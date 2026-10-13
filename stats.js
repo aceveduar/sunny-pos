@@ -711,7 +711,11 @@ function dvToggle(idx) {
   document.getElementById('dv-'+idx)?.classList.toggle('open');
 }
 
-const _DV_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#C9A462" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
+// Color de marca para las imágenes de relleno (data: URI no entiende variables CSS)
+const _BRAND_HEX = (window.NEGOCIO && NEGOCIO.color) || '#F0A830';
+const _brand = () => _cssVar('--brand') || _BRAND_HEX;
+const _brandA = a => `rgba(${_cssVar('--brand-rgb') || '240,168,48'},${a})`;
+const _DV_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="' + _BRAND_HEX + '" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
 function _dvImgErr(el) { el.onerror = null; el.src = _DV_PH; }
 function _prodImg(prod) {
   if (!prod) return null;
@@ -805,7 +809,7 @@ function renderVendedores() {
     const icon = isSinSesion
       ? '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
       : '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
-    const barColor = d.total < 0 ? 'var(--red)' : isSinSesion ? '#B5A696' : 'var(--gold)';
+    const barColor = d.total < 0 ? 'var(--red)' : isSinSesion ? '#B5A696' : 'var(--brand)';
     const nameStyle = isSinSesion ? 'color:var(--muted);font-weight:500' : 'font-weight:600';
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1046,7 +1050,7 @@ function renderKPIs() {
   // calculadas aparte para no acoplar el sparkline al ciclo de vida de la
   // gráfica grande de Chart.js.
   _revSparkChart = _drawSparkline('kpi-revenue-spark', _revSparkChart, paymentsLoaded ? _sparklineBuckets(payments, _paymentAmount) : [], _cssVar('--green', '#2D6A4F'));
-  _unitsSparkChart = _drawSparkline('kpi-avg-spark', _unitsSparkChart, salesLoaded ? _sparklineBuckets(sales, s => _unitsOf(s.items), _completionDate) : [], _cssVar('--gold-dark', '#A67C3A'));
+  _unitsSparkChart = _drawSparkline('kpi-avg-spark', _unitsSparkChart, salesLoaded ? _sparklineBuckets(sales, s => _unitsOf(s.items), _completionDate) : [], _cssVar('--brand-dark', '#A86A0C'));
 }
 
 // Agrupa una lista (pagos o ventas) en cubetas por hora (modo Día) o por día
@@ -1125,7 +1129,7 @@ function renderHourChart() {
       labels: Array.from({length:24}, (_,i) => `${i}h`),
       datasets: [{
         data: byHour,
-        backgroundColor: byHour.map((value, i) => value < 0 ? '#E85D5D' : i === maxH ? '#C9A462' : 'rgba(201,164,98,.35)'),
+        backgroundColor: byHour.map((value, i) => value < 0 ? '#E85D5D' : i === maxH ? _brand() : _brandA(.35)),
         borderRadius: 4, borderSkipped: false
       }]
     },
@@ -1217,8 +1221,8 @@ function renderRevenueChart() {
       labels: days.map(mkLabel),
       datasets: [{
         data: days.map(d => byDay[d]),
-        backgroundColor: 'rgba(201,164,98,.75)',
-        borderColor: '#C9A462', borderWidth:1,
+        backgroundColor: _brandA(.75),
+        borderColor: _brand(), borderWidth:1,
         borderRadius: 3, borderSkipped:false
       }]
     },
@@ -1282,13 +1286,13 @@ function _renderWeekComparison(ctx, byDayCurr) {
   }
 
   const maxCurr = Math.max(...currByDow.map(Math.abs), 1);
-  const currColors = currByDow.map(v => v < 0 ? '#E85D5D' : Math.abs(v)===maxCurr&&v!==0 ? '#C9A462' : 'rgba(201,164,98,.7)');
+  const currColors = currByDow.map(v => v < 0 ? '#E85D5D' : Math.abs(v)===maxCurr&&v!==0 ? _brand() : _brandA(.7));
 
   const datasets = [{
     label: _currLabel,
     data: currByDow,
     backgroundColor: currColors,
-    borderColor: '#A67C3A', borderWidth: 1,
+    borderColor: _cssVar('--brand-dark'), borderWidth: 1,
     borderRadius: 6, borderSkipped: false,
     barPercentage: hasPrev ? 0.7 : 0.6,
     categoryPercentage: hasPrev ? 0.7 : 0.5
@@ -1358,7 +1362,7 @@ function _renderDayHourly(ctx) {
   for (let h=Math.max(0,first-1); h<=Math.min(23,last+1); h++) hours.push(h);
 
   const maxH = Math.max(...hours.map(h=>Math.abs(byHour[h])),1);
-  const colors = hours.map(h => byHour[h] < 0 ? '#E85D5D' : Math.abs(byHour[h])===maxH&&byHour[h]!==0?'#C9A462':'rgba(201,164,98,.55)');
+  const colors = hours.map(h => byHour[h] < 0 ? '#E85D5D' : Math.abs(byHour[h])===maxH&&byHour[h]!==0?_brand():_brandA(.55));
 
   revenueChart = new Chart(ctx, {
     type:'bar',
@@ -1435,7 +1439,7 @@ function renderCatChart() {
   const ctx = _chartReady('cat-chart');
   if (!ctx) return;
 
-  const COLORS = ['#C9A462','#34d399','#60a5fa','#f472b6','#a78bfa','#fb923c','#fbbf24'];
+  const COLORS = [_brand(),'#34d399','#60a5fa','#f472b6','#a78bfa','#fb923c','#fbbf24'];
   if (entries.length && entries[entries.length - 1][0] === 'Otras' && sortedCats.length > TOP_CATS + 1) COLORS[entries.length - 1] = '#CFC6BC'; // "Otras" en neutro
   catChart = new Chart(ctx, {
     type: 'doughnut',
@@ -1490,7 +1494,7 @@ function aggregateProducts() {
   return Object.values(map).sort((a,b)=>b.qty-a.qty||b.revenue-a.revenue);
 }
 
-const _TP_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#C9A462" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
+const _TP_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="' + _BRAND_HEX + '" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
 
 function renderTopProducts() {
   const prods = aggregateProducts().slice(0,8);
@@ -1628,7 +1632,7 @@ function renderCapitalCategoria() {
         <span style="font-weight:700;font-size:.88rem">$${Math.round(e.total).toLocaleString('es-MX',{maximumFractionDigits:0})}</span>
       </div>
       <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:var(--gold);border-radius:50px"></div>
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
       </div>
       <div style="font-size:.7rem;color:var(--muted)">${share}% del valor en venta</div>
     </div>`;
@@ -1757,7 +1761,7 @@ function renderBestSeller() {
   const best = aggregateProducts()[0];
   if (!best) { el.style.display = 'none'; return; }
   el.style.display = '';
-  el.innerHTML = `<div style="font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:5px;overflow:hidden"><svg style="width:13px;height:13px;flex-shrink:0;fill:var(--gold-dark);stroke:none" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Más vendido: <strong style="color:var(--charcoal)">${_esc(best.name)}</strong> · $${Math.round(best.revenue).toLocaleString('es-MX',{maximumFractionDigits:0})} en ventas</span></div>`;
+  el.innerHTML = `<div style="font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:5px;overflow:hidden"><svg style="width:13px;height:13px;flex-shrink:0;fill:var(--brand-dark);stroke:none" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Más vendido: <strong style="color:var(--charcoal)">${_esc(best.name)}</strong> · $${Math.round(best.revenue).toLocaleString('es-MX',{maximumFractionDigits:0})} en ventas</span></div>`;
 }
 
 /* ── APARTADOS PENDIENTES ── */
@@ -1825,7 +1829,7 @@ async function loadApartadosPendientes() {
         </div>
       </div>
       <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:var(--gold);border-radius:50px"></div>
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:.68rem;color:var(--muted)">${pct}% pagado</span>
@@ -1917,7 +1921,7 @@ function renderTurnos() {
       ${aggRows.map(r => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.8rem">
           <span>${_esc(nameMap[r.email] || r.email.split('@')[0])}<span style="color:var(--muted);font-weight:400;margin-left:6px;font-size:.72rem">${r.count} turno${r.count !== 1 ? 's' : ''}${r.grandes ? ` · ${r.grandes} grande${r.grandes !== 1 ? 's' : ''}` : ''}</span></span>
-          <span style="font-weight:700;color:${Math.abs(r.total) < .005 ? 'var(--green)' : r.total > 0 ? 'var(--gold-dark)' : 'var(--red)'}">${Math.abs(r.total) < .005 ? '✓ Cuadra' : fmtMoney(r.total)}</span>
+          <span style="font-weight:700;color:${Math.abs(r.total) < .005 ? 'var(--green)' : r.total > 0 ? 'var(--brand-dark)' : 'var(--red)'}">${Math.abs(r.total) < .005 ? '✓ Cuadra' : fmtMoney(r.total)}</span>
         </div>`).join('')}
     </div>` : '';
 
@@ -1932,7 +1936,7 @@ function renderTurnos() {
       : `${diff > 0 ? '+' : '-'}$${Math.abs(diff).toLocaleString('es-MX')}`;
     const diffColor = diff == null ? 'var(--muted)'
       : Math.abs(diff) < .005 ? 'var(--green)'
-      : diff > 0 ? 'var(--gold-dark)' : 'var(--red)';
+      : diff > 0 ? 'var(--brand-dark)' : 'var(--red)';
     // Lo que explica una diferencia sin abrir Actividad: qué esperaba el
     // sistema, cuánto se retiró del cajón y cuánto efectivo de otras cuentas
     // declaró la cajera como suyo (2026-10-02).
@@ -2032,7 +2036,7 @@ function renderTopClientes() {
         <span style="font-weight:700;font-size:.88rem">$${c.total.toLocaleString('es-MX',{maximumFractionDigits:0})}</span>
       </div>
       <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:var(--gold);border-radius:50px"></div>
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
       </div>
       <div style="font-size:.7rem;color:var(--muted)">${c.count} compra${c.count!==1?'s':''}</div>
     </div>`;
@@ -2078,7 +2082,7 @@ function openClienteProfile(id) {
         <input type="text" id="cliente-name-input" value="${_esc(c.name)}" placeholder="Nombre" style="${_fieldInput}font-weight:700">
         <label style="${_fieldLabel}margin-top:8px">Teléfono</label>
         <input type="tel" inputmode="numeric" id="cliente-phone-input" value="${_esc(c.phone || '')}" placeholder="10 dígitos (opcional)" style="${_fieldInput}">
-        ${digits ? `<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:.72rem;color:var(--gold-dark)">Abrir WhatsApp con este número</a>` : ''}
+        ${digits ? `<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:.72rem;color:var(--brand-dark)">Abrir WhatsApp con este número</a>` : ''}
         <div id="cliente-profile-error" style="display:none;color:var(--red);font-size:.72rem;margin-top:5px"></div>
       </div>
       <div style="display:flex;gap:8px;margin:14px 0">
@@ -2351,7 +2355,7 @@ function renderWeekdayChart() {
   card.style.display='';
 
   const maxDow = Math.max(...byDow.map(Math.abs));
-  const colors = byDow.map(v => v<0?'#E85D5D':Math.abs(v)===maxDow&&v!==0?'#C9A462':'rgba(201,164,98,.4)');
+  const colors = byDow.map(v => v<0?'#E85D5D':Math.abs(v)===maxDow&&v!==0?_brand():_brandA(.4));
 
   const lbl = document.getElementById('weekday-period-label');
   if (lbl) lbl.textContent = PERIOD_LABELS[currentPeriod]||'';

@@ -390,7 +390,7 @@ function closeDriveAudit() {
 // sin esto se sentía "atorado" en un solo texto estático.
 function _driveAuditSpinner(msg) {
   return `<div style="text-align:center;padding:28px 0;color:var(--muted)">
-    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
+    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
     <br>${msg}
   </div>`;
 }

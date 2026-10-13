@@ -662,7 +662,7 @@ function _openKitLightbox(p, editFn) {
       <div style="font-size:.92rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.3">${_esc(p.name)}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem;margin-bottom:4px"><span style="color:rgba(255,255,255,.5)">Stock</span>${stockTxt}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem"><span style="color:rgba(255,255,255,.5)">Precio</span><span style="color:rgba(255,255,255,.9);font-weight:600">$${(p.price||0).toLocaleString('es-MX')}</span></div>
-      ${editFn ? `<button id="${editBtnId}" style="display:block;width:100%;margin-top:10px;background:rgba(201,164,98,.2);border:1px solid rgba(201,164,98,.4);border-radius:8px;padding:9px;color:var(--gold);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">${ICON_EDIT} Editar producto →</button>` : ''}
+      ${editFn ? `<button id="${editBtnId}" style="display:block;width:100%;margin-top:10px;background:rgba(var(--brand-rgb),.2);border:1px solid rgba(var(--brand-rgb),.4);border-radius:8px;padding:9px;color:var(--brand);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">${ICON_EDIT} Editar producto →</button>` : ''}
     </div>`;
   lb.onclick = e => { if (e.target === lb) lb.remove(); };
   document.body.appendChild(lb);
@@ -1121,7 +1121,7 @@ async function showApp() {
   // Mostrar skeleton mientras cargan datos
   const tbody = document.getElementById('products-table');
   if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px;color:var(--muted)">
-    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
+    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
     <br>Cargando catálogo…
   </td></tr>`;
 

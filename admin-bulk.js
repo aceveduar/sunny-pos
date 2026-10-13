@@ -298,7 +298,7 @@ function _bcpToggleParentPicker(btn) {
       </button>`).join('')}
     </div>`;
   picker.style.display = 'block';
-  btn.style.borderColor = 'var(--gold)';
+  btn.style.borderColor = 'var(--brand)';
 }
 
 async function _bcpCreateAndSelect(parentCode = null) {

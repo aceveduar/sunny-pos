@@ -135,9 +135,9 @@ function _kbSearch(q) {
   const termEncoded = encodeURIComponent(term);
   const createBtn = `
     <div class="kb-result-item" onclick="_kbCreateDraft(decodeURIComponent('${termEncoded}'))">
-      <div style="width:36px;height:36px;border-radius:7px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--gold-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <div style="width:36px;height:36px;border-radius:7px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--brand-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:.84rem;font-weight:600;color:var(--gold-dark)">Crear "${term}" como borrador</div>
+        <div style="font-size:.84rem;font-weight:600;color:var(--brand-dark)">Crear "${term}" como borrador</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:1px">Stock 0 · Sin publicar · editar después</div>
       </div>
     </div>`;
@@ -158,7 +158,7 @@ function _kbSearch(q) {
         <div style="font-size:.84rem;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(p.name)}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${stockTxt}</div>
       </div>
-      <span style="font-size:.75rem;color:var(--gold);font-weight:700;flex-shrink:0">+ agregar</span>
+      <span style="font-size:.75rem;color:var(--brand);font-weight:700;flex-shrink:0">+ agregar</span>
     </div>`;
   }).join('') + createBtn;
   res.style.display = 'block';
@@ -248,7 +248,7 @@ function _kbSuggestPrice() {
   }, 0);
   if (!sum) { hint.style.display = 'none'; return; }
   hint.style.display = 'block';
-  hint.innerHTML = `Suma de componentes: <strong>$${sum.toLocaleString('es-MX')}</strong> · <a href="#" onclick="event.preventDefault();document.getElementById('kb-price').value=${sum};this.parentElement.style.display='none'" style="color:var(--gold);text-decoration:none;font-weight:600">Usar este precio</a>`;
+  hint.innerHTML = `Suma de componentes: <strong>$${sum.toLocaleString('es-MX')}</strong> · <a href="#" onclick="event.preventDefault();document.getElementById('kb-price').value=${sum};this.parentElement.style.display='none'" style="color:var(--brand);text-decoration:none;font-weight:600">Usar este precio</a>`;
   const priceEl = document.getElementById('kb-price');
   if (!priceEl.value) priceEl.value = sum;
 }

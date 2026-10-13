@@ -603,7 +603,7 @@ function _actPopup(idx) {
     const img = p?.image || DEFAULT_IMG;
     imgHtml = `<img src="${img}" onerror="this.src='${DEFAULT_IMG}'" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#F7F2EB;margin-bottom:12px">`;
     bodyHtml = `<div style="font-size:.9rem;font-weight:700;line-height:1.35;margin-bottom:4px">${_esc(meta.name || p?.name || '—')}</div>`;
-    if (meta.price != null) bodyHtml += `<div style="font-size:1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--gold)">$${parseFloat(meta.price).toLocaleString('es-MX')} MXN</div>`;
+    if (meta.price != null) bodyHtml += `<div style="font-size:1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--brand)">$${parseFloat(meta.price).toLocaleString('es-MX')} MXN</div>`;
     if (p?.price != null && p.price !== meta.price) bodyHtml += `<div style="font-size:.72rem;color:var(--muted);margin-top:2px">Precio actual: $${parseFloat(p.price).toLocaleString('es-MX')}</div>`;
   } else if (isSale) {
     // Thumbnails de productos vendidos (si están disponibles en el meta)
@@ -616,7 +616,7 @@ function _actPopup(idx) {
       }).join('');
       imgHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${thumbs}</div>`;
     }
-    bodyHtml = `<div style="font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);margin-bottom:6px">$${parseFloat(meta.total||0).toLocaleString('es-MX')} MXN</div>`;
+    bodyHtml = `<div style="font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--brand);margin-bottom:6px">$${parseFloat(meta.total||0).toLocaleString('es-MX')} MXN</div>`;
     bodyHtml += `<div style="font-size:.82rem;color:var(--charcoal);margin-bottom:4px">${meta.items||0} producto${(meta.items||0)!==1?'s':''}</div>`;
     bodyHtml += `<div style="font-size:.82rem;color:var(--muted)">${meta.method==='transferencia'?_actIcoPhone(12)+' Transferencia':_actIcoCash(12)+' Efectivo'}</div>`;
     if (meta.discount > 0) bodyHtml += `<div style="font-size:.78rem;color:#059669;margin-top:4px">Descuento −$${parseFloat(meta.discount).toLocaleString('es-MX')}</div>`;

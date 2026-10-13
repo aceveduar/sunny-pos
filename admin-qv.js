@@ -88,7 +88,7 @@ async function _qvEditPrice(e, id) {
   const input = document.createElement('input');
   input.type = 'text'; input.inputMode = 'decimal';
   input.value = p.price;
-  input.style.cssText = 'width:100px;padding:3px 8px;border:2px solid var(--gold);border-radius:6px;font-size:1.25rem;font-weight:800;font-family:inherit;outline:none;text-align:center;color:var(--charcoal)';
+  input.style.cssText = 'width:100px;padding:3px 8px;border:2px solid var(--brand);border-radius:6px;font-size:1.25rem;font-weight:800;font-family:inherit;outline:none;text-align:center;color:var(--charcoal)';
   el.replaceWith(input);
   input.focus(); input.select();
   let saved = false;
@@ -121,14 +121,14 @@ async function _qvEditName(e, id) {
 
   const ta = document.createElement('textarea');
   ta.rows = 2; ta.value = p.name;
-  ta.style.cssText = 'width:100%;padding:8px 10px;border:2px solid var(--gold);border-radius:8px;font-size:1.05rem;font-weight:700;font-family:inherit;outline:none;color:var(--charcoal);box-sizing:border-box;resize:none;line-height:1.3';
+  ta.style.cssText = 'width:100%;padding:8px 10px;border:2px solid var(--brand);border-radius:8px;font-size:1.05rem;font-weight:700;font-family:inherit;outline:none;color:var(--charcoal);box-sizing:border-box;resize:none;line-height:1.3';
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:6px';
 
   const btnSave = document.createElement('button');
   btnSave.type = 'button'; btnSave.textContent = '✓ Guardar';
-  btnSave.style.cssText = 'flex:1;padding:9px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;touch-action:manipulation;font-family:inherit';
+  btnSave.style.cssText = 'flex:1;padding:9px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;touch-action:manipulation;font-family:inherit';
 
   const btnCancel = document.createElement('button');
   btnCancel.type = 'button'; btnCancel.textContent = '✕';
@@ -171,14 +171,14 @@ async function _qvEditDesc(e, id) {
   const ta = document.createElement('textarea');
   ta.value = p.description || ''; ta.rows = 4;
   ta.placeholder = 'Descripción del producto…';
-  ta.style.cssText = 'width:100%;padding:8px 10px;border:2px solid var(--gold);border-radius:8px;font-size:.85rem;font-family:inherit;outline:none;color:var(--charcoal);resize:vertical;box-sizing:border-box;display:block;line-height:1.6';
+  ta.style.cssText = 'width:100%;padding:8px 10px;border:2px solid var(--brand);border-radius:8px;font-size:.85rem;font-family:inherit;outline:none;color:var(--charcoal);resize:vertical;box-sizing:border-box;display:block;line-height:1.6';
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:6px;margin-top:6px';
 
   const btnSave = document.createElement('button');
   btnSave.type = 'button'; btnSave.textContent = '✓ Guardar';
-  btnSave.style.cssText = 'flex:1;padding:10px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;touch-action:manipulation;font-family:inherit';
+  btnSave.style.cssText = 'flex:1;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;touch-action:manipulation;font-family:inherit';
 
   const btnCancel = document.createElement('button');
   btnCancel.type = 'button'; btnCancel.textContent = '✕';
@@ -554,7 +554,7 @@ function _renderQV(p) {
           const compOos = !comp || comp.outOfStock || comp.stock === 0;
           const baseBg = compOos ? 'var(--tint-red-bg)' : '';
           const rowStyle = `display:flex;align-items:center;gap:8px;padding:5px 6px;margin:0 -6px;border-radius:6px;background:${baseBg};${compOos ? '' : 'border-bottom:1px solid var(--border-light);'}`;
-          const clickable = comp ? `onclick="_kitCompPopup(${comp.id},this)" style="${rowStyle}cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--gold-light)'" onmouseleave="this.style.background='${baseBg}'"` : `style="${rowStyle}"`;
+          const clickable = comp ? `onclick="_kitCompPopup(${comp.id},this)" style="${rowStyle}cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--brand-light)'" onmouseleave="this.style.background='${baseBg}'"` : `style="${rowStyle}"`;
           const oosTag = compOos ? `<span style="font-size:.66rem;font-weight:700;color:var(--tint-red-strong);background:var(--tint-red-bg);padding:1px 7px;border-radius:50px;flex-shrink:0">Sin stock</span>` : '';
           return `<div ${clickable}>
             <img src="${_driveSz(comp?.image || DEFAULT_IMG, 80)}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface-soft)" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
@@ -655,7 +655,7 @@ function _renderQV(p) {
     ? `<span style="color:var(--muted-light)">· Creado por ${_esc(_creatorFullName(p.createdBy))}</span>`
     : '';
   idEl.innerHTML = `<span style="font-family:monospace">ID #${p.id}</span>${p.barcode ? `<span style="font-family:monospace;color:var(--muted)">· ${_esc(p.barcode)}</span>` : ''}${p.supplierCode ? `<span style="font-family:monospace;color:var(--muted-light)">· prov. ${_esc(p.supplierCode)}</span>` : ''}${creatorEl}` +
-    ` <a href="#" onclick="event.preventDefault();openProductTimeline(${p.id},'${_esc(p.name).replace(/'/g,"\\'")}')" style="color:var(--gold-dark);font-weight:700;text-decoration:underline;font-family:inherit">${QV_ICO_CLOCK(11)} Ver historial</a>`;
+    ` <a href="#" onclick="event.preventDefault();openProductTimeline(${p.id},'${_esc(p.name).replace(/'/g,"\\'")}')" style="color:var(--brand-dark);font-weight:700;text-decoration:underline;font-family:inherit">${QV_ICO_CLOCK(11)} Ver historial</a>`;
 
   // Botones de acción
   const btnEdit = can.editProduct
@@ -796,8 +796,8 @@ async function openProductTimeline(productId, productName) {
     const when = d.toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
     const who = (ev.user_email || 'desconocido').split('@')[0];
     return `
-<div style="border-left:2px solid var(--gold);padding:2px 0 14px 14px;margin-left:4px;position:relative">
-  <span style="position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--gold)"></span>
+<div style="border-left:2px solid var(--brand);padding:2px 0 14px 14px;margin-left:4px;position:relative">
+  <span style="position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--brand)"></span>
   <div style="font-size:.68rem;color:var(--muted);font-weight:600">${_esc(when)} · ${_esc(who)}</div>
   <div style="font-size:.85rem;color:var(--charcoal);margin-top:2px">${_esc(ev.summary)}</div>
 </div>`;

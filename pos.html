@@ -16,6 +16,7 @@
    propia paleta oscura — ver shared.js _initThemeToggle(). */
 (function(){try{if(localStorage.getItem('te_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 </script>
+<script src="negocio.js"></script>
 </head>
 <body>
 <!-- Input trampa: captura escáner USB en Android sin mostrar teclado virtual -->
@@ -137,7 +138,7 @@
       <span class="pos-freq-label">Freq.</span>
     </div>
     <!-- Resumen de caja diario — solo mobile -->
-    <div id="daily-summary-mobile" style="display:none;align-items:center;gap:8px;padding:5px 14px;background:var(--gold-light);border-bottom:1px solid var(--border);font-size:.73rem;color:var(--charcoal);flex-shrink:0"></div>
+    <div id="daily-summary-mobile" style="display:none;align-items:center;gap:8px;padding:5px 14px;background:var(--brand-light);border-bottom:1px solid var(--border);font-size:.73rem;color:var(--charcoal);flex-shrink:0"></div>
     <div class="pos-results" id="pos-results">
       <div class="pos-empty"><div class="em"><svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>Cargando productos…</div>
     </div>
@@ -308,7 +309,7 @@
     <p class="apt-info-lbl" id="abonar-info"></p>
     <label style="display:flex;justify-content:space-between;align-items:center">
       Monto del abono
-      <button type="button" id="abonar-max-hint" onclick="_fillAbonarMax()" style="font-size:.75rem;font-weight:600;color:var(--gold-dark);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit;padding:4px"></button>
+      <button type="button" id="abonar-max-hint" onclick="_fillAbonarMax()" style="font-size:.75rem;font-weight:600;color:var(--brand-dark);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit;padding:4px"></button>
     </label>
     <div class="money-field money-field-sm">
       <span class="money-field-sign">$</span>
@@ -644,7 +645,7 @@
       <input type="text" id="edit-apt-search" placeholder="Agregar producto…" autocomplete="off"
         style="width:100%;padding:9px 40px 9px 36px;border:1.5px solid var(--border);border-radius:9px;font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box;background:var(--surface);color:var(--charcoal)"
         oninput="searchEditApt(this.value)"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+        onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'">
       <button type="button" onclick="openEditAptScanner()" title="Escanear código de barras" aria-label="Escanear código de barras"
         style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:7px;cursor:pointer;color:var(--muted)">
         <svg aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg>
@@ -680,7 +681,7 @@
     </div>
     </div><!-- /.edit-apt-fields -->
     <button type="button" class="collected-by-btn" id="edit-apt-fiado" aria-pressed="false" onclick="_editAptToggleFiado(this)"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Se lo llevó (fiado): ya tiene el producto</button>
-    <div id="edit-apt-pagado-row" style="display:none;background:var(--gold-light);border:1px solid #EAD9B8;border-radius:9px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+    <div id="edit-apt-pagado-row" style="display:none;background:var(--brand-light);border:1px solid #EAD9B8;border-radius:9px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-size:.74rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Anticipo registrado</div>
         <div id="edit-apt-pagado-amt" style="font-size:.95rem;font-weight:700;color:var(--charcoal);margin-top:2px"></div>
@@ -840,7 +841,7 @@
         aria-label="Buscar apartado por cliente"
         style="width:100%;padding:8px 32px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box"
         oninput="filterApartadosWithDue(this.value,'offcanvas')"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+        onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'">
       <button type="button" id="apt-search-clear" onclick="clearAptSearchWithDue('offcanvas')" aria-label="Limpiar búsqueda" style="display:none;position:absolute;right:2px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;line-height:1;padding:2px">✕</button>
     </div>
   </div>
@@ -866,7 +867,7 @@
       <input type="text" id="apt-page-search" placeholder="Buscar cliente…" autocomplete="off"
         aria-label="Buscar apartado por cliente"
         oninput="filterApartadosWithDue(this.value,'page')"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=''">
+        onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor=''">
       <button type="button" class="apt-page-search-clear" id="apt-page-search-clear" onclick="clearAptPageSearch()" aria-label="Limpiar búsqueda">✕</button>
     </div>
   </div>
@@ -928,7 +929,6 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="negocio.js"></script>
 <script src="pos-core.js"></script>
 <script src="pos-cart.js"></script>
 <script src="pos-ui.js"></script>

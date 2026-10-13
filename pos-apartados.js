@@ -362,7 +362,7 @@ function updateAnticipoInfo() {
         hint.style.color = 'var(--muted)'; hint.style.display = '';
       } else if (anticipo <= 0) {
         hint.innerHTML = '<svg style="width:13px;height:13px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> ' + (_formEsFiado() ? 'Se lo lleva hoy — paga después' : 'Sin anticipo — se cobrará al entregar');
-        hint.style.color = 'var(--gold-dark)'; hint.style.display = '';
+        hint.style.color = 'var(--brand-dark)'; hint.style.display = '';
       } else {
         hint.style.display = 'none';
       }
@@ -1065,7 +1065,7 @@ function validateAbonarAmount() {
   btn.disabled = !valid;
   const _amtEl = document.getElementById('abonar-amount');
   (_amtEl?.closest('.money-field') || _amtEl).style.borderColor = val > 0 && !valid ? 'var(--red)' : '';
-  if (hint) hint.style.color = over ? 'var(--red)' : 'var(--gold-dark)';
+  if (hint) hint.style.color = over ? 'var(--red)' : 'var(--brand-dark)';
 
   const preview = document.getElementById('abonar-restante-preview');
   if (preview && _abonarCtx) {
@@ -1264,7 +1264,7 @@ function renderEditAptItems() {
           <input type="number" value="${item.price}" min="0" step="1" inputmode="numeric"
             style="width:72px;padding:4px 6px;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;outline:none;font-family:inherit"
             oninput="_editAptChangePrice(${idx},this.value)"
-            onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+            onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'">
           <span style="font-size:.74rem;color:var(--muted);margin-left:2px">c/u</span>
           ${(item.qty || 1) > 1 ? `<span id="edit-apt-line-${idx}" style="font-size:.74rem;color:var(--muted);margin-left:4px">· $${_aptMoney(item.price * item.qty).toLocaleString('es-MX')} en total</span>` : ''}
         </div>

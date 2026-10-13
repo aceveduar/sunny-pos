@@ -1472,7 +1472,7 @@ function productCard(p) {
   const stockSub = isKit
     ? (isKit && !p.kitItems.length ? ' · <span style="color:var(--red)">Sin componentes</span>' : oos ? ' · <span style="color:var(--red)">Sin stock</span>' : ` · <span style="color:#6B9E78;font-weight:600">${_giftIconSvg(13)} ${effStock} kit${effStock!==1?'s':''}</span>`)
     : effStock === 1
-      ? ' · <span style="color:var(--gold);font-weight:700">Última</span>'
+      ? ' · <span style="color:var(--brand);font-weight:700">Última</span>'
       : effStock >= 2 && effStock <= 5
         ? ` · <span style="color:#6B9E78;font-weight:600">${effStock} pzas</span>`
         : effStock > 5

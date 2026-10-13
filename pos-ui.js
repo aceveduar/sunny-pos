@@ -52,8 +52,8 @@ async function openTransactionTimeline(saleId) {
       ? `<div style="font-size:.76rem;color:var(--charcoal);font-style:italic;margin-top:4px;background:var(--cream);border-radius:6px;padding:5px 8px">"${_esc(ev.meta.reason)}"</div>`
       : '';
     return `
-<div style="border-left:2px solid var(--gold);padding:2px 0 14px 14px;margin-left:4px;position:relative">
-  <span style="position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--gold)"></span>
+<div style="border-left:2px solid var(--brand);padding:2px 0 14px 14px;margin-left:4px;position:relative">
+  <span style="position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--brand)"></span>
   <div style="font-size:.68rem;color:var(--muted);font-weight:600">${_esc(when)} · ${_esc(who)}</div>
   <div style="font-size:.85rem;color:var(--charcoal);margin-top:2px">${_esc(ev.summary)}</div>
   ${reasonHTML}
@@ -289,8 +289,8 @@ function openPosPreview(id) {
   let stockHTML = '';
   if (oos)                          stockHTML = '<span style="color:var(--red)">⊘ Agotado</span>';
   else if (isKit)                   stockHTML = `<span style="color:#6B9E78">${_giftIconSvg(13)} ${effStock} kit${effStock!==1?'s':''} disponibles</span>`;
-  else if (effStock === 1)          stockHTML = `<span style="color:var(--gold-dark)">${_uiIcoZap()} Última pieza</span>`;
-  else if (effStock >= 2 && effStock <= 5) stockHTML = `<span style="color:var(--gold-dark)">${effStock} piezas disponibles</span>`;
+  else if (effStock === 1)          stockHTML = `<span style="color:var(--brand-dark)">${_uiIcoZap()} Última pieza</span>`;
+  else if (effStock >= 2 && effStock <= 5) stockHTML = `<span style="color:var(--brand-dark)">${effStock} piezas disponibles</span>`;
   else                              stockHTML = `<span style="color:#6B9E78">${_uiIcoCheck()} Disponible</span>`;
   document.getElementById('pos-preview-stock').innerHTML = stockHTML;
 
@@ -692,7 +692,7 @@ function openAptDetail(id) {
       ? _libretaChipHTML() + _esc(_libretaDateLabel(s, { day:'numeric', month:'short', year:'numeric' }))
       : (s.status === 'activo' ? (_isFiado(s) ? _fiadoChipHTML() : _enTiendaChipHTML(s)) : '') + (_saldoFavor(s) > 0 ? _favorChipHTML(s) : '')
         + _esc(t + ' · ' + nItems + ' producto' + (nItems !== 1 ? 's' : ''))) + (telNum ? ' · ' + _uiIcoPhone() + ' ' + _esc(telNum) : '') +
-    ` · <a href="#" onclick="event.preventDefault();openTransactionTimeline(${id})" style="color:var(--gold-dark);font-weight:700;text-decoration:underline">${_uiIcoClock(11)} Ver historial</a>`;
+    ` · <a href="#" onclick="event.preventDefault();openTransactionTimeline(${id})" style="color:var(--brand-dark);font-weight:700;text-decoration:underline">${_uiIcoClock(11)} Ver historial</a>`;
 
   // Items
   const itemsHTML = (s.items || []).map(i => {

@@ -831,7 +831,7 @@ function _openOverrideSheet(permission, label, onDone) {
       <div id="ov-error" style="color:var(--red);font-size:.78rem;min-height:16px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
         <button id="ov-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-weight:600;font-family:inherit;cursor:pointer">Cancelar</button>
-        <button id="ov-submit" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--gold);color:#fff;font-weight:700;font-family:inherit;cursor:pointer">Autorizar</button>
+        <button id="ov-submit" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--brand);color:var(--on-brand);font-weight:700;font-family:inherit;cursor:pointer">Autorizar</button>
       </div>
     </div>`;
   document.body.appendChild(wrap);
@@ -875,7 +875,7 @@ function openMyPinModal() {
       <div id="mypin-error" style="color:var(--red);font-size:.78rem;min-height:16px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px">
         <button id="mypin-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-weight:600;font-family:inherit;cursor:pointer">Cancelar</button>
-        <button id="mypin-submit" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--gold);color:#fff;font-weight:700;font-family:inherit;cursor:pointer">Guardar</button>
+        <button id="mypin-submit" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--brand);color:var(--on-brand);font-weight:700;font-family:inherit;cursor:pointer">Guardar</button>
       </div>
     </div>`;
   document.body.appendChild(wrap);

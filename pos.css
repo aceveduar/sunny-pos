@@ -1,13 +1,13 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --cream:#FAF5EE;--gold:#C9A462;--gold-dark:#A67C3A;--charcoal:#1C1817;
+  --cream:#FAF5EE;--brand:#F0A830;--brand-rgb:240,168,48;--brand-dark:#A86A0C;--brand-light:#FEF5E4;--on-brand:#1F1B16;--charcoal:#1C1817;
   --red:#E85D5D;--green:#2D6A4F;--border:#E8DDD0;--r:10px;
 }
 
 /* ══ MODO OSCURO ═══════════════════════════════════════════════════════
    Mismo mecanismo y misma paleta que Inventario (ver admin.css) — activado
    por [data-theme="dark"] en <html> (shared.js _toggleTheme()/pos.html
-   inline script anti-flash). --gold/--gold-dark/--red/--green/--wa se
+   inline script anti-flash). --brand/--brand-dark/--red/--green/--wa se
    quedan fijos a propósito (acentos suficientemente vivos para leerse en
    ambos temas, igual que en Inventario); --ink/--ink-soft (shared.css)
    tampoco se redefinen -- son el chrome intencionalmente oscuro (topbar,
@@ -20,7 +20,7 @@
 :root[data-theme="dark"]{
   --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
   --charcoal:#F1E8DB;--charcoal-soft:#D8CBB8;
-  --gold-light:#2C2415;
+  --brand-light:#3A2D17;
   --border:#3D352B;
   --muted:#B9A890;--muted-light:#6B5D4D;
   --tint-red-bg:#332020;--tint-red-border:rgba(248,113,113,.35);--tint-red-strong:#F87171;
@@ -99,7 +99,7 @@ button,a{touch-action:manipulation}
 .topbar-left img{height:30px;border-radius:5px}
 .topbar-title{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;white-space:nowrap;padding-right:8px;border-right:1px solid rgba(255,255,255,.18);margin-right:2px}
 .topbar-right{display:flex;gap:8px;align-items:center}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(201,164,98,.25);color:var(--gold);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(201,164,98,.45);user-select:none}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(var(--brand-rgb),.25);color:var(--brand);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(var(--brand-rgb),.45);user-select:none}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
 /* Historial y Corte en topbar — estilo tbn-icon */
 #btn-history-pos,#btn-corte-pos,#btn-apt-pos{
@@ -112,8 +112,8 @@ button,a{touch-action:manipulation}
 }
 #btn-history-pos:hover,#btn-corte-pos:hover,#btn-apt-pos:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.09)}
 #btn-history-pos:active,#btn-corte-pos:active,#btn-apt-pos:active{opacity:.6;transform:scale(.9)}
-.btn-gold{background:var(--gold);color:#fff}
-.btn-gold:hover{background:var(--gold-dark)}
+.btn-gold{background:var(--brand);color:var(--on-brand)}
+.btn-gold:hover{background:var(--brand-dark)}
 .btn-green{background:var(--green);color:#fff;font-size:.92rem;padding:11px 20px;border-radius:10px;width:100%;justify-content:center;font-weight:700}
 .btn-green:disabled{background:var(--border);color:rgba(255,255,255,.7);cursor:not-allowed}
 #cobrar-btn:disabled{background:var(--border);color:rgba(255,255,255,.7);cursor:not-allowed;box-shadow:none}
@@ -123,18 +123,18 @@ button,a{touch-action:manipulation}
 /* Divisor arrastrable */
 .pos-divider{width:5px;background:var(--border);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;transition:background .15s;touch-action:none}
 .pos-divider::before{content:'';position:absolute;top:0;bottom:0;left:-10px;right:-10px;z-index:1}
-.pos-divider:hover,.pos-divider.dragging{background:var(--gold)}
+.pos-divider:hover,.pos-divider.dragging{background:var(--brand)}
 .pos-divider::after{content:'⋮';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--muted-light);font-size:.9rem;pointer-events:none}
 
 /* PANEL IZQUIERDO */
 .pos-left{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .pos-search-bar{padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
 .pos-search-bar input{flex:1;min-width:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:.88rem;outline:none}
-.pos-search-bar input:focus{border-color:var(--gold)}
+.pos-search-bar input:focus{border-color:var(--brand)}
 .pos-sort-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;align-self:center;margin:0 2px}
 .pos-results{flex:1;overflow-y:auto;padding:6px 8px;overscroll-behavior-y:contain}
 .pos-prod{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:.15s;background:var(--surface);margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.pos-prod:hover{border-color:var(--gold);background:var(--gold-light)}
+.pos-prod:hover{border-color:var(--brand);background:var(--brand-light)}
 .pos-prod-img{width:60px;height:60px;object-fit:cover;border-radius:9px;flex-shrink:0;border:1px solid var(--border);background:var(--surface-soft)}
 .pos-prod-info{flex:1;min-width:0}
 .pos-prod-name{font-weight:600;font-size:.82rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
@@ -144,13 +144,13 @@ button,a{touch-action:manipulation}
 /* Botón + — affordance de agregar al carrito */
 .pos-prod-add{
   width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  background:var(--gold);color:#fff;border:none;cursor:pointer;
+  background:var(--brand);color:var(--on-brand);border:none;cursor:pointer;
   font-size:1.2rem;font-weight:300;line-height:1;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 8px rgba(201,164,98,.35);
+  box-shadow:0 2px 8px rgba(var(--brand-rgb),.35);
   transition:transform .15s,box-shadow .15s,background .15s,color .15s;touch-action:manipulation;
 }
-.pos-prod-add:active{transform:scale(.88);box-shadow:0 1px 4px rgba(201,164,98,.3)}
+.pos-prod-add:active{transform:scale(.88);box-shadow:0 1px 4px rgba(var(--brand-rgb),.3)}
 .pos-prod.card-sold .pos-prod-add{background:var(--border);box-shadow:none;cursor:not-allowed}
 .stock-ok{background:#D1FAE5;color:#065F46}
 .stock-one{background:var(--surface-soft);color:var(--muted)}
@@ -179,21 +179,21 @@ button,a{touch-action:manipulation}
 .ci-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .ci-name{font-size:.86rem;font-weight:600;line-height:1.3;color:var(--charcoal);
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.ci-price{font-size:.72rem;color:var(--muted);font-weight:500;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;border-bottom:1px dashed var(--gold);display:inline-block;align-self:flex-start}
+.ci-price{font-size:.72rem;color:var(--muted);font-weight:500;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;border-bottom:1px dashed var(--brand);display:inline-block;align-self:flex-start}
 .ci-price:active{opacity:.6}
-.ci-price.ci-price-custom{color:var(--gold-dark);border-bottom-style:solid}
-.ci-price-input{width:80px;padding:2px 6px;border:2px solid var(--gold);border-radius:6px;font-size:.82rem;font-family:inherit;font-weight:600;color:var(--charcoal);outline:none;touch-action:manipulation}
+.ci-price.ci-price-custom{color:var(--brand-dark);border-bottom-style:solid}
+.ci-price-input{width:80px;padding:2px 6px;border:2px solid var(--brand);border-radius:6px;font-size:.82rem;font-family:inherit;font-weight:600;color:var(--charcoal);outline:none;touch-action:manipulation}
 .ci-row2{display:flex;align-items:center;gap:6px;margin-top:4px}
 .ci-qty{display:flex;align-items:center;gap:4px}
 .ci-qty button{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);
   background:var(--surface);font-size:.85rem;cursor:pointer;display:flex;align-items:center;
   justify-content:center;font-weight:700;transition:.15s;touch-action:manipulation}
-.ci-qty button:hover,.ci-qty button:active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.ci-qty button:hover,.ci-qty button:active{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
 .ci-qty .qty-num{font-size:.88rem;font-weight:700;min-width:22px;text-align:center}
 /* Columna derecha: subtotal arriba, × abajo */
 .ci-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
 .ci-subtotal{font-size:1rem;font-weight:700;font-family:'Playfair Display',serif;
-  color:var(--gold-dark);white-space:nowrap}
+  color:var(--brand-dark);white-space:nowrap}
 /* Botón − cuando qty=1 actúa como eliminar */
 .ci-qty button.ci-qty-del{border-color:#FECACA;color:#EF4444}
 .ci-qty button.ci-qty-del:hover,.ci-qty button.ci-qty-del:active{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
@@ -207,7 +207,7 @@ button,a{touch-action:manipulation}
 .cash-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
 .cash-field label{font-size:.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
 .cash-field input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;outline:none}
-.cash-field input:focus{border-color:var(--gold)}
+.cash-field input:focus{border-color:var(--brand)}
 @keyframes pendientePulse{0%{background-color:#FDE68A;transform:scale(1.03)}100%{background-color:#F9F4EE;transform:scale(1)}}
 #pos-pendiente.pendiente-pulse{animation:pendientePulse .45s ease-out}
 /* SCANNER MODAL */
@@ -257,7 +257,7 @@ button,a{touch-action:manipulation}
 /* CASH QUICK BUTTONS */
 .cash-quick{display:flex;gap:4px;margin-bottom:6px;flex-wrap:nowrap}
 .cash-quick button{flex:1;min-width:0;padding:6px 2px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);font-size:.76rem;font-weight:600;cursor:pointer;transition:.15s;color:var(--charcoal)}
-.cash-quick button:hover{border-color:var(--gold);background:var(--cream);color:var(--gold-dark)}
+.cash-quick button:hover{border-color:var(--brand);background:var(--cream);color:var(--brand-dark)}
 .cash-quick .exact-btn{background:var(--surface);border-color:var(--border);color:var(--charcoal)}
 .cash-quick button:active{transform:scale(.95)}
 
@@ -342,7 +342,7 @@ button,a{touch-action:manipulation}
 /* Reenviar comprobante no es una acción destructiva -- no debe ponerse rojo
    al hover como el resto de .hi-del (✕ cancelar, 🧪 marcar prueba). */
 .hi-del.hi-send{color:var(--muted)}
-.hi-del.hi-send:hover{color:var(--gold-dark);background:var(--gold-light)}
+.hi-del.hi-send:hover{color:var(--brand-dark);background:var(--brand-light)}
 
 /* Lista de artículos */
 .hi-items{padding:8px 12px}
@@ -378,7 +378,7 @@ button,a{touch-action:manipulation}
    estilo inline, movido a clase para poder
    invertir en modo oscuro. */
 .pay-badge-default{background:#F5F1EB;color:var(--muted);border:1px solid var(--border)}
-.pay-badge-gold{background:var(--gold-light);color:var(--gold-dark);border:1px solid var(--gold)}
+.pay-badge-gold{background:var(--brand-light);color:var(--brand-dark);border:1px solid var(--brand)}
 .pay-badge-refund{background:#FEE2E2;color:var(--red);border:1px solid #FCA5A5}
 .pay-badge-green{background:#ECFDF5;color:#2D6A4F;border:1px solid #2D6A4F}
 
@@ -416,26 +416,26 @@ button,a{touch-action:manipulation}
   box-shadow:0 1px 4px rgba(0,0,0,.07);
   display:flex;flex-direction:column;
 }
-.pos-card:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.pos-card:hover{border-color:var(--brand);transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
 .pos-card:active{transform:scale(.97)}
 .pos-card.card-sold{opacity:.55;cursor:not-allowed;filter:grayscale(.4)}
 .pos-card-img-wrap{position:relative;overflow:hidden}
 .pos-card-img{width:100%;aspect-ratio:1;object-fit:cover;display:block;transition:transform .3s ease}
 .pos-card:hover:not(.card-sold) .pos-card-img{transform:scale(1.05)}
 .pos-card-add{
-  position:absolute;inset:0;background:rgba(201,164,98,.0);
+  position:absolute;inset:0;background:rgba(var(--brand-rgb),.0);
   display:flex;align-items:center;justify-content:center;
   transition:background .2s;
   pointer-events:none;
 }
-.pos-card:hover:not(.card-sold) .pos-card-add{background:rgba(201,164,98,.15)}
+.pos-card:hover:not(.card-sold) .pos-card-add{background:rgba(var(--brand-rgb),.15)}
 .pos-card-add-icon{
   width:36px;height:36px;border-radius:50%;
-  background:var(--gold);color:#fff;
+  background:var(--brand);color:var(--on-brand);
   display:flex;align-items:center;justify-content:center;
   font-size:1.2rem;font-weight:700;
   opacity:0;transform:scale(.7);transition:background .15s,color .15s,transform .2s,opacity .2s;
-  box-shadow:0 3px 10px rgba(201,164,98,.5);
+  box-shadow:0 3px 10px rgba(var(--brand-rgb),.5);
   pointer-events:auto;
 }
 .pos-card:hover:not(.card-sold) .pos-card-add-icon{opacity:1;transform:scale(1)}
@@ -489,8 +489,8 @@ button,a{touch-action:manipulation}
 .pos-preview-stock{font-size:.75rem;font-weight:600;margin-bottom:6px}
 .pos-preview-desc{font-size:.82rem;color:var(--muted);line-height:1.5;margin-top:2px}
 .pos-preview-footer{flex-shrink:0;padding:10px 18px 20px;border-top:1px solid var(--border);background:var(--cream)}
-.pos-preview-add-btn{width:100%;padding:13px;background:var(--gold);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:background .15s}
-.pos-preview-add-btn:active{background:var(--gold-dark)}
+.pos-preview-add-btn{width:100%;padding:13px;background:var(--brand);color:var(--on-brand);border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;transition:background .15s}
+.pos-preview-add-btn:active{background:var(--brand-dark)}
 .pos-preview-add-btn:disabled{background:var(--muted-light);cursor:not-allowed}
 
 /* PRODUCT PREVIEW — desktop: modal centrado, dos columnas */
@@ -515,16 +515,16 @@ button,a{touch-action:manipulation}
 .pos-freq-bar.visible{display:flex}
 .pos-freq-label{display:none}
 .pos-freq-card{flex-shrink:0;width:74px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 4px;border-radius:10px;border:1.5px solid transparent;transition:.15s;-webkit-tap-highlight-color:transparent}
-.pos-freq-card:hover,.pos-freq-card:active{background:var(--border);border-color:rgba(201,164,98,.4)}
+.pos-freq-card:hover,.pos-freq-card:active{background:var(--border);border-color:rgba(var(--brand-rgb),.4)}
 .pos-freq-img-wrap{position:relative;flex-shrink:0}
 .pos-freq-img{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--surface-soft);display:block;transition:transform .2s}
 .pos-freq-card:hover:not(.card-sold) .pos-freq-img{transform:scale(1.06)}
-.pos-freq-add{position:absolute;inset:0;border-radius:8px;background:rgba(201,164,98,0);display:flex;align-items:center;justify-content:center;transition:background .2s}
-.pos-freq-card:hover:not(.card-sold) .pos-freq-add{background:rgba(201,164,98,.18)}
-.pos-freq-add-icon{width:22px;height:22px;border-radius:50%;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;opacity:0;transform:scale(.6);transition:opacity .2s,transform .2s;box-shadow:0 2px 8px rgba(201,164,98,.5)}
+.pos-freq-add{position:absolute;inset:0;border-radius:8px;background:rgba(var(--brand-rgb),0);display:flex;align-items:center;justify-content:center;transition:background .2s}
+.pos-freq-card:hover:not(.card-sold) .pos-freq-add{background:rgba(var(--brand-rgb),.18)}
+.pos-freq-add-icon{width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;opacity:0;transform:scale(.6);transition:opacity .2s,transform .2s;box-shadow:0 2px 8px rgba(var(--brand-rgb),.5)}
 .pos-freq-card:hover:not(.card-sold) .pos-freq-add-icon{opacity:1;transform:scale(1)}
 .pos-freq-name{font-size:.6rem;font-weight:600;color:var(--charcoal);text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;max-width:70px}
-.pos-freq-price{font-size:.62rem;color:var(--gold-dark);font-weight:700}
+.pos-freq-price{font-size:.62rem;color:var(--brand-dark);font-weight:700}
 
 /* CATEGORY CHIPS */
 .cat-chip-bar-wrap{position:relative;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -543,7 +543,7 @@ button,a{touch-action:manipulation}
 .cat-chip-bar::-webkit-scrollbar{display:none}
 .cat-chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1.5px solid var(--border);background:var(--surface);font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);transition:.15s;white-space:nowrap}
 .cat-chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.cat-chip:hover:not(.active){border-color:var(--gold);color:var(--gold-dark)}
+.cat-chip:hover:not(.active){border-color:var(--brand);color:var(--brand-dark)}
 
 /* APARTADOS — toggle Activos/Liquidados */
 .apt-view-toggle{display:flex;gap:4px;background:var(--surface-soft);border-radius:50px;padding:3px}
@@ -556,7 +556,7 @@ button,a{touch-action:manipulation}
 .apt-due-filters{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
 .apt-due-filters::-webkit-scrollbar{display:none}
 .apt-due-filter{min-height:44px;padding:7px 12px;border:1.5px solid var(--border);border-radius:50px;background:var(--surface);color:var(--muted);font-size:.74rem;font-weight:700;font-family:inherit;white-space:nowrap;cursor:pointer;transition:.15s}
-.apt-due-filter:hover{border-color:var(--gold);color:var(--gold-dark)}
+.apt-due-filter:hover{border-color:var(--brand);color:var(--brand-dark)}
 .apt-due-filter.active{background:var(--ink);border-color:var(--ink);color:#fff}
 #apt-venc-banner{display:none;width:100%;min-height:44px;background:#FEE2E2;border:0;border-bottom:2px solid #FECACA;padding:0 6px 0 16px;align-items:center;gap:4px;color:#B91C1C}
 #apt-venc-banner .apt-venc-banner-main{flex:1;display:flex;align-items:center;gap:8px;min-width:0;background:none;border:none;padding:9px 0;color:inherit;font-size:.82rem;font-weight:700;font-family:inherit;text-align:left;cursor:pointer;touch-action:manipulation}
@@ -568,15 +568,15 @@ button,a{touch-action:manipulation}
    duplicando la alerta en tablet/desktop. El banner se queda como la
    única señal en mobile, donde el chip está oculto. */
 @media(min-width:641px){#apt-venc-banner{display:none!important}}
-.shift-reminder-banner{display:none;width:100%;min-height:44px;background:var(--gold-light);border:0;border-bottom:2px solid rgba(201,164,98,.35);padding:0 6px 0 16px;align-items:center;gap:4px;color:var(--gold-dark)}
+.shift-reminder-banner{display:none;width:100%;min-height:44px;background:var(--brand-light);border:0;border-bottom:2px solid rgba(var(--brand-rgb),.35);padding:0 6px 0 16px;align-items:center;gap:4px;color:var(--brand-dark)}
 .shift-reminder-banner.show{display:flex}
 .shift-reminder-banner .shift-reminder-banner-main{flex:1;display:flex;align-items:center;gap:8px;min-width:0;background:none;border:none;padding:9px 0;color:inherit;font-size:.82rem;font-weight:700;font-family:inherit;text-align:left;cursor:pointer;touch-action:manipulation}
-.shift-reminder-banner .shift-reminder-banner-close{flex-shrink:0;width:44px;height:44px;background:none;border:none;color:var(--gold-dark);opacity:.6;font-size:.95rem;cursor:pointer;touch-action:manipulation}
+.shift-reminder-banner .shift-reminder-banner-close{flex-shrink:0;width:44px;height:44px;background:none;border:none;color:var(--brand-dark);opacity:.6;font-size:.95rem;cursor:pointer;touch-action:manipulation}
 .shift-reminder-banner .shift-reminder-banner-close:hover{opacity:1}
 #apt-vencidos-alert{min-height:44px}
 #apt-search{min-height:44px;padding-right:44px!important}
 #apt-search-clear{width:44px;height:44px}
-.apt-view-toggle button:focus-visible,.apt-due-filter:focus-visible,#apt-venc-banner .apt-venc-banner-main:focus-visible,#apt-venc-banner .apt-venc-banner-close:focus-visible,#apt-vencidos-alert:focus-visible{outline:3px solid rgba(201,164,98,.55);outline-offset:2px}
+.apt-view-toggle button:focus-visible,.apt-due-filter:focus-visible,#apt-venc-banner .apt-venc-banner-main:focus-visible,#apt-venc-banner .apt-venc-banner-close:focus-visible,#apt-vencidos-alert:focus-visible{outline:3px solid rgba(var(--brand-rgb),.55);outline-offset:2px}
 
 /* CHECKOUT EXTRAS */
 .discount-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
@@ -584,14 +584,14 @@ button,a{touch-action:manipulation}
 .discount-type-btn{padding:3px 8px;border-radius:50px;border:1.5px solid var(--border);background:var(--surface);font-size:.73rem;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s}
 .discount-type-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
 #pos-discount{width:60px;padding:4px 7px;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;outline:none;text-align:right;font-family:inherit}
-#pos-discount:focus{border-color:var(--gold)}
+#pos-discount:focus{border-color:var(--brand)}
 .discount-amount{margin-left:auto;color:var(--red);font-weight:700;font-family:'Playfair Display',serif;font-size:.82rem;white-space:nowrap}
 .discount-clear-btn{background:none;border:none;cursor:pointer;color:var(--muted-light);font-size:.9rem;padding:2px 4px;line-height:1;flex-shrink:0;touch-action:manipulation}
 .discount-clear-btn:hover{color:var(--red)}
 .pay-method-row{display:flex;gap:5px;margin-bottom:5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .pay-btn{flex:1;padding:6px 4px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);transition:.15s;text-align:center}
 .pay-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.pay-btn:hover:not(.active){border-color:var(--gold);color:var(--gold-dark)}
+.pay-btn:hover:not(.active){border-color:var(--brand);color:var(--brand-dark)}
 .note-cliente-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
 .note-cliente-row .note-toggle-btn,.note-cliente-row .note-input-wrap{flex:1;margin-bottom:0}
 .note-cliente-row .note-input-wrap{flex-basis:100%}
@@ -601,31 +601,31 @@ button,a{touch-action:manipulation}
   text-align:left;font-family:inherit;margin-bottom:5px;transition:.15s;
   display:flex;align-items:center;gap:6px;
 }
-.note-toggle-btn:hover{border-color:var(--gold);color:var(--gold-dark)}
+.note-toggle-btn:hover{border-color:var(--brand);color:var(--brand-dark)}
 .note-input-wrap{position:relative;margin-bottom:5px}
-#pos-note,#pos-customer{width:100%;padding:6px 32px 6px 10px;border:1.5px solid var(--gold);border-radius:7px;font-size:.82rem;outline:none;font-family:inherit;color:var(--charcoal)}
-#pos-note:focus,#pos-customer:focus{border-color:var(--gold-dark)}
+#pos-note,#pos-customer{width:100%;padding:6px 32px 6px 10px;border:1.5px solid var(--brand);border-radius:7px;font-size:.82rem;outline:none;font-family:inherit;color:var(--charcoal)}
+#pos-note:focus,#pos-customer:focus{border-color:var(--brand-dark)}
 #pos-customer-phone{width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.82rem;outline:none;font-family:inherit;color:var(--charcoal)}
-#pos-customer-phone:focus{border-color:var(--gold)}
+#pos-customer-phone:focus{border-color:var(--brand)}
 .note-clear-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-light);font-size:.9rem;padding:2px 4px;line-height:1;touch-action:manipulation}
-.cust-hint{width:100%;font-size:.74rem;color:var(--gold-dark);margin:0 0 6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cust-hint button{font-size:.72rem;font-weight:600;color:var(--gold-dark);background:none;border:none;text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-family:inherit;padding:2px}
+.cust-hint{width:100%;font-size:.74rem;color:var(--brand-dark);margin:0 0 6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cust-hint button{font-size:.72rem;font-weight:600;color:var(--brand-dark);background:none;border:none;text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-family:inherit;padding:2px}
 .apartado-group{transition:background .15s,border-color .15s;border:1px solid transparent;border-radius:10px;padding:2px 0;margin-bottom:2px}
 .apartado-group.active{background:#FFFBEB;border-color:#FDE68A;padding:8px 10px;margin-bottom:8px}
-.apartado-toggle-label{display:flex;align-items:center;gap:10px;font-size:.85rem;cursor:pointer;padding:9px 14px;color:var(--charcoal);font-weight:600;background:var(--gold-light);border:1.5px solid var(--border);border-radius:8px;margin-bottom:5px;transition:.15s}
-.apartado-toggle-label:hover{border-color:var(--gold)}
-.apartado-toggle-label input{width:17px;height:17px;margin-left:1px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+.apartado-toggle-label{display:flex;align-items:center;gap:10px;font-size:.85rem;cursor:pointer;padding:9px 14px;color:var(--charcoal);font-weight:600;background:var(--brand-light);border:1.5px solid var(--border);border-radius:8px;margin-bottom:5px;transition:.15s}
+.apartado-toggle-label:hover{border-color:var(--brand)}
+.apartado-toggle-label input{width:17px;height:17px;margin-left:1px;accent-color:var(--brand);cursor:pointer;flex-shrink:0}
 .apartado-group.active .apartado-toggle-label{background:transparent;border-color:transparent;padding:2px 0;margin-bottom:0}
 .apartado-group.active .note-toggle-btn,.apartado-group.active .apartado-summary-row{margin-top:8px;margin-bottom:0}
 .apartado-summary-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.8rem;color:var(--charcoal);cursor:pointer;margin-bottom:8px}
-.apartado-summary-row:hover{border-color:var(--gold)}
-.apartado-summary-row .apt-summary-edit{font-size:.72rem;font-weight:600;color:var(--gold-dark);white-space:nowrap;flex-shrink:0}
+.apartado-summary-row:hover{border-color:var(--brand)}
+.apartado-summary-row .apt-summary-edit{font-size:.72rem;font-weight:600;color:var(--brand-dark);white-space:nowrap;flex-shrink:0}
 
 /* APARTADOS PANEL — inline (desktop) */
 /* APARTADO CARD — colapsable */
 .apartado-item{border-radius:12px;margin:8px;background:var(--surface);border:1px solid var(--border);box-shadow:0 1px 4px rgba(28,24,23,.06);cursor:pointer;overflow:hidden;transition:box-shadow .15s,border-color .15s}
 .apartado-item:hover{box-shadow:0 3px 14px rgba(28,24,23,.12)}
-.apartado-item.open{border-color:var(--gold)}
+.apartado-item.open{border-color:var(--brand)}
 .apt-cancelado{opacity:.82}
 /* Header */
 .apt-header{padding:12px 14px}
@@ -646,7 +646,7 @@ button,a{touch-action:manipulation}
 .apt-chevron{font-size:.75rem;color:var(--muted);transition:transform .22s;display:inline-block;margin-left:2px}
 .apartado-item.open .apt-chevron{transform:rotate(90deg)}
 .apt-mini-bar{height:3px;background:var(--border);margin-top:8px;overflow:hidden;border-radius:2px}
-.apt-mini-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:2px}
+.apt-mini-fill{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));border-radius:2px}
 /* Body colapsable */
 .apt-body{display:none;padding:10px 14px 14px;border-top:1px solid var(--border)}
 .apartado-item.open .apt-body{display:block}
@@ -671,7 +671,7 @@ button,a{touch-action:manipulation}
 .apt-progress-fill{height:100%;background:linear-gradient(90deg,#6B9E78,var(--green));border-radius:50px;transition:width .4s}
 .apt-amounts-row{display:flex;justify-content:space-between;font-size:.78rem}
 .apt-paid-lbl{color:var(--green);font-weight:700}
-.apt-pending-lbl{color:var(--gold);font-weight:700}
+.apt-pending-lbl{color:var(--brand);font-weight:700}
 .apt-abonos-section{border-top:1px solid var(--border);padding-top:10px}
 .apt-abonos-section-inline{border-top:1px solid var(--border);padding-top:8px;margin-bottom:10px}
 .apt-btns{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap}
@@ -700,7 +700,7 @@ button,a{touch-action:manipulation}
 .apt-page-search-wrap .aps-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:rgba(255,255,255,.55);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .apt-page-search-wrap input{width:100%;height:44px;padding:7px 44px 7px 36px;border:1.5px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-size:.83rem;font-family:inherit;outline:none;transition:.15s}
 .apt-page-search-wrap input::placeholder{color:rgba(255,255,255,.45)}
-.apt-page-search-wrap input:focus{border-color:var(--gold);background:rgba(255,255,255,.15)}
+.apt-page-search-wrap input:focus{border-color:var(--brand);background:rgba(255,255,255,.15)}
 .apt-page-search-clear{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.5);font-size:.95rem;line-height:1;padding:2px;display:none}
 .apt-page-body{flex:1;overflow-y:auto;padding:18px 20px}
 .apt-page-body>.apt-due-filters-wrap>.apt-due-filters{margin-bottom:10px;padding-bottom:0}
@@ -708,8 +708,8 @@ button,a{touch-action:manipulation}
 .apt-page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;align-content:start}
 /* Compact card */
 .apc-card{display:block;width:100%;background:var(--surface);border-radius:12px;border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(28,24,23,.06);padding:12px 14px;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
-.apc-card:hover{border-color:var(--gold);box-shadow:0 3px 10px rgba(201,164,98,.18);transform:translateY(-1px)}
-.apc-card:focus-visible,.apt-page-back:focus-visible,.apt-page-search-clear:focus-visible,.adm-close:focus-visible,.adm-footer button:focus-visible,.apt-item-row[role="button"]:focus-visible{outline:3px solid rgba(201,164,98,.55);outline-offset:2px}
+.apc-card:hover{border-color:var(--brand);box-shadow:0 3px 10px rgba(var(--brand-rgb),.18);transform:translateY(-1px)}
+.apc-card:focus-visible,.apt-page-back:focus-visible,.apt-page-search-clear:focus-visible,.adm-close:focus-visible,.adm-footer button:focus-visible,.apt-item-row[role="button"]:focus-visible{outline:3px solid rgba(var(--brand-rgb),.55);outline-offset:2px}
 .apc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
 .apc-name{font-size:.88rem;font-weight:700;color:var(--charcoal);line-height:1.2}
 .apc-pending{font-size:.92rem;font-weight:800;color:var(--charcoal);white-space:nowrap;flex-shrink:0}
@@ -720,7 +720,7 @@ button,a{touch-action:manipulation}
 .apc-meta{display:block;font-size:.72rem;color:var(--muted);margin-bottom:4px}
 .apc-due{display:block;font-size:.7rem;font-weight:700;margin-bottom:6px;color:var(--muted)}
 .apc-bar{display:block;height:4px;background:var(--border);border-radius:50px;overflow:hidden}
-.apc-fill{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:50px}
+.apc-fill{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));border-radius:50px}
 /* Detail modal */
 #apt-detail-modal{display:none;position:fixed;inset:0;z-index:1200;background:rgba(20,15,12,.5);align-items:center;justify-content:center;padding:16px}
 .adm-box{background:var(--surface);border-radius:16px;width:min(520px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.28)}
@@ -745,9 +745,9 @@ button,a{touch-action:manipulation}
 .adm-footer .btn-abonar{flex:1;height:44px;font-size:.82rem}
 .adm-footer .btn-liquidar{flex:1;height:44px;font-size:.82rem}
 .adm-footer .btn-edit-apt{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--border);background:var(--cream);color:var(--charcoal);font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
-.adm-footer .btn-edit-apt:hover{background:var(--gold-light);border-color:var(--gold)}
-.btn-abonar{flex:1;height:44px;padding:0 9px;border-radius:8px;border:1.5px solid var(--gold);background:var(--surface);color:var(--gold-dark);font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center}
-.btn-abonar:hover{background:var(--gold-light)}
+.adm-footer .btn-edit-apt:hover{background:var(--brand-light);border-color:var(--brand)}
+.btn-abonar{flex:1;height:44px;padding:0 9px;border-radius:8px;border:1.5px solid var(--brand);background:var(--surface);color:var(--brand-dark);font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center}
+.btn-abonar:hover{background:var(--brand-light)}
 .btn-liquidar{flex:1;height:44px;padding:0 9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center}
 .btn-liquidar:hover{background:#1B4332}
 .btn-wa-reminder{flex-shrink:0;width:44px;height:44px;padding:0;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;line-height:1}
@@ -763,19 +763,19 @@ button,a{touch-action:manipulation}
 .abonar-modal .apt-info-lbl{font-size:.8rem;color:var(--muted);margin-bottom:16px}
 .abonar-modal label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.01em}
 .abonar-modal input[type=number]{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:1.1rem;outline:none;font-family:inherit;color:var(--charcoal);margin-bottom:14px}
-.abonar-modal input[type=number]:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,164,98,.12)}
+.abonar-modal input[type=number]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(var(--brand-rgb),.12)}
 .abonar-pay-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-#more-options-toggle-btn.active{background:#FFFBEB;border:1.5px dashed #FDE68A;color:var(--gold-dark);font-weight:600}
+#more-options-toggle-btn.active{background:#FFFBEB;border:1.5px dashed #FDE68A;color:var(--brand-dark);font-weight:600}
 #more-options-wrap{margin:2px 0 5px;padding:10px 10px 2px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
 .collected-by-btn{width:100%;padding:7px 10px;border:1.5px dashed var(--border);border-radius:7px;background:transparent;color:var(--muted);font-size:.8rem;font-weight:500;cursor:pointer;text-align:left;font-family:inherit;margin:2px 0 16px;transition:.15s;display:flex;align-items:center;gap:6px}
-.collected-by-btn:hover{border-color:var(--gold);color:var(--gold-dark)}
-.collected-by-btn.active{background:#FFFBEB;border:1.5px solid #FDE68A;color:var(--gold-dark);font-weight:600}
+.collected-by-btn:hover{border-color:var(--brand);color:var(--brand-dark)}
+.collected-by-btn.active{background:#FFFBEB;border:1.5px solid #FDE68A;color:var(--brand-dark);font-weight:600}
 .abonar-pay-btn{padding:10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;color:var(--muted)}
 .abonar-pay-btn.active{border-color:var(--ink);background:var(--ink);color:#fff}
 .abonar-footer{display:flex;gap:10px}
 .abonar-footer .btn-cancel{flex:1;padding:13px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted)}
-.abonar-footer .btn-confirm{flex:2;padding:13px;border-radius:10px;border:none;background:var(--gold);color:#fff;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
-.abonar-footer .btn-confirm:hover{background:var(--gold-dark)}
+.abonar-footer .btn-confirm{flex:2;padding:13px;border-radius:10px;border:none;background:var(--brand);color:var(--on-brand);font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.abonar-footer .btn-confirm:hover{background:var(--brand-dark)}
 /* Tablet/desktop: estos modales son bottom-sheets de celular -- estirados a todo
    el ancho de un monitor dejaban campos de 1800px y el nombre de un producto a
    un lado con su stepper al otro. A partir de 641px pasan a un diálogo centrado
@@ -878,13 +878,13 @@ button,a{touch-action:manipulation}
 .pos-mini-cart-bar.visible{display:flex}
 .pmc-info{display:flex;align-items:center;gap:9px;min-width:0}
 .pmc-count{
-  background:var(--gold);color:#fff;font-weight:800;font-size:.72rem;
+  background:var(--brand);color:var(--on-brand);font-weight:800;font-size:.72rem;
   min-width:21px;height:21px;border-radius:50%;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
 }
 .pmc-total{font-family:'Playfair Display',serif;font-weight:700;font-size:1.08rem;white-space:nowrap}
 .pmc-cta{
-  background:var(--gold);color:#fff;font-weight:700;font-size:.84rem;
+  background:var(--brand);color:var(--on-brand);font-weight:700;font-size:.84rem;
   padding:9px 18px;border-radius:50px;white-space:nowrap;flex-shrink:0;
 }
 
@@ -907,12 +907,12 @@ button,a{touch-action:manipulation}
 .pos-tab.active{color:var(--charcoal)}
 .pos-tab.active::before{
   content:'';position:absolute;top:0;left:28%;right:28%;
-  height:2.5px;background:var(--gold);border-radius:0 0 3px 3px;
+  height:2.5px;background:var(--brand);border-radius:0 0 3px 3px;
 }
 .pos-tab-badge.is-alert{background:var(--red);min-width:20px;width:auto;padding:0 5px;border-radius:50px}
 .pos-tab-badge{
   position:absolute;top:4px;left:calc(50% + 6px);
-  background:var(--gold);color:#fff;
+  background:var(--brand);color:var(--on-brand);
   font-size:.66rem;font-weight:800;
   min-width:18px;height:18px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
@@ -948,7 +948,7 @@ button,a{touch-action:manipulation}
   .pos-card:active:not(.card-sold){
     transform:scale(.95);
     box-shadow:0 1px 6px rgba(0,0,0,.07);
-    border-color:var(--gold);
+    border-color:var(--brand);
   }
   .pos-card-img{aspect-ratio:4/3}
   .pos-card-body{padding:10px 12px 12px;gap:4px}
@@ -970,16 +970,16 @@ button,a{touch-action:manipulation}
     bottom:10px;right:10px;
     width:36px;height:36px;
     font-size:1.15rem;
-    box-shadow:0 3px 12px rgba(201,164,98,.65);
+    box-shadow:0 3px 12px rgba(var(--brand-rgb),.65);
   }
   /* Feedback al tap */
   .pos-card:active:not(.card-sold) .pos-card-add-icon{
     transform:scale(.85);
-    background:var(--gold-dark);
+    background:var(--brand-dark);
   }
   .pos-card:hover:not(.card-sold) .pos-card-add-icon{
     transform:scale(1.08);
-    background:var(--gold-dark);
+    background:var(--brand-dark);
   }
   /* Sin stock: ocultar + */
   .pos-card.card-sold .pos-card-add-icon{display:none}
@@ -1124,7 +1124,7 @@ button,a{touch-action:manipulation}
 .corte-result-val{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;line-height:1.15;margin-top:6px;font-variant-numeric:tabular-nums}
 .corte-result-val.is-ok{color:var(--green)}
 .corte-result-val.is-short{color:var(--red)}
-.corte-result-val.is-over{color:var(--gold-dark)}
+.corte-result-val.is-over{color:var(--brand-dark)}
 .corte-result-tag{font-size:.88rem;color:var(--muted);margin-top:4px}
 .corte-corregir{display:block;width:100%;color:var(--muted);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .corte-total{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;background:var(--surface-soft)}
@@ -1168,7 +1168,7 @@ button,a{touch-action:manipulation}
 /* Campo de dinero: monto grande, alineado a la izquierda junto a su signo
    (antes el "$" quedaba a la izquierda y el número hasta la orilla derecha). */
 .money-field{display:flex;align-items:baseline;gap:6px;border:1.5px solid var(--border);border-radius:12px;padding:10px 16px;margin-bottom:6px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
-.money-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,164,98,.15)}
+.money-field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(var(--brand-rgb),.15)}
 .money-field-sign{font-size:1.5rem;font-weight:600;color:var(--muted)}
 .money-field input{flex:1;min-width:0;border:none;outline:none;background:none;font-family:inherit;font-size:1.75rem;font-weight:700;color:var(--charcoal);text-align:left;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .money-field input::-webkit-outer-spin-button,.money-field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -1193,7 +1193,7 @@ button,a{touch-action:manipulation}
 .pos-vbtn svg{display:block}
 /* Datos del apartado: campos de un mismo alto; anticipo como campo de dinero */
 .apt-input{display:block;width:100%;min-height:44px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:inherit;color:var(--charcoal);background:var(--surface);outline:none;margin-bottom:14px;transition:border-color .15s,box-shadow .15s}
-.apt-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,164,98,.15)}
+.apt-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(var(--brand-rgb),.15)}
 #pos-phone.apt-input{margin-bottom:6px}
 .money-field-sm{padding:6px 14px}
 .money-field-sm .money-field-sign{font-size:1.2rem}
@@ -1244,7 +1244,7 @@ button,a{touch-action:manipulation}
 .apt-new-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal);font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s}
 .apt-new-btn[hidden]{display:none}
 .apt-new-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.apt-new-btn:hover{border-color:var(--gold)}
+.apt-new-btn:hover{border-color:var(--brand)}
 .history-oc-head .apt-new-btn{margin-left:auto;margin-right:4px}
 .apt-page-head .apt-new-btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
 .apt-page-head .apt-new-btn:hover{background:rgba(255,255,255,.15)}
@@ -1255,7 +1255,7 @@ button,a{touch-action:manipulation}
 .lib-item-row{cursor:default}
 .lib-item-ico{width:32px;height:32px;border-radius:8px;background:var(--surface-soft);color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .lib-item-note{font-size:.76rem;color:var(--muted);margin-top:1px;overflow-wrap:anywhere}
-.lib-photo-link{background:none;border:none;padding:6px 0;min-height:32px;font-family:inherit;font-size:.76rem;font-weight:600;color:var(--gold-dark);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.lib-photo-link{background:none;border:none;padding:6px 0;min-height:32px;font-family:inherit;font-size:.76rem;font-weight:600;color:var(--brand-dark);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 
 .libreta-modal .eam-head{padding-bottom:10px}
 .lib-head-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -1285,7 +1285,7 @@ button,a{touch-action:manipulation}
 .lib-abono{display:grid;grid-template-columns:auto 1fr auto auto;grid-template-areas:"n amt date x" ". left left left";align-items:center;column-gap:8px;padding:8px 0;border-bottom:1px dashed var(--border)}
 .lib-abono-n{grid-area:n;font-size:.78rem;font-weight:600;color:var(--muted);white-space:nowrap}
 .lib-abono-field{grid-area:amt;display:flex;align-items:baseline;gap:4px;border:1.5px solid var(--border);border-radius:10px;padding:0 10px;min-height:44px;background:var(--surface);min-width:0}
-.lib-abono-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,164,98,.15)}
+.lib-abono-field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(var(--brand-rgb),.15)}
 .lib-abono-sign{font-size:.95rem;font-weight:600;color:var(--muted);align-self:center}
 /* Misma especificidad que la regla anti-zoom de Caja (input:not([type=checkbox])),
    que si no le pone su propio borde y fondo dentro del campo. */
@@ -1301,7 +1301,7 @@ button,a{touch-action:manipulation}
 .lib-abono-left:empty{display:none}
 .lib-abono-left.neg{color:var(--red);font-weight:600}
 .lib-add-abono{width:100%;min-height:44px;margin-top:10px;border-radius:10px;border:1.5px dashed var(--border);background:none;color:var(--charcoal);font-family:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
-.lib-add-abono:hover{border-color:var(--gold)}
+.lib-add-abono:hover{border-color:var(--brand)}
 
 .lib-photo-btn{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;border:1.5px dashed var(--border);background:none;color:var(--charcoal);font-family:inherit;font-size:.86rem;font-weight:600;cursor:pointer}
 .lib-photo-btn[hidden]{display:none}

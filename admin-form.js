@@ -219,7 +219,7 @@ function updateMarginDisplay() {
   const pct = ((price - cost) / price * 100).toFixed(1);
   const amt = (price - cost).toLocaleString('es-MX');
   el.textContent = `Margen: $${amt} (${pct}%)`;
-  el.style.color = parseFloat(pct) >= 30 ? 'var(--green)' : parseFloat(pct) >= 10 ? 'var(--gold-dark)' : 'var(--red)';
+  el.style.color = parseFloat(pct) >= 30 ? 'var(--green)' : parseFloat(pct) >= 10 ? 'var(--brand-dark)' : 'var(--red)';
 }
 
 function _updateActiveFiltersBar() {
@@ -997,7 +997,7 @@ function _updateKitStockCalc() {
   if (calcEl) calcEl.style.display = '';
   if (valEl) {
     valEl.textContent = final === 0 ? '0 (algún componente agotado)' : `${final} kit${final !== 1 ? 's' : ''}`;
-    valEl.style.color = final === 0 ? 'var(--red)' : final <= 2 ? 'var(--gold-dark)' : 'var(--green)';
+    valEl.style.color = final === 0 ? 'var(--red)' : final <= 2 ? 'var(--brand-dark)' : 'var(--green)';
   }
 }
 
@@ -1012,10 +1012,10 @@ function searchKitProducts(query) {
   const matches = products.filter(p => p.id !== editingId && p.name.toLowerCase().includes(q)).slice(0, 6);
   const termEncoded = encodeURIComponent(query.trim());
   const createBtn = `
-<div onclick="_kitFormCreateDraft(decodeURIComponent('${termEncoded}'))" style="cursor:pointer;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:.82rem;border-bottom:1px solid var(--border);transition:.1s" onmouseenter="this.style.background='var(--gold-light)'" onmouseleave="this.style.background=''">
-  <div style="width:28px;height:28px;border-radius:5px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="var(--gold-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+<div onclick="_kitFormCreateDraft(decodeURIComponent('${termEncoded}'))" style="cursor:pointer;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:.82rem;border-bottom:1px solid var(--border);transition:.1s" onmouseenter="this.style.background='var(--brand-light)'" onmouseleave="this.style.background=''">
+  <div style="width:28px;height:28px;border-radius:5px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="var(--brand-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
   <div style="flex:1;min-width:0">
-    <div style="font-weight:600;color:var(--gold-dark)">Crear "${_esc(query.trim())}" como borrador</div>
+    <div style="font-weight:600;color:var(--brand-dark)">Crear "${_esc(query.trim())}" como borrador</div>
     <div style="color:var(--muted);font-size:.74rem">Stock 0 · Sin publicar · editar después</div>
   </div>
 </div>`;
@@ -1026,7 +1026,7 @@ function searchKitProducts(query) {
   }
   resultsEl.style.display = 'block';
   resultsEl.innerHTML = matches.map(p => `
-<div onclick="addKitComponent(${p.id})" style="cursor:pointer;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:.82rem;border-bottom:1px solid var(--border);transition:.1s" onmouseenter="this.style.background='var(--gold-light)'" onmouseleave="this.style.background=''">
+<div onclick="addKitComponent(${p.id})" style="cursor:pointer;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:.82rem;border-bottom:1px solid var(--border);transition:.1s" onmouseenter="this.style.background='var(--brand-light)'" onmouseleave="this.style.background=''">
   <img src="${_driveSz(p.image, 80)}" style="width:28px;height:28px;object-fit:cover;border-radius:5px;flex-shrink:0" onerror="this.style.display='none'">
   <span style="flex:1;font-weight:600">${_esc(p.name)}</span>
   <span style="color:var(--muted);font-size:.74rem">${p.stock > 0 && !p.outOfStock ? p.stock+' uds' : 'Agotado'}</span>
@@ -1123,9 +1123,9 @@ function renderAdditionalImages() {
       ? `<span style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:#e67e22;color:#fff;font-size:.42rem;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;pointer-events:none">B64</span>`
       : '';
     const mainBadge = isMain
-      ? `<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--gold);color:#fff;font-size:.42rem;font-weight:700;padding:1px 5px;border-radius:10px;white-space:nowrap;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.18);display:flex;align-items:center;gap:2px"><svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Principal</span>`
+      ? `<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--brand);color:var(--on-brand);font-size:.42rem;font-weight:700;padding:1px 5px;border-radius:10px;white-space:nowrap;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.18);display:flex;align-items:center;gap:2px"><svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Principal</span>`
       : '';
-    const border = isMain ? '2px solid var(--gold)' : '1px solid var(--border)';
+    const border = isMain ? '2px solid var(--brand)' : '1px solid var(--border)';
     const btnStyle = 'width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;color:var(--charcoal);flex-shrink:0;touch-action:manipulation';
     const btnLeft  = i > 0
       ? `<button type="button" onclick="event.stopPropagation();_aiMove(${i},-1)" ontouchend="event.preventDefault();event.stopPropagation();_aiMove(${i},-1)" style="${btnStyle}" title="Mover a la izquierda${i===1?' (→ Principal)':''}">‹</button>`
@@ -1177,7 +1177,7 @@ function _aiDragOver(e, idx) {
   document.querySelectorAll('[data-ai]').forEach(el => el.style.outline = '');
   if (idx !== _aiDragSrc) {
     const el = document.querySelector(`[data-ai="${idx}"]`);
-    if (el) el.style.outline = '2px solid var(--gold)';
+    if (el) el.style.outline = '2px solid var(--brand)';
   }
 }
 function _aiDrop(e, idx) {

@@ -1,6 +1,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --cream:#F7F2EB;--gold:#C9A462;--gold-dark:#A67C3A;--gold-light:#FFF8EE;
+  --cream:#F7F2EB;--brand:#F0A830;--brand-rgb:240,168,48;--brand-dark:#A86A0C;--brand-light:#FEF5E4;--on-brand:#1F1B16;
   --charcoal:#1C1817;--muted:#8A7564;--muted-light:#B5A696;
   --red:#E85D5D;--green:#2D6A4F;--amber:#F59E0B;--violet:#7C5CBF;--teal:#1F8A82;
   --border:#EAE0D4;--shadow:0 4px 20px rgba(28,24,23,.1);--r:14px;
@@ -11,7 +11,7 @@
    Mismo mecanismo y misma paleta que Inventario/Caja (ver admin.css/
    pos.css) — activado por [data-theme="dark"] en <html> (shared.js
    _toggleTheme() / script anti-flash en <head> de stats.html).
-   --gold/--gold-dark/--red/--green/--amber/--violet/--teal se quedan
+   --brand/--brand-dark/--red/--green/--amber/--violet/--teal se quedan
    fijos a propósito (acentos ya legibles en ambos temas); --ink/--ink-soft
    (shared.css) tampoco se redefinen — son el chrome intencionalmente
    oscuro (topbar) que ya era oscuro en modo claro. --tint-*: solo se
@@ -21,7 +21,7 @@
 :root[data-theme="dark"]{
   --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
   --charcoal:#F1E8DB;--muted:#B9A890;--muted-light:#6B5D4D;
-  --gold-light:#2C2415;--border:#3D352B;
+  --brand-light:#3A2D17;--border:#3D352B;
   --tint-red-bg:#332020;--tint-red-border:rgba(248,113,113,.35);--tint-red-strong:#F87171;
   --tint-amber-bg:#332A14;--tint-amber-border:rgba(251,191,36,.4);--tint-amber-strong:#FBBF24;
   --tint-green-bg:#1B2E22;--tint-green-border:rgba(110,231,183,.35);--tint-green-strong:#6EE7B7;
@@ -46,7 +46,7 @@ button,select{font-family:inherit}
 .topbar-left img{height:34px;border-radius:5px}
 .topbar-title{font-family:'Playfair Display',serif;font-size:1rem;color:rgba(255,255,255,.9)}
 .topbar-right{display:flex;gap:10px;align-items:center}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(201,164,98,.25);color:var(--gold);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(201,164,98,.45);user-select:none}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(var(--brand-rgb),.25);color:var(--brand);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(var(--brand-rgb),.45);user-select:none}
 
 /* ── MAIN ── */
 main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
@@ -157,7 +157,7 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:0 2px 8px rgba(28,24,23,.06);overflow:hidden}
 .card-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .card-head h2{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--charcoal);display:flex;align-items:center;gap:7px}
-.card-h-icon{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold-dark)}
+.card-h-icon{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--brand-dark)}
 .card-head span{font-size:.75rem;color:var(--muted)}
 .card-body{padding:20px 22px}
 
@@ -191,12 +191,12 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .cal-zero{background:var(--cream);color:var(--muted);border:1px dashed var(--border)}
 .cal-l1{background:#FEF3CD;color:#92400E}
 .cal-l2{background:#FBBF24;color:#78350F}
-.cal-l3{background:#C9A462;color:#fff}
-.cal-l4{background:#A67C3A;color:#fff}
+.cal-l3{background:var(--brand);color:var(--on-brand)}
+.cal-l4{background:var(--brand-dark);color:#fff}
 .cal-l5{background:#7C5A2E;color:#fff}
 :root[data-theme="dark"] .cal-l1{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
-.cal-today{box-shadow:0 0 0 2.5px var(--gold-dark);z-index:1}
-.cal-today .cal-cell-n::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--gold-dark);margin:2px auto 0}
+.cal-today{box-shadow:0 0 0 2.5px var(--brand-dark);z-index:1}
+.cal-today .cal-cell-n::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--brand-dark);margin:2px auto 0}
 .cal-cell.cal-l1:hover,.cal-cell.cal-l2:hover,.cal-cell.cal-l3:hover,.cal-cell.cal-l4:hover,.cal-cell.cal-l5:hover,.cal-cell.cal-zero:hover{transform:scale(1.1);box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:2}
 .cal-tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600;white-space:nowrap;pointer-events:none;z-index:10}
 .cal-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--ink)}
@@ -224,14 +224,14 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .top-prod-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
 .top-prod-item:last-child{border-bottom:none}
 .tp-rank{width:22px;height:22px;border-radius:50%;background:var(--cream);color:var(--muted);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.top-prod-item:nth-child(1) .tp-rank{background:var(--gold);color:#fff}
+.top-prod-item:nth-child(1) .tp-rank{background:var(--brand);color:var(--on-brand)}
 .top-prod-item:nth-child(2) .tp-rank{background:#9B8B78;color:#fff}
 .top-prod-item:nth-child(3) .tp-rank{background:#C9A07E;color:#fff}
 .tp-img{width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);background:var(--surface-soft)}
 .tp-info{flex:1;min-width:0}
 .tp-name{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--charcoal)}
 .tp-bar-wrap{height:4px;background:var(--surface-soft);border-radius:2px;margin-top:5px;overflow:hidden}
-.tp-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:2px;transition:width .4s ease}
+.tp-bar{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));border-radius:2px;transition:width .4s ease}
 .tp-stats{text-align:right;flex-shrink:0}
 /* Sans, no Playfair -- son 8 productos al mismo nivel, ninguno es el
    protagonista de la tarjeta (mismo criterio que .kpi-stat-value/
@@ -276,7 +276,7 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .inv-stat.amber .l::before{background:var(--amber)}
 .inv-stat.green .l::before{background:var(--green)}
 
-.inv-valor-box{background:var(--gold-light);border:1px solid var(--border)}
+.inv-valor-box{background:var(--brand-light);border:1px solid var(--border)}
 .inv-valor-box-green{background:#F0FDF4;border:1px solid #A7F3D0}
 :root[data-theme="dark"] .inv-valor-box-green{background:var(--tint-green-bg);border-color:var(--tint-green-border)}
 
@@ -307,7 +307,7 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .mv-tag{font-size:.72rem;padding:1px 6px;border-radius:50px;font-weight:700;flex-shrink:0}
 .mv-tag-refund{background:#FEE2E2;color:#991B1B}
 .mv-tag-adjust{background:#FEF3C7;color:#92400E}
-.mv-tag-aptnew{background:#FFF8EE;color:#9A742D}
+.mv-tag-aptnew{background:var(--brand-light);color:#9A742D}
 .mv-tag-abono{background:#F1EAFB;color:#5B3FA0}
 .mv-tag-venta{background:#DCFCE7;color:#166534}
 :root[data-theme="dark"] .mv-tag-refund{background:var(--tint-red-bg);color:var(--tint-red-strong)}
@@ -325,7 +325,7 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .dv-sale{border-bottom:1px solid var(--border)}
 .dv-sale:last-child{border-bottom:none}
 .dv-sale-head{display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;transition:background .15s;border-radius:8px;margin:0 -6px}
-.dv-sale-head:hover,.dv-sale-head:active{background:var(--gold-light)}
+.dv-sale-head:hover,.dv-sale-head:active{background:var(--brand-light)}
 .dv-sale-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .dv-sale-name-row{display:flex;align-items:center;gap:6px;min-width:0}
 .dv-sale-names{font-size:.85rem;font-weight:600;color:var(--charcoal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -351,11 +351,11 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .dv-item-meta{font-size:.72rem;color:var(--muted);margin-top:1px}
 .dv-item-sub{font-size:.8rem;font-weight:700;color:var(--charcoal);white-space:nowrap;flex-shrink:0}
 
-#rent-no-cost{background:var(--gold-light);color:var(--muted)}
+#rent-no-cost{background:var(--brand-light);color:var(--muted)}
 
 /* ── LOADING / EMPTY ── */
 .loading-state{text-align:center;padding:48px 20px;color:var(--muted);font-size:.88rem}
-.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .no-data{text-align:center;padding:32px;color:var(--muted-light);font-size:.84rem}
 
@@ -503,7 +503,7 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .srn-btn.srn-wa{width:auto;padding:0 12px 0 10px;border-radius:50px;gap:6px;font-size:.8rem;font-weight:600;color:#128C4A}
 :root[data-theme="dark"] .srn-btn.srn-wa{color:#7EE2A8}
 /* Celular: listas sin scroll interno; primeros renglones + "Ver todo" */
-.list-more-btn{display:block;width:100%;min-height:44px;margin:0;padding:10px 16px;border:none;border-top:1px solid var(--border);background:none;font-family:inherit;font-size:.86rem;font-weight:600;color:var(--gold-dark);cursor:pointer}
+.list-more-btn{display:block;width:100%;min-height:44px;margin:0;padding:10px 16px;border:none;border-top:1px solid var(--border);background:none;font-family:inherit;font-size:.86rem;font-weight:600;color:var(--brand-dark);cursor:pointer}
 @media(max-width:640px){
   #today-sales-list,#turnos-body,#apt-pending-body,#capital-cat-body,#clientes-body{max-height:300px!important;overflow:hidden!important;position:relative}
   #today-sales-list.is-expanded,#turnos-body.is-expanded,#apt-pending-body.is-expanded,#capital-cat-body.is-expanded,#clientes-body.is-expanded{max-height:none!important}

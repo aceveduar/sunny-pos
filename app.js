@@ -359,10 +359,10 @@ function _showCatalogError() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
   grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:56px 24px">
-    <div style="margin-bottom:14px"><svg width="40" height="40" viewBox="0 0 24 24" stroke="#C9A462" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+    <div style="margin-bottom:14px"><svg width="40" height="40" viewBox="0 0 24 24" stroke="var(--brand)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
     <p style="font-size:.95rem;color:#6B5C48;margin-bottom:6px;font-weight:600">No pudimos cargar el catálogo</p>
     <p style="font-size:.82rem;color:#9B8B78;margin-bottom:22px">Revisa tu conexión e intenta de nuevo</p>
-    <button onclick="location.reload()" style="background:#C9A462;color:#fff;border:none;border-radius:50px;padding:12px 28px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Reintentar</button>
+    <button onclick="location.reload()" style="background:var(--brand);color:var(--on-brand);border:none;border-radius:50px;padding:12px 28px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Reintentar</button>
   </div>`;
 }
 
@@ -541,7 +541,7 @@ function render() {
 
   if (!list.length) {
     const msg = searchQuery
-      ? `No encontramos "${_esc(searchQuery)}". <a href="https://wa.me/${WA}?text=${encodeURIComponent(`¡Hola! Busco: ${searchQuery}`)}" target="_blank" rel="noopener" style="color:var(--gold)">Pregunta por WhatsApp →</a>`
+      ? `No encontramos "${_esc(searchQuery)}". <a href="https://wa.me/${WA}?text=${encodeURIComponent(`¡Hola! Busco: ${searchQuery}`)}" target="_blank" rel="noopener" style="color:var(--brand)">Pregunta por WhatsApp →</a>`
       : 'No hay productos aquí todavía.<br>¡Escríbenos y te decimos qué tenemos!';
     const emIconSvg = searchQuery
       ? '<svg width="42" height="42" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'

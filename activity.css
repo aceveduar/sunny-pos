@@ -5,15 +5,15 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
    admin.css/pos.css/stats.css) — activado por [data-theme="dark"] en
    <html> (shared.js _toggleTheme() / script anti-flash en <head> de
    activity.html). Activity.css nunca tuvo su propio :root claro (usa el
-   de shared.css tal cual) — aquí solo se agrega el bloque oscuro. --gold/
-   --gold-dark/--red/--green se quedan fijos (acentos ya legibles en
+   de shared.css tal cual) — aquí solo se agrega el bloque oscuro. --brand/
+   --brand-dark/--red/--green se quedan fijos (acentos ya legibles en
    ambos temas, mismo criterio que el resto del proyecto); --ink (shared.
    css) tampoco se redefine — es el chrome intencionalmente oscuro
    (topbar) que ya era oscuro en modo claro. */
 :root[data-theme="dark"]{
   --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
   --charcoal:#F1E8DB;--muted:#B9A890;--muted-light:#6B5D4D;
-  --gold-light:#2C2415;--border:#3D352B;
+  --brand-light:#3A2D17;--border:#3D352B;
   --tint-red-bg:#332020;--tint-red-border:rgba(248,113,113,.35);--tint-red-strong:#F87171;
   --tint-amber-bg:#332A14;--tint-amber-border:rgba(251,191,36,.4);--tint-amber-strong:#FBBF24;
   --tint-green-bg:#1B2E22;--tint-green-border:rgba(110,231,183,.35);--tint-green-strong:#6EE7B7;
@@ -45,7 +45,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 /* SEARCH */
 .act-search-wrap{position:relative;margin-bottom:10px}
 .act-search-input{width:100%;padding:12px 36px 12px 14px;border:1.5px solid var(--border);border-radius:50px;font-size:16px;outline:none;font-family:inherit;background:var(--surface);color:var(--charcoal)}
-.act-search-input:focus{border-color:var(--gold)}
+.act-search-input:focus{border-color:var(--brand)}
 .act-search-input::-webkit-search-cancel-button{display:none}
 /* Se ve compacto pero el área de toque real es ~44px -- mismo hit-slop que
    .hi-del en Historial de Caja. .act-search-wrap no tiene overflow:hidden,
@@ -62,7 +62,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A7564' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;
 }
-.filter-select:focus{border-color:var(--gold)}
+.filter-select:focus{border-color:var(--brand)}
 /* La flecha del select es un SVG con el color grabado en el string --
    en oscuro se quedaría con el mismo tono café-oscuro, casi invisible
    sobre el fondo ya oscuro del select. Mismo patrón que admin.css usa
@@ -78,14 +78,14 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
    vuelve claro), así que el chip activo se habría visto como una pastilla
    clara con texto blanco encima -- mismo bug ya corregido en Caja/Reportes. */
 .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.chip:hover:not(.active){border-color:var(--gold);color:var(--gold-dark)}
+.chip:hover:not(.active){border-color:var(--brand);color:var(--brand-dark)}
 
 
 /* FEED */
 .date-sep{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:16px 2px 6px}
 .date-sep:first-child{padding-top:2px}
 .act-card{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;transition:.15s}
-.act-card:active{background:var(--gold-light);border-color:var(--gold)}
+.act-card:active{background:var(--brand-light);border-color:var(--brand)}
 .act-card:hover{box-shadow:0 2px 10px rgba(28,24,23,.07)}
 .act-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;color:#fff;margin-top:1px}
 .act-body{flex:1;min-width:0}
@@ -95,7 +95,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 .badge-inventario{background:#E0E7FF;color:#3730A3}
 .badge-apartado {background:#FEF3C7;color:#92400E}
 .badge-creado   {background:#D1FAE5;color:#065F46}
-.badge-editado  {background:var(--gold-light);color:var(--gold-dark)}
+.badge-editado  {background:var(--brand-light);color:var(--brand-dark)}
 .badge-eliminado{background:#FEE2E2;color:#991B1B}
 .badge-revisado {background:#EDE9FE;color:#5B21B6}
 :root[data-theme="dark"] .badge-venta,:root[data-theme="dark"] .badge-creado{background:var(--tint-green-bg);color:var(--tint-green-strong)}
@@ -112,7 +112,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 .empty-state{text-align:center;padding:56px 20px;color:var(--muted)}
 .empty-state .em{font-size:2.5rem;margin-bottom:10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;margin:48px auto}
+.spinner{width:22px;height:22px;border:2.5px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin .6s linear infinite;margin:48px auto}
 
 @media(max-width:640px){
   .topbar{padding:0 12px}
