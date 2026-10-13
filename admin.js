@@ -247,7 +247,7 @@ function renderCategorySelects() {
   if (fSel) {
     const cur = fSel.value;
     const roots = rootCats();
-    fSel.innerHTML = `<option value="por_revisar">📋 Por revisar</option>` + roots.filter(r => r.code !== 'por_revisar').map(r => {
+    fSel.innerHTML = `<option value="por_revisar">Por revisar</option>` + roots.filter(r => r.code !== 'por_revisar').map(r => {
       const subs = subCats(r.code);
       if (subs.length) {
         return `<optgroup label="${_esc(r.label)}"><option value="${r.code}">${_esc(r.label)} — General</option>${subs.map(s => `<option value="${s.code}">${_esc(s.label)}</option>`).join('')}</optgroup>`;

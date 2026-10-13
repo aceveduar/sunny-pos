@@ -151,19 +151,6 @@
       </div>
     </div>
     <div class="scard-row">
-      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h6"/><path d="M9 11h4"/></svg></div>
-      <div class="scard-body">
-        <div class="scard-title">Apartados de libreta</div>
-        <div class="scard-desc">Muestra "Pasar de la libreta" en Apartados de Caja, para registrar apartados que se llevaban en papel</div>
-      </div>
-      <div class="scard-action">
-        <label class="te-switch" title="Activar/desactivar apartados de libreta">
-          <input type="checkbox" id="show-libreta-toggle" onchange="toggleShowLibreta(this.checked)">
-          <span class="te-switch-slider"></span>
-        </label>
-      </div>
-    </div>
-    <div class="scard-row">
       <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11"/><path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
       <div class="scard-body">
         <div class="scard-title">Recibir mercancía</div>
@@ -180,7 +167,7 @@
       <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
       <div class="scard-body">
         <div class="scard-title">Recepción con IA</div>
-        <div class="scard-desc">Muestra el botón "Importar" en Inventario para subir el PDF de una orden de pedido (ej. Natura) y prellenar costo/precio/stock</div>
+        <div class="scard-desc">Muestra el botón "Importar" en Inventario para subir el PDF de una orden de pedido del proveedor y prellenar costo/precio/stock</div>
       </div>
       <div class="scard-action">
         <label class="te-switch" title="Activar/desactivar recepción con IA">
@@ -203,8 +190,8 @@
     <div class="scard-row">
       <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
       <div class="scard-body">
-        <div class="scard-title">Revista Digital Natura</div>
-        <div class="scard-desc">URL o PDF de la revista para clientes en el sitio web</div>
+        <div class="scard-title">Revista o catálogo digital</div>
+        <div class="scard-desc">Enlace o PDF de la revista de una marca que vendes por catálogo; se muestra en la Tienda</div>
       </div>
       <div class="scard-action">
         <button class="btn btn-outline btn-sm" onclick="openRevista()">Editar</button>
@@ -369,12 +356,12 @@
         <details class="scard-help">
           <summary>Instrucciones para conectar o reconectar Drive</summary>
           <ol>
-            <li>Abre tu proyecto de Apps Script en <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a> (el que ya tenías configurado, ligado a la carpeta de Drive de Tres Encantos) — no crees uno nuevo.</li>
+            <li>Abre tu proyecto de Apps Script en <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a> (el ligado a la carpeta de Drive de este negocio) — si ya existe, no crees uno nuevo.</li>
             <li>Ahí, ve a <strong>Implementar → Administrar implementaciones</strong> y copia la URL que termina en <code>/exec</code>.</li>
             <li>Pega esa URL arriba, en "URL del Apps Script (exec)", y toca <strong>Guardar</strong> — se genera un secreto nuevo solo.</li>
             <li>Toca el campo gris para copiar ese secreto nuevo.</li>
             <li>Regresa al código del Apps Script, busca la línea <code>const SECRET = '...'</code> y reemplázala con el secreto que copiaste.</li>
-            <li>En Apps Script: <strong>Implementar → Administrar implementaciones → ✏️ (editar) → Nueva versión → Implementar</strong>. Este paso es obligatorio — si se salta, sigue usando el secreto viejo y da error de "no autorizado".</li>
+            <li>En Apps Script: <strong>Implementar → Administrar implementaciones → lápiz (editar) → Nueva versión → Implementar</strong>. Este paso es obligatorio — si se salta, sigue usando el secreto viejo y da error de "no autorizado".</li>
             <li>Regresa aquí y toca <strong>"Probar conexión"</strong> para confirmar que ya quedó.</li>
           </ol>
         </details>
@@ -445,14 +432,14 @@
 <div class="overlay" id="revista-overlay">
   <div class="modal">
     <div class="modal-head">
-      <h3>Revista Digital Natura</h3>
+      <h3>Revista o catálogo digital</h3>
       <button class="modal-close" onclick="closeRevista()">✕</button>
     </div>
     <div class="modal-body">
       <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Actualiza el enlace y portada que se muestran en el sitio.</p>
       <span class="field-label">URL de la revista</span>
-      <input type="url" class="field-input" id="revista-url-input" placeholder="https://mx.natura.digital-catalogue.com/...">
-      <p class="field-hint" style="margin-top:6px">Enlace de tu revista interactiva Natura (cambia cada ciclo).</p>
+      <input type="url" class="field-input" id="revista-url-input" placeholder="https://...">
+      <p class="field-hint" style="margin-top:6px">Enlace a la revista interactiva de la marca (suele cambiar cada campaña).</p>
       <span class="field-label" style="margin-top:16px">Portada del ciclo (URL de imagen)</span>
       <input type="url" class="field-input" id="revista-cover-input" placeholder="https://...jpg o .png">
       <p class="field-hint" style="margin-top:6px">Imagen que se muestra en el banner del sitio. Captura la portada de la revista o sube una foto a Drive.</p>

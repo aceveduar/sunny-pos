@@ -223,7 +223,7 @@ async function saveGroqKey() {
     document.getElementById('groq-key-input').value = '';
     loadGroqKeyStatus();
     logActivity('configuracion_editada', 'Actualizó la Groq API key', { setting: 'groq_key' });
-    toast('🤖 Groq key guardada — IA activa en todos los dispositivos ✓', 'ok');
+    toast('Clave de IA guardada — IA activa en todos los dispositivos ✓', 'ok');
   } else { toast('Error al guardar la key', 'err'); }
 }
 
@@ -337,7 +337,7 @@ async function _refreshAutoBackup() {
   let st = null;
   try { st = r.ok && r.data?.[0]?.value ? JSON.parse(r.data[0].value) : null; } catch {}
   if (!st?.at) {
-    desc.innerHTML = '<strong style="color:var(--red)">Sin registro todavía.</strong> Se anota la primera vez que corra el respaldo nocturno (9:30 p. m.).';
+    desc.innerHTML = '<strong style="color:var(--red)">Sin registro todavía.</strong> Aparece cuando se configure el respaldo automático del negocio.';
     return;
   }
   const at = new Date(st.at);
@@ -1130,7 +1130,7 @@ async function saveRevista() {
   await _saveConfigValue('revista_cover', coverVal);
 
   closeRevista();
-  logActivity('configuracion_editada', 'Actualizó la Revista Digital Natura', { setting: 'revista_url' });
+  logActivity('configuracion_editada', 'Actualizó la revista o catálogo digital', { setting: 'revista_url' });
   toast('Revista guardada ✓', 'ok');
 }
 

@@ -428,7 +428,7 @@ function _initOfflineBanner() {
   let hideTimer = null;
   const goOffline = () => {
     clearTimeout(hideTimer);
-    banner.textContent = '⚡ Sin conexión a internet';
+    banner.textContent = 'Sin conexión a internet';
     banner.className = 'ob-offline';
   };
   const goOnline = () => {
