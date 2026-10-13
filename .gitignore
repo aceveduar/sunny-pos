@@ -1,3 +1,7 @@
 # Caché local del CLI de Supabase (link del proyecto, versiones de servicios) --
 # se regenera sola con `supabase link`, no aporta nada versionada y varía por máquina.
 supabase/.temp/
+
+# Llaves y tokens: nunca al repo
+*token*.txt
+.env*
