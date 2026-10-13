@@ -31,9 +31,8 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 /* var(--ink), no var(--charcoal) -- charcoal se invierte en oscuro (se
    vuelve claro) y el topbar quedaría claro con texto blanco -- mismo bug
    ya corregido en Caja/Reportes. */
-@media(min-width:1025px){.topbar{background:var(--ink)}}
 @media(max-width:1024px){
-  .topbar{padding:0 12px;background:var(--ink)}
+  .topbar{padding:0 12px}
   .main{padding:14px 16px 40px}
   .act-card{padding:10px 12px;gap:10px}
   .act-avatar{width:34px;height:34px;font-size:.78rem}

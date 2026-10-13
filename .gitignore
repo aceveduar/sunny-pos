@@ -5,3 +5,6 @@ supabase/.temp/
 # Llaves y tokens: nunca al repo
 *token*.txt
 .env*
+
+# Muestras de diseño (no son parte de la app)
+muestras/

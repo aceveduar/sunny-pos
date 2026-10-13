@@ -39,7 +39,6 @@ button,a,[onclick]{touch-action:manipulation}
 /* var(--ink), no var(--charcoal) -- charcoal se invierte en oscuro (se
    vuelve claro) y el topbar quedaría claro con texto blanco -- mismo bug
    ya corregido en Caja/Reportes/Actividad. */
-@media(min-width:1025px){.topbar{background:var(--ink)}}
 
 /* ── MAIN ── */
 .main{flex:1;max-width:680px;width:100%;margin:0 auto;padding:24px 16px 56px}

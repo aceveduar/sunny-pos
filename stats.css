@@ -36,7 +36,6 @@ button,select{font-family:inherit}
 
 /* ── TOPBAR ── */
 .topbar{
-  background:var(--ink);color:#fff;
   padding:0 28px;height:62px;
   display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:50;
@@ -457,7 +456,6 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 }
 
 /* stats-specific topbar overrides */
-@media(min-width:1025px){.topbar{background:var(--ink)}}
 
 /* ── ESCRITORIO ANCHO (≥1300px) ──────────────────────────────────────
    Hasta aquí el contenido se quedaba centrado en 1080px sin importar

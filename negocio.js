@@ -36,7 +36,16 @@ if (window.NEGOCIO.nombre && document.title && !document.title.includes(window.N
 // después de las hojas de estilo). Los valores por defecto viven en shared.css
 // y style.css; aquí solo se sobrescriben con los de este negocio.
 (function aplicarColorDeMarca() {
-  const hex = String(window.NEGOCIO.color || '').trim();
+  // Probar otro color sin tocar este archivo: agregar ?color=4F7461 a la dirección.
+  // Se recuerda mientras la pestaña siga abierta; ?color=0 vuelve al de aquí.
+  let prueba = null;
+  try {
+    const q = new URLSearchParams(location.search).get('color');
+    if (q === '0') sessionStorage.removeItem('negocio_color_prueba');
+    else if (q && /^#?[0-9a-f]{6}$/i.test(q)) sessionStorage.setItem('negocio_color_prueba', '#' + q.replace('#', ''));
+    prueba = sessionStorage.getItem('negocio_color_prueba');
+  } catch {}
+  const hex = String(prueba || window.NEGOCIO.color || '').trim();
   if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
   const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
   const toHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');

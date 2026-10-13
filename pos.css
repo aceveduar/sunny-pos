@@ -178,7 +178,7 @@ button,a{touch-action:manipulation}
 }
 .ci-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .ci-name{font-size:.86rem;font-weight:600;line-height:1.3;color:var(--charcoal);
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ci-price{font-size:.72rem;color:var(--muted);font-weight:500;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;border-bottom:1px dashed var(--brand);display:inline-block;align-self:flex-start}
 .ci-price:active{opacity:.6}
 .ci-price.ci-price-custom{color:var(--brand-dark);border-bottom-style:solid}
@@ -1051,12 +1051,12 @@ button,a{touch-action:manipulation}
   .pos-mini-cart-bar{display:none!important}
 }
 @media(min-width:1025px){
-  .topbar{background:var(--ink);justify-content:space-between}
+  .topbar{justify-content:space-between}
   .topbar-left{flex:1;display:flex;align-items:center}
   .topbar-right{flex:1;justify-content:flex-end}
   .topbar-nav-mobile{position:absolute;left:50%;transform:translateX(-50%)}
   #btn-corte-pos .btn-label,#btn-history-pos .btn-label,#btn-apt-pos .btn-label{display:inline;font-size:.69rem}
-  #btn-corte-pos,#btn-history-pos,#btn-apt-pos{padding:5px 12px!important;gap:3px!important;}
+  #btn-corte-pos,#btn-history-pos,#btn-apt-pos{padding:5px 12px!important;gap:3px!important}
 }
 /* Modal post-venta: corregir una venta que era apartado */
 .sd-era-apartado{display:block;width:100%;min-height:44px;margin-top:6px;padding:10px;border:none;background:none;color:var(--muted);font-size:.84rem;font-weight:600;text-decoration:underline;cursor:pointer;font-family:inherit}
