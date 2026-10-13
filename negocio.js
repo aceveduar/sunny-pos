@@ -6,8 +6,8 @@ window.NEGOCIO = {
 
   // Supabase de ESTE negocio (Dashboard → Project Settings → API).
   // La anon key es pública por diseño; la service_role key NUNCA va aquí.
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://aduahsqbmborplojhubw.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkdWFoc3FibWJvcnBsb2podWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5MDA0ODMsImV4cCI6MjEwNzQ3NjQ4M30._q99xYihkZ9so8Yh3NaabTllvU20AoqMATVV9ktVvw4',
 
   // Google Analytics de la Tienda (G-XXXXXXX). Vacío = sin Analytics.
   analyticsId: '',
