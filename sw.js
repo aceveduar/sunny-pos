@@ -1,5 +1,5 @@
 // ⚠️ Incrementar CACHE_VERSION en cada deploy para invalidar caché anterior
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v15';
 const CACHE = `sunny-pos-${CACHE_VERSION}`;
 
 // Base path dinámica — funciona en GitHub Pages (/tresencantos) y en dominio raíz ("")
@@ -11,7 +11,6 @@ const STATIC = [
   `${BASE}/tema.css`,
   `${BASE}/style.css`,
   `${BASE}/manifest.json`,
-  `${BASE}/img/logo.png`,
   `${BASE}/negocio.js`,
   `${BASE}/img/icono-192.png`,
   `${BASE}/img/icono-512.png`,

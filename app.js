@@ -378,12 +378,11 @@ async function loadRevista() {
       });
     }
   } catch {}
-  if (!revistaUrl) revistaUrl = "https://mx.natura.digital-catalogue.com/mx/2026/10/revista/ciclo-10/view/index.html?id_consultora=4721203&utm_term=app&utm_source=md&utm_medium=dynamic_link&page=1";
 }
 
 function updateRevistaBanner() {
   const banner = document.getElementById('revista-banner');
-  if (banner) banner.href = revistaUrl;
+  if (banner) { banner.hidden = !(revistaUrl && _marca()); banner.href = revistaUrl || '#'; }
   const cover = document.getElementById('rb-cover');
   if (cover && revistaCover) {
     cover.src = revistaCover;
@@ -470,11 +469,98 @@ function initAdminBar() {
   } catch {}
 }
 
+/* ── CONTENIDO DE LA TIENDA (NEGOCIO.tienda en negocio.js) ──
+   [data-t="ruta"] recibe el texto; [data-wa="mensaje"] el enlace a WhatsApp;
+   las secciones sin datos se quedan ocultas (hidden). */
+const _T = (window.NEGOCIO && NEGOCIO.tienda) || {};
+const _marca = () => String(_T.catalogo?.marca || '').trim();
+function _telefonoBonito() {
+  const d = String(NEGOCIO.whatsapp || '').replace(/\D/g, '').slice(-10);
+  return d.length === 10 ? `${d.slice(0, 2)} ${d.slice(2, 6)} ${d.slice(6)}` : 'WhatsApp';
+}
+// "Texto\n*resaltado*" → saltos de línea y cursiva de marca (todo escapado)
+function _textoRico(t) {
+  return _esc(String(t || '')).replace(/\*([^*]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+}
+function _valorTienda(ruta) {
+  if (ruta === 'telefono') return _telefonoBonito();
+  if (ruta === 'catalogo.etiqueta') return _marca() ? `Catálogo ${_marca()}` : '';
+  if (ruta === 'catalogo.revista') return _marca() ? `Revista ${_marca()}` : 'Revista';
+  return ruta.split('.').reduce((o, k) => (o == null ? o : o[k]), _T) || '';
+}
+function _aplicarNegocioTienda() {
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const v = _valorTienda(el.dataset.t);
+    if (['titulo', 'catalogo.titulo', 'nosotros.titulo'].includes(el.dataset.t)) el.innerHTML = _textoRico(v);
+    else el.textContent = v;
+  });
+  document.querySelectorAll('[data-wa]').forEach(a => {
+    let msg = a.dataset.wa;
+    if (msg === 'catalogo') msg = `¡Hola! Me interesan los productos ${_marca()}. ¿Qué tienen disponible?`;
+    a.href = msg ? `${WA_BASE}?text=${encodeURIComponent(msg)}` : WA_BASE;
+    a.target = '_blank'; a.rel = 'noopener';
+  });
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.hidden = !on; };
+  // Marca por catálogo
+  show('catalogo', !!_marca()); show('nav-catalogo', !!_marca());
+  // Nosotros
+  const nos = _T.nosotros || {};
+  const parrafos = (nos.parrafos || []).filter(Boolean);
+  const hayNos = !!(nos.titulo || parrafos.length);
+  show('nosotros', hayNos); show('nav-nosotros', hayNos); show('footer-nosotros', hayNos);
+  const nt = document.getElementById('nosotros-texto');
+  if (nt) nt.innerHTML = parrafos.map(x => `<p>${_textoRico(x)}</p>`).join('');
+  if (nos.foto) {
+    show('nosotros-foto', true);
+    const img = document.querySelector('#nosotros-foto img');
+    if (img) { img.src = nos.foto; img.alt = NEGOCIO.nombre || ''; }
+  }
+  // Local y mapa
+  const dir = _T.direccion || {};
+  show('d-local', !!dir.calle);
+  const mapa = document.getElementById('d-mapa');
+  if (mapa) { if (dir.mapa) { mapa.href = dir.mapa; mapa.target = '_blank'; mapa.rel = 'noopener'; } else mapa.hidden = true; }
+  // Redes
+  const redes = _T.redes || {};
+  const ICO = {
+    facebook: '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.5h-2.8V24C19.62 23.1 24 18.1 24 12.07"/></svg>',
+    instagram: '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
+    tiktok: '<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 1 1 .81-5.05V9.7a5.72 5.72 0 1 0 4.87 5.65V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3a4.3 4.3 0 0 1-3.24-1.48"/></svg>',
+  };
+  const NOMBRE_RED = { facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok' };
+  const socialBox = document.querySelector('.social-links');
+  const contacto = document.getElementById('footer-contacto');
+  document.querySelector('[data-red="facebook"]')?.remove();
+  Object.keys(ICO).forEach(red => {
+    const url = String(redes[red] || '').trim();
+    if (!/^https:\/\//.test(url)) return;
+    if (socialBox) socialBox.insertAdjacentHTML('afterbegin',
+      `<a href="${_esc(url)}" target="_blank" rel="noopener" class="soc-link ${({ facebook: 'fb', instagram: 'ig', tiktok: 'tt' })[red]}">${ICO[red]} Síguenos en ${NOMBRE_RED[red]}</a>`);
+    if (contacto) contacto.insertAdjacentHTML('beforeend', `<li><a href="${_esc(url)}" target="_blank" rel="noopener">${NOMBRE_RED[red]}</a></li>`);
+  });
+  // Pie
+  const copy = document.getElementById('footer-copy');
+  if (copy) copy.textContent = `© ${new Date().getFullYear()} ${NEGOCIO.nombre || ''}${dir.ciudad ? ' · ' + dir.ciudad : ''}`;
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc && _T.acerca) desc.setAttribute('content', _T.acerca);
+}
+
+// Pie: las categorías principales que la Tienda sí muestra
+function _footerCategorias() {
+  const ul = document.getElementById('footer-cats');
+  if (!ul) return;
+  const raices = (publicCategories || []).filter(c => !c.parent && c.code !== 'por_revisar' && c.code !== _T.catalogo?.categoria);
+  ul.innerHTML = raices.slice(0, 6).map(c =>
+    `<li><a href="#productos" onclick="filterTo('${_esc(c.code).replace(/'/g, "\\'")}')">${_esc(c.label)}</a></li>`).join('');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  _aplicarNegocioTienda();
   _initOfflineBanner();
   initAdminBar();
   await Promise.all([loadProducts(), loadRevista(), loadCategories()]);
   _reconcileCart();
+  _footerCategorias();
   render();
   renderNatura();
   updateRevistaBanner();
@@ -692,9 +778,8 @@ let _ncPage  = 0;
 function renderNatura() {
   const wrap = document.getElementById('nc-wrap');
   if (!wrap) return;
-  const list = products
-    .filter(p => p.category === 'natura' || p.category?.startsWith('natura_'))
-    .slice(0, 8);
+  const cat = String(_T.catalogo?.categoria || '').trim();
+  const list = cat ? products.filter(p => catMatchesFilter(p.category || '', cat)).slice(0, 8) : [];
   if (!list.length) {
     document.querySelector('.natura-carousel')?.style.setProperty('display','none');
     return;
@@ -862,9 +947,9 @@ function _handleDeepLink() {
 }
 
 async function shareRevista() {
-  const text = `📖 ¡Nueva revista Natura! 🌿\nOfertas exclusivas, lanzamientos y todo el catálogo.\n\nHojéala aquí 👇`;
+  const text = `📖 ¡Nueva revista ${_marca()}!\nOfertas, lanzamientos y todo el catálogo.\n\nHojéala aquí 👇`;
   if (navigator.share) {
-    try { await navigator.share({ title: 'Revista Natura', text, url: revistaUrl }); return; } catch {}
+    try { await navigator.share({ title: `Revista ${_marca()}`, text, url: revistaUrl }); return; } catch {}
   }
   try { await navigator.clipboard.writeText(`${text}\n${revistaUrl}`); } catch {}
 }

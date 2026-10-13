@@ -27,13 +27,13 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Control de versiones de la base (qué cambios tiene cada negocio)
 
 ## 3. Quitar lo que es solo de Tres Encantos
-- [ ] Tienda: nombre, logo, portada, "Nosotros", WhatsApp, redes, dirección → configurables
-- [ ] Quitar foto/historia de Ofelia, Facebook, Maquixco, textos de Natura en `index.html`
+- [x] Tienda: nombre, logo, portada, "Nosotros", WhatsApp, redes, dirección → configurables (`NEGOCIO.tienda`; lo vacío se oculta)
+- [x] Quitar foto/historia de Ofelia, Facebook, Maquixco, textos de Natura en `index.html`
 - [x] "Ya lo cobró Ofelia" → "Ya lo cobró [dueña]" configurable (`negocio.js` → `duena`)
 - [x] Correos y horarios fijos en `activity.js` (dueñas = superadmin de `user_permissions`)
 - [x] Ubicación de la tienda → `config.ubicacion_tienda` `{lat,lng}` (sin dato no avisa) — falta capturarla en Configuración
-- [ ] Natura/Avon/revista → opcional ("marca por catálogo")
-- [ ] `manifest.json`, íconos, `og:*` (títulos de páginas y nombre en mensajes de WhatsApp: listos, salen de `negocio.js`)
+- [x] Natura/Avon/revista → opcional ("marca por catálogo": `NEGOCIO.tienda.catalogo`)
+- [x] `manifest.json`, íconos genéricos, títulos y mensajes de WhatsApp. Pendiente por negocio: `og:*` de `index.html` y sus íconos (WhatsApp no ejecuta JS)
 - [ ] `MANUAL.md` genérico
 - [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos (pruebas listas: personas temporales + kits/apartados; falta respaldo)
 - [ ] Reescribir `CLAUDE.md` para Sunny POS

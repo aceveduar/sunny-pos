@@ -1,20 +1,35 @@
 {
-  "name": "Tres Encantos",
-  "short_name": "Tres Encantos",
-  "description": "Bolsos, accesorios, maquillaje y Natura en Maquixco, San Juan Teotihuacán",
+  "name": "Sunny POS",
+  "short_name": "Sunny POS",
+  "description": "Tienda en línea, caja e inventario",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FAF5EE",
-  "theme_color": "#C9A462",
+  "background_color": "#F7F2EB",
+  "theme_color": "#4F7461",
   "lang": "es",
   "prefer_related_applications": false,
   "icons": [
-    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "img/icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {

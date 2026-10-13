@@ -16,6 +16,15 @@
 @media (prefers-reduced-motion:reduce){.sk{animation:none}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
+/* ── Logo del negocio (data-negocio-logo): imagen o nombre en letra elegante ── */
+[data-negocio-logo]{display:inline-flex;align-items:center}
+[data-negocio-logo] img{display:block;max-height:100%;width:auto}
+.negocio-logo-texto{font-family:'Playfair Display',serif;font-weight:600;letter-spacing:-.01em;color:var(--charcoal);line-height:1.1;white-space:nowrap}
+.nav-logo .negocio-logo-texto{font-size:1.45rem}
+.footer-brand .negocio-logo-texto{font-size:1.6rem;color:#fff}
+.auth-box [data-negocio-logo]{justify-content:center;margin-bottom:8px}
+.auth-box .negocio-logo-texto{font-size:1.7rem}
+
 /* ── Nombre del negocio en la barra (solo escritorio) ── */
 .topbar-brand{display:none}
 @media(min-width:1025px){

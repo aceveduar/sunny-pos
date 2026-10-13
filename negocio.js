@@ -21,6 +21,40 @@ window.NEGOCIO = {
   // Google Analytics de la Tienda (G-XXXXXXX). Vacío = sin Analytics.
   analyticsId: '',
 
+  // Logo (ruta o URL de imagen). Vacío = se muestra el nombre en letra elegante.
+  logo: '',
+
+  // ── Tienda en línea ────────────────────────────────────────────────
+  // Todo es opcional: lo que se deja vacío se oculta solo.
+  // *palabra* entre asteriscos se pinta en cursiva con el color de marca.
+  tienda: {
+    titulo: 'Lo que te gusta,\n*a un mensaje* de distancia.',
+    descripcion: 'Ropa, bolsos, accesorios y belleza — pídelo por WhatsApp.',
+    zona: 'Envíos a domicilio',            // etiqueta pequeña sobre el título
+    acerca: 'Tu boutique de ropa, accesorios y belleza.',  // pie de página y buscadores
+
+    // Sección "Nosotros" (sin texto = no se muestra)
+    nosotros: {
+      titulo: '',                          // ej. 'Una tienda hecha\n*con cariño*'
+      parrafos: [],                        // ej. ['Somos…', 'Empezamos…']
+      foto: '',                            // ruta o URL
+    },
+
+    // Local y entregas (sin dirección = no se muestra la tarjeta del local)
+    direccion: { calle: '', referencia: '', colonia: '', ciudad: '', mapa: '' },
+    entregas: 'Llevamos tu pedido a domicilio. Escríbenos para coordinar la entrega.',
+
+    redes: { facebook: '', instagram: '', tiktok: '' },
+
+    // Marca que se vende por catálogo (Natura, Avon, Jafra…). Vacío = sin sección.
+    catalogo: {
+      marca: '',                           // ej. 'Natura'
+      categoria: '',                       // código de categoría de sus productos
+      titulo: '',                          // ej. 'La belleza\n*que cuida*'
+      texto: '',
+    },
+  },
+
   // Color de marca (botones, pestaña activa, precios destacados, gráficas).
   // Cualquier tono sirve: los tonos derivados y el color del texto encima
   // (blanco o casi negro, el que se lea mejor) se calculan solos.
@@ -59,10 +93,11 @@ if (window.NEGOCIO.nombre && document.title && !document.title.includes(window.N
   // Texto de marca legible (4.5:1) sobre blanco y, en oscuro, sobre el fondo oscuro
   let dark = rgb; for (let t = 0; contrast(dark, WHITE) < 4.5 && t < 1; t += .05) dark = mix(rgb, [0, 0, 0], t);
   let light = rgb; for (let t = 0; contrast(light, DARK_BG) < 4.5 && t < 1; t += .05) light = mix(rgb, WHITE, t);
+  let claro = rgb; for (let t = 0; contrast(claro, DARK_BG) < 7 && t < 1; t += .05) claro = mix(rgb, WHITE, t);
   const onBrand = contrast(rgb, WHITE) >= 3 ? '#fff' : toHex(INK);
   const css =
     `:root{--brand:${hex};--brand-rgb:${rgb.join(',')};--brand-dark:${toHex(dark)};` +
-    `--brand-light:${toHex(mix(rgb, WHITE, .88))};--on-brand:${onBrand}}` +
+    `--brand-light:${toHex(mix(rgb, WHITE, .88))};--on-brand:${onBrand};--brand-claro:${toHex(claro)}}` +
     `:root[data-theme="dark"]{--brand-dark:${toHex(light)};--brand-light:${toHex(mix(DARK_BG, rgb, .18))}}`;
   const style = document.createElement('style');
   style.id = 'negocio-color';
@@ -82,3 +117,22 @@ if (!window.NEGOCIO.supabaseUrl || !window.NEGOCIO.supabaseAnonKey) {
     document.body.appendChild(d);
   });
 }
+
+// Logo del negocio en cualquier página: <span data-negocio-logo></span> se
+// vuelve la imagen de NEGOCIO.logo o, si no hay, el nombre en letra elegante.
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-negocio-logo]').forEach(el => {
+    const n = window.NEGOCIO;
+    el.textContent = '';
+    if (n.logo) {
+      const img = document.createElement('img');
+      img.src = n.logo; img.alt = n.nombre || '';
+      el.appendChild(img);
+    } else {
+      const t = document.createElement('span');
+      t.className = 'negocio-logo-texto';
+      t.textContent = n.nombre || '';
+      el.appendChild(t);
+    }
+  });
+});
