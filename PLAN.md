@@ -56,3 +56,18 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] **(Eduardo)** Nombre definitivo (hoy "Sunny POS" es de trabajo), antes de logo, dominio o primera venta
 - [ ] Precio y planes (básico / con tienda / diseño a la medida aparte)
 - [ ] Instalarlo a un segundo negocio piloto
+
+## 7. Ropa y calzado: tallas, colores y tamaños (variantes)
+**Problema:** hoy cada producto es un renglón con su stock. Una blusa en 4 tallas × 3 colores serían 12 productos sueltos: la Tienda mostraría 12 tarjetas casi iguales y nadie sabría qué tallas quedan.
+
+**Estrategia (modelo Shopify: producto + variantes):**
+- Cada variante sigue siendo un producto completo (su stock, código de barras y precio), pero ligado a un **producto padre** (`variant_of` → products.id) con sus atributos (`variant` jsonb: `{"Talla":"M","Color":"Negro"}`). El padre guarda lo común: nombre, descripción, fotos y categoría; no se vende directo (como los kits).
+- **Por qué así:** ventas, apartados, kits, stock y escáner ya funcionan por producto. Las RPC de Caja no cambian, y cada talla tiene su propio código de barras para escanear.
+- **Atributos por categoría** en `config` (`variant_templates`): Ropa → Talla + Color; Calzado → Número + Color; Bolsos → Tamaño + Color; Perfumes → Presentación. Con tallas sugeridas (CH/M/G/EG, 22–27) que la dueña ajusta.
+- **Inventario:** "Crear variantes" = elegir tallas × colores → se generan todas de un jalón, y el stock se captura en una **matriz** (filas = talla, columnas = color). El padre muestra el total y "faltan: M negro, G rosa".
+- **Caja:** buscar "blusa lino" muestra cada variante ("Blusa lino · M · Negro · 2 pzas"); escanear la etiqueta agrega la variante exacta.
+- **Tienda:** una sola tarjeta por padre; en el modal, botones de talla y color (las agotadas tachadas); el WhatsApp dice talla y color.
+- **Reportes:** ventas agrupadas por padre y "lo que más se vende por talla", para saber qué resurtir.
+- **Etiquetas:** imprimir código de barras por variante (fase posterior).
+
+**Fases:** 1) modelo + matriz en Inventario · 2) Caja · 3) Tienda · 4) Reportes por talla.
