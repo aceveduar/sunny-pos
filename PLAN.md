@@ -46,5 +46,6 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Asistente de primer uso (nombre, logo, categorías, equipo, primera caja)
 - [ ] Negocio demo con datos ficticios
 - [ ] Aviso de privacidad y términos
+- [ ] **(Eduardo)** Nombre definitivo (hoy "Sunny POS" es de trabajo), antes de logo, dominio o primera venta
 - [ ] Precio y planes (básico / con tienda / diseño a la medida aparte)
 - [ ] Instalarlo a un segundo negocio piloto
