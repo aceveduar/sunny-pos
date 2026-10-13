@@ -10,17 +10,6 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
    ambos temas, mismo criterio que el resto del proyecto); --ink (shared.
    css) tampoco se redefine — es el chrome intencionalmente oscuro
    (topbar) que ya era oscuro en modo claro. */
-:root[data-theme="dark"]{
-  --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
-  --charcoal:#F1E8DB;--muted:#B9A890;--muted-light:#6B5D4D;
-  --brand-light:#1F241F;--border:#3D352B;
-  --tint-red-bg:#332020;--tint-red-border:rgba(248,113,113,.35);--tint-red-strong:#F87171;
-  --tint-amber-bg:#332A14;--tint-amber-border:rgba(251,191,36,.4);--tint-amber-strong:#FBBF24;
-  --tint-green-bg:#1B2E22;--tint-green-border:rgba(110,231,183,.35);--tint-green-strong:#6EE7B7;
-  --tint-blue-bg:#18263A;--tint-blue-border:rgba(96,165,250,.35);--tint-blue-strong:#7DB8F5;
-  --tint-violet-bg:#241C38;--tint-violet-border:rgba(196,168,245,.35);--tint-violet-strong:#C4A8F5;
-  color-scheme:dark;
-}
 
 /* TOPBAR */
 .topbar{position:sticky;top:0}
@@ -43,7 +32,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 
 /* SEARCH */
 .act-search-wrap{position:relative;margin-bottom:10px}
-.act-search-input{width:100%;padding:12px 36px 12px 14px;border:1.5px solid var(--border);border-radius:50px;font-size:16px;outline:none;font-family:inherit;background:var(--surface);color:var(--charcoal)}
+.act-search-input{width:100%;padding:12px 36px 12px 14px;border:1.5px solid var(--border);border-radius:var(--radio-pill);font-size:16px;outline:none;font-family:inherit;background:var(--surface);color:var(--charcoal)}
 .act-search-input:focus{border-color:var(--brand)}
 .act-search-input::-webkit-search-cancel-button{display:none}
 /* Se ve compacto pero el área de toque real es ~44px -- mismo hit-slop que
@@ -55,7 +44,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 /* FILTERS */
 .filters-bar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 .filter-select{
-  padding:7px 28px 7px 12px;border:1.5px solid var(--border);border-radius:50px;
+  padding:7px 28px 7px 12px;border:1.5px solid var(--border);border-radius:var(--radio-pill);
   font-size:.8rem;font-weight:600;background:var(--surface);color:var(--charcoal);outline:none;cursor:pointer;
   appearance:none;-webkit-appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A7564' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -72,7 +61,7 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 .chip-group-wrap.at-end::after{opacity:0}
 .chip-group{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .chip-group::-webkit-scrollbar{display:none}
-.chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1.5px solid var(--border);background:var(--surface);font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);transition:.15s;white-space:nowrap}
+.chip{flex-shrink:0;padding:6px 14px;border-radius:var(--radio-pill);border:1.5px solid var(--border);background:var(--surface);font-size:.76rem;font-weight:600;cursor:pointer;color:var(--muted);transition:.15s;white-space:nowrap}
 /* var(--ink), no var(--charcoal) -- charcoal SÍ se invierte en oscuro (se
    vuelve claro), así que el chip activo se habría visto como una pastilla
    clara con texto blanco encima -- mismo bug ya corregido en Caja/Reportes. */
@@ -83,20 +72,20 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
 /* FEED */
 .date-sep{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:16px 2px 6px}
 .date-sep:first-child{padding-top:2px}
-.act-card{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:7px;transition:.15s}
+.act-card{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:var(--radio-md);padding:12px 14px;margin-bottom:7px;transition:.15s}
 .act-card:active{background:var(--brand-light);border-color:var(--brand)}
-.act-card:hover{box-shadow:0 2px 10px rgba(28,24,23,.07)}
+.act-card:hover{box-shadow:var(--sombra-2)}
 .act-avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;color:#fff;margin-top:1px}
 .act-body{flex:1;min-width:0}
 .act-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
-.act-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:50px;font-size:.63rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;flex-shrink:0}
-.badge-venta    {background:#D1FAE5;color:#065F46}
+.act-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:var(--radio-pill);font-size:.63rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;flex-shrink:0}
+.badge-venta    {background:var(--tint-green-bg);color:var(--tint-green-strong)}
 .badge-inventario{background:#E0E7FF;color:#3730A3}
-.badge-apartado {background:#FEF3C7;color:#92400E}
-.badge-creado   {background:#D1FAE5;color:#065F46}
+.badge-apartado {background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
+.badge-creado   {background:var(--tint-green-bg);color:var(--tint-green-strong)}
 .badge-editado  {background:var(--brand-light);color:var(--brand-dark)}
-.badge-eliminado{background:#FEE2E2;color:#991B1B}
-.badge-revisado {background:#EDE9FE;color:#5B21B6}
+.badge-eliminado{background:var(--tint-red-bg);color:var(--tint-red-strong)}
+.badge-revisado {background:var(--tint-violet-bg);color:#5B21B6}
 :root[data-theme="dark"] .badge-venta,:root[data-theme="dark"] .badge-creado{background:var(--tint-green-bg);color:var(--tint-green-strong)}
 :root[data-theme="dark"] .badge-inventario{background:var(--tint-blue-bg);color:var(--tint-blue-strong)}
 :root[data-theme="dark"] .badge-apartado{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}

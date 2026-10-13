@@ -244,15 +244,15 @@ function _bcpFilter(q) {
 
     if (!term) {
       html += `<div class="bcp-group-label">${_esc(root.label)}</div><div class="bcp-chips">`;
-      html += `<button class="bcp-chip${selCls(root.code)}" onclick="_bcpSelect('${root.code}')"><span class="bcp-dot" style="background:${root.color||'#9B8B78'}"></span>${_esc(root.label)}${root.code===curCode?CHECK:''}</button>`;
+      html += `<button class="bcp-chip${selCls(root.code)}" onclick="_bcpSelect('${root.code}')"><span class="bcp-dot" style="background:${root.color||'var(--muted)'}"></span>${_esc(root.label)}${root.code===curCode?CHECK:''}</button>`;
       subs.forEach(s => {
-        html += `<button class="bcp-chip bcp-sub-chip${selCls(s.code)}" onclick="_bcpSelect('${s.code}')"><span class="bcp-dot" style="background:${s.color||root.color||'#9B8B78'}"></span>${_esc(s.label)}${s.code===curCode?CHECK:''}</button>`;
+        html += `<button class="bcp-chip bcp-sub-chip${selCls(s.code)}" onclick="_bcpSelect('${s.code}')"><span class="bcp-dot" style="background:${s.color||root.color||'var(--muted)'}"></span>${_esc(s.label)}${s.code===curCode?CHECK:''}</button>`;
       });
       html += `</div>`;
     } else {
       html += `<div class="bcp-chips" style="margin-bottom:8px">`;
       visible.forEach(c => {
-        html += `<button class="bcp-chip${selCls(c.code)}" onclick="_bcpSelect('${c.code}')"><span class="bcp-dot" style="background:${c.color||'#9B8B78'}"></span>${_esc(c.label)}${c.code===curCode?CHECK:''}</button>`;
+        html += `<button class="bcp-chip${selCls(c.code)}" onclick="_bcpSelect('${c.code}')"><span class="bcp-dot" style="background:${c.color||'var(--muted)'}"></span>${_esc(c.label)}${c.code===curCode?CHECK:''}</button>`;
       });
       html += `</div>`;
     }
@@ -264,11 +264,11 @@ function _bcpFilter(q) {
       <p style="color:var(--muted);font-size:.85rem;text-align:center;padding:16px 0 10px">Sin resultados para "<strong>${_esc(label)}</strong>"</p>
       <div style="display:flex;flex-direction:column;gap:10px;padding:0 8px 8px">
         <button onclick="_bcpCreateAndSelect(null)"
-          style="background:var(--ink);color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">
+          style="background:var(--ink);color:#fff;border:none;border-radius:var(--radio-md);padding:11px 20px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">
           + Crear "${_esc(label)}" como categoría
         </button>
         <button onclick="_bcpToggleParentPicker(this)"
-          style="background:transparent;color:var(--charcoal);border:1.5px solid var(--border);border-radius:10px;padding:11px 20px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;touch-action:manipulation">
+          style="background:transparent;color:var(--charcoal);border:1.5px solid var(--border);border-radius:var(--radio-md);padding:11px 20px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;touch-action:manipulation">
           + Crear "${_esc(label)}" como subcategoría de…
         </button>
         <div id="bcp-parent-picker" style="display:none;padding-top:4px"></div>
@@ -294,7 +294,7 @@ function _bcpToggleParentPicker(btn) {
     <p style="font-size:.8rem;color:var(--muted);margin-bottom:8px;text-align:center">Elige la categoría padre:</p>
     <div class="bcp-chips" style="justify-content:center">
       ${roots.map(r => `<button class="bcp-chip" onclick="_bcpCreateAndSelect('${r.code}')">
-        <span class="bcp-dot" style="background:${r.color||'#9B8B78'}"></span>${_esc(r.label)}
+        <span class="bcp-dot" style="background:${r.color||'var(--muted)'}"></span>${_esc(r.label)}
       </button>`).join('')}
     </div>`;
   picker.style.display = 'block';

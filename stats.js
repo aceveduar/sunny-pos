@@ -816,8 +816,8 @@ function renderVendedores() {
         <span style="font-size:.84rem;${nameStyle};display:inline-flex;align-items:center;gap:5px"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24">${icon}</svg>${_esc(name)}</span>
         <span style="font-weight:700;font-size:.88rem;${isSinSesion?'color:var(--muted)':''}">${fmt(d.total)}</span>
       </div>
-      <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:50px"></div>
+      <div style="background:var(--border);border-radius:var(--radio-pill);height:5px;overflow:hidden;margin-bottom:4px">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:var(--radio-pill)"></div>
       </div>
       <div style="font-size:.7rem;color:var(--muted)">${d.movimientos} movimiento${d.movimientos!==1?'s':''}${isSinSesion?' · sin cobrador identificado':''}</div>
     </div>`;
@@ -1631,8 +1631,8 @@ function renderCapitalCategoria() {
         <span style="font-size:.84rem;font-weight:600">${_esc(e.label)}</span>
         <span style="font-weight:700;font-size:.88rem">$${Math.round(e.total).toLocaleString('es-MX',{maximumFractionDigits:0})}</span>
       </div>
-      <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
+      <div style="background:var(--border);border-radius:var(--radio-pill);height:5px;overflow:hidden;margin-bottom:4px">
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:var(--radio-pill)"></div>
       </div>
       <div style="font-size:.7rem;color:var(--muted)">${share}% del valor en venta</div>
     </div>`;
@@ -1828,8 +1828,8 @@ async function loadApartadosPendientes() {
           <div style="font-size:.68rem;color:var(--muted)">de $${total.toLocaleString('es-MX',{maximumFractionDigits:0})}</div>
         </div>
       </div>
-      <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
+      <div style="background:var(--border);border-radius:var(--radio-pill);height:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:var(--radio-pill)"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:.68rem;color:var(--muted)">${pct}% pagado</span>
@@ -2035,8 +2035,8 @@ function renderTopClientes() {
         <span style="font-size:.84rem;font-weight:600">${_esc(_displayName(c.name))}</span>
         <span style="font-weight:700;font-size:.88rem">$${c.total.toLocaleString('es-MX',{maximumFractionDigits:0})}</span>
       </div>
-      <div style="background:var(--border);border-radius:50px;height:5px;overflow:hidden;margin-bottom:4px">
-        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:50px"></div>
+      <div style="background:var(--border);border-radius:var(--radio-pill);height:5px;overflow:hidden;margin-bottom:4px">
+        <div style="width:${pct}%;height:100%;background:var(--brand);border-radius:var(--radio-pill)"></div>
       </div>
       <div style="font-size:.7rem;color:var(--muted)">${c.count} compra${c.count!==1?'s':''}</div>
     </div>`;
@@ -2075,7 +2075,7 @@ function openClienteProfile(id) {
   pop.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);animation:ap-in .15s ease';
   pop.innerHTML = `
     <style>@keyframes ap-in{from{opacity:0}to{opacity:1}}</style>
-    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:18px;padding:18px;max-width:340px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.28);position:relative">
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:var(--radio-xl);padding:18px;max-width:340px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:var(--sombra-3);position:relative">
       <button onclick="document.getElementById('cliente-pop').remove()" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);line-height:1">✕</button>
       <div style="padding-right:24px">
         <label style="${_fieldLabel}">Nombre</label>
@@ -2086,11 +2086,11 @@ function openClienteProfile(id) {
         <div id="cliente-profile-error" style="display:none;color:var(--red);font-size:.72rem;margin-top:5px"></div>
       </div>
       <div style="display:flex;gap:8px;margin:14px 0">
-        <div class="inv-valor-box" style="flex:1;padding:10px;border-radius:10px;text-align:center">
+        <div class="inv-valor-box" style="flex:1;padding:10px;border-radius:var(--radio-md);text-align:center">
           <div style="font-size:1.1rem;font-weight:700">$${stats.total.toLocaleString('es-MX',{maximumFractionDigits:0})}</div>
           <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Total gastado</div>
         </div>
-        <div class="inv-valor-box" style="flex:1;padding:10px;border-radius:10px;text-align:center">
+        <div class="inv-valor-box" style="flex:1;padding:10px;border-radius:var(--radio-md);text-align:center">
           <div style="font-size:1.1rem;font-weight:700">${stats.count}</div>
           <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Compras</div>
         </div>
@@ -2100,7 +2100,7 @@ function openClienteProfile(id) {
       <div style="max-height:180px;overflow-y:auto;margin-bottom:14px">${rowsHtml}</div>
       <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px">Notas</div>
       <textarea id="cliente-notes-input" rows="2" placeholder="Preferencias, tallas, alergias…" style="${_fieldInput}resize:vertical">${_esc(c.notes || '')}</textarea>
-      <button id="cliente-save-btn" onclick="_saveClienteProfile(${id})" style="width:100%;margin-top:8px;background:var(--ink);color:#fff;padding:9px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit">Guardar cambios</button>
+      <button id="cliente-save-btn" onclick="_saveClienteProfile(${id})" style="width:100%;margin-top:8px;background:var(--ink);color:#fff;padding:9px;border-radius:var(--radio-sm);border:none;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit">Guardar cambios</button>
     </div>`;
   pop.addEventListener('click', () => pop.remove());
   document.body.appendChild(pop);

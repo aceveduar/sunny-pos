@@ -389,7 +389,7 @@ function _renderCatSheetChips(query) {
   const roots = rootCats();
   const q     = query.toLowerCase().trim();
 
-  const dot  = (color) => `<span style="width:8px;height:8px;border-radius:50%;background:${color || '#8A7564'};display:inline-block;flex-shrink:0"></span>`;
+  const dot  = (color) => `<span style="width:8px;height:8px;border-radius:50%;background:${color || 'var(--muted)'};display:inline-block;flex-shrink:0"></span>`;
   const chip = (code, label, color, isSelected) =>
     `<button class="bcp-chip${isSelected ? ' selected' : ''}" onclick="selectCatSheet('${code}')">${dot(color)}${_esc(label)}</button>`;
 
@@ -657,12 +657,12 @@ function _openKitLightbox(p, editFn) {
     : `<span style="color:#6abe83">● ${p.stock} en stock</span>`;
   const editBtnId = 'kit-lb-edit-btn';
   lb.innerHTML = `
-    <img src="${_driveSz(p.image || DEFAULT_IMG, 900)}" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'" style="max-width:100%;max-height:58dvh;border-radius:12px;object-fit:contain;display:block">
-    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 16px;backdrop-filter:blur(8px)">
+    <img src="${_driveSz(p.image || DEFAULT_IMG, 900)}" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'" style="max-width:100%;max-height:58dvh;border-radius:var(--radio-md);object-fit:contain;display:block">
+    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:var(--radio-md);padding:12px 16px;backdrop-filter:blur(8px)">
       <div style="font-size:.92rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.3">${_esc(p.name)}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem;margin-bottom:4px"><span style="color:rgba(255,255,255,.5)">Stock</span>${stockTxt}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem"><span style="color:rgba(255,255,255,.5)">Precio</span><span style="color:rgba(255,255,255,.9);font-weight:600">$${(p.price||0).toLocaleString('es-MX')}</span></div>
-      ${editFn ? `<button id="${editBtnId}" style="display:block;width:100%;margin-top:10px;background:rgba(var(--brand-rgb),.2);border:1px solid rgba(var(--brand-rgb),.4);border-radius:8px;padding:9px;color:var(--brand);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">${ICON_EDIT} Editar producto →</button>` : ''}
+      ${editFn ? `<button id="${editBtnId}" style="display:block;width:100%;margin-top:10px;background:rgba(var(--brand-rgb),.2);border:1px solid rgba(var(--brand-rgb),.4);border-radius:var(--radio-sm);padding:9px;color:var(--brand);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">${ICON_EDIT} Editar producto →</button>` : ''}
     </div>`;
   lb.onclick = e => { if (e.target === lb) lb.remove(); };
   document.body.appendChild(lb);

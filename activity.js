@@ -506,7 +506,7 @@ function _renderItemsDetail(meta) {
     const sub = parseFloat(i.subtotal ?? (i.price * qty) ?? 0);
     const overridden = i.original_price != null && parseFloat(i.original_price) !== parseFloat(i.price);
     const priceNote = overridden
-      ? `<div style="font-size:.7rem;color:#B45309;margin-top:1px">Precio modificado: $${parseFloat(i.original_price).toLocaleString('es-MX')} → $${parseFloat(i.price).toLocaleString('es-MX')}</div>`
+      ? `<div style="font-size:.7rem;color:var(--tint-amber-strong);margin-top:1px">Precio modificado: $${parseFloat(i.original_price).toLocaleString('es-MX')} → $${parseFloat(i.price).toLocaleString('es-MX')}</div>`
       : '';
     return `<div style="display:flex;flex-direction:column;gap:0;font-size:.78rem;padding:3px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;gap:8px">
@@ -537,7 +537,7 @@ function _renderEditDiff(meta) {
     const name = _esc(a?.name || b?.name || 'Producto');
     if (b && !a) itemRows.push(`<div style="font-size:.78rem;color:var(--red);padding:2px 0">− Quitó ${name} (×${b.qty})</div>`);
     else if (!b && a) itemRows.push(`<div style="font-size:.78rem;color:#059669;padding:2px 0">+ Agregó ${name} (×${a.qty})</div>`);
-    else if (b.qty !== a.qty) itemRows.push(`<div style="font-size:.78rem;color:#B45309;padding:2px 0">${name}: ×${b.qty} → ×${a.qty}</div>`);
+    else if (b.qty !== a.qty) itemRows.push(`<div style="font-size:.78rem;color:var(--tint-amber-strong);padding:2px 0">${name}: ×${b.qty} → ×${a.qty}</div>`);
   });
 
   const fieldRows = [];
@@ -581,7 +581,7 @@ function _actPopup(idx) {
     // cuánto quedó. El dato ya existía, solo faltaba mostrarlo.
     bodyHtml = `<div style="font-size:.82rem;color:var(--muted);margin-bottom:8px;font-weight:600">${meta.items.length} producto${meta.items.length !== 1 ? 's' : ''} recibido${meta.items.length !== 1 ? 's' : ''}</div>` +
       `<div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">` +
-      meta.items.map(it => `<div style="font-size:.82rem;padding:8px 10px;background:var(--surface-soft);border-radius:8px">
+      meta.items.map(it => `<div style="font-size:.82rem;padding:8px 10px;background:var(--surface-soft);border-radius:var(--radio-sm)">
         <div style="font-weight:600;color:var(--charcoal)">${_esc(it.name || '(sin nombre)')}</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:2px">${it.prevStock} → <strong style="color:var(--green)">+${it.qtyAdded}</strong> = ${it.newStock} uds.</div>
       </div>`).join('') +
@@ -595,12 +595,12 @@ function _actPopup(idx) {
     // puntual estuvo entre ellos.
     bodyHtml = `<div style="font-size:.82rem;color:var(--muted);margin-bottom:8px;font-weight:600">${meta.names.length} producto${meta.names.length !== 1 ? 's' : ''} afectado${meta.names.length !== 1 ? 's' : ''}</div>` +
       `<div style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">` +
-      meta.names.map(n => `<div style="font-size:.82rem;color:var(--charcoal);padding:6px 10px;background:var(--surface-soft);border-radius:8px">${_esc(n || '(sin nombre)')}</div>`).join('') +
+      meta.names.map(n => `<div style="font-size:.82rem;color:var(--charcoal);padding:6px 10px;background:var(--surface-soft);border-radius:var(--radio-sm)">${_esc(n || '(sin nombre)')}</div>`).join('') +
       `</div>`;
   } else if (isProductAction && meta.id) {
     const p = _prodMap[meta.id];
     const img = p?.image || DEFAULT_IMG;
-    imgHtml = `<img src="${img}" onerror="this.src='${DEFAULT_IMG}'" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#F7F2EB;margin-bottom:12px">`;
+    imgHtml = `<img src="${img}" onerror="this.src='${DEFAULT_IMG}'" style="width:100%;max-height:200px;object-fit:contain;border-radius:var(--radio-md);background:var(--cream);margin-bottom:12px">`;
     bodyHtml = `<div style="font-size:.9rem;font-weight:700;line-height:1.35;margin-bottom:4px">${_esc(meta.name || p?.name || '—')}</div>`;
     if (meta.price != null) bodyHtml += `<div style="font-size:1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--brand)">$${parseFloat(meta.price).toLocaleString('es-MX')} MXN</div>`;
     if (p?.price != null && p.price !== meta.price) bodyHtml += `<div style="font-size:.72rem;color:var(--muted);margin-top:2px">Precio actual: $${parseFloat(p.price).toLocaleString('es-MX')}</div>`;
@@ -611,7 +611,7 @@ function _actPopup(idx) {
       const thumbs = ids.slice(0, 5).map(id => {
         const p = _prodMap[id];
         const src = p?.image || DEFAULT_IMG;
-        return `<img src="${src}" onerror="this.src='${DEFAULT_IMG}'" title="${_esc(p?.name||'')}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;background:#F7F2EB;flex-shrink:0">`;
+        return `<img src="${src}" onerror="this.src='${DEFAULT_IMG}'" title="${_esc(p?.name||'')}" style="width:52px;height:52px;object-fit:cover;border-radius:var(--radio-sm);background:var(--cream);flex-shrink:0">`;
       }).join('');
       imgHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${thumbs}</div>`;
     }
@@ -619,20 +619,20 @@ function _actPopup(idx) {
     bodyHtml += `<div style="font-size:.82rem;color:var(--charcoal);margin-bottom:4px">${meta.items||0} producto${(meta.items||0)!==1?'s':''}</div>`;
     bodyHtml += `<div style="font-size:.82rem;color:var(--muted)">${meta.method==='transferencia'?_actIcoPhone(12)+' Transferencia':_actIcoCash(12)+' Efectivo'}</div>`;
     if (meta.discount > 0) bodyHtml += `<div style="font-size:.78rem;color:#059669;margin-top:4px">Descuento −$${parseFloat(meta.discount).toLocaleString('es-MX')}</div>`;
-    if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:8px;font-style:italic">"${_esc(meta.reason)}"</div>`;
+    if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:var(--radio-sm);font-style:italic">"${_esc(meta.reason)}"</div>`;
     bodyHtml += _renderItemsDetail(meta);
   } else if (isApt) {
     bodyHtml = `<div style="font-size:.9rem;font-weight:700;margin-bottom:6px">${_esc(meta.customer || item.summary)}</div>`;
     if (meta.total != null)    bodyHtml += `<div style="font-size:.82rem;color:var(--muted)">Total: $${parseFloat(meta.total).toLocaleString('es-MX')}</div>`;
     if (meta.anticipo != null) bodyHtml += `<div style="font-size:.82rem;color:#059669;margin-top:2px">Anticipo: $${parseFloat(meta.anticipo).toLocaleString('es-MX')}</div>`;
-    if (meta.pendiente != null) bodyHtml += `<div style="font-size:.82rem;color:#B45309;margin-top:2px">Pendiente: $${parseFloat(meta.pendiente).toLocaleString('es-MX')}</div>`;
+    if (meta.pendiente != null) bodyHtml += `<div style="font-size:.82rem;color:var(--tint-amber-strong);margin-top:2px">Pendiente: $${parseFloat(meta.pendiente).toLocaleString('es-MX')}</div>`;
     if (meta.amount != null)   bodyHtml += `<div style="font-size:.82rem;color:#059669;margin-top:2px">Pago: $${parseFloat(meta.amount).toLocaleString('es-MX')}</div>`;
     if (meta.restante != null) bodyHtml += `<div style="font-size:.82rem;color:#059669;margin-top:2px">Liquidado: $${parseFloat(meta.restante).toLocaleString('es-MX')}</div>`;
     if (meta.pagado != null)   bodyHtml += `<div style="font-size:.82rem;color:var(--muted);margin-top:2px">Cobrado antes de cancelar: $${parseFloat(meta.pagado).toLocaleString('es-MX')}</div>`;
     if (meta.refund != null)   bodyHtml += `<div style="font-size:.82rem;color:var(--red);margin-top:2px">Devuelto: $${parseFloat(meta.refund).toLocaleString('es-MX')}</div>`;
     if (meta.method)           bodyHtml += `<div style="font-size:.78rem;color:var(--muted);margin-top:2px">${meta.method==='transferencia'?_actIcoPhone(12)+' Transferencia':_actIcoCash(12)+' Efectivo'}</div>`;
     if (meta.dueDate)          bodyHtml += `<div style="font-size:.78rem;color:var(--muted);margin-top:2px">${_actIcoCalendar(12)} Vencía: ${_activityFormat(meta.dueDate+'T12:00:00Z',{day:'numeric',month:'short',year:'numeric'})}</div>`;
-    if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:8px;font-style:italic">"${_esc(meta.reason)}"</div>`;
+    if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:var(--radio-sm);font-style:italic">"${_esc(meta.reason)}"</div>`;
     bodyHtml += _renderItemsDetail(meta);
     if (item.action === 'apartado_editado' && meta.itemsDetailPrevio) bodyHtml += _renderEditDiff(meta);
   } else {
@@ -644,7 +644,7 @@ function _actPopup(idx) {
   pop.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);animation:ap-in .15s ease';
   pop.innerHTML = `
     <style>@keyframes ap-in{from{opacity:0}to{opacity:1}}</style>
-    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:18px;padding:18px;max-width:300px;width:90%;box-shadow:0 12px 48px rgba(0,0,0,.28);position:relative">
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:var(--radio-xl);padding:18px;max-width:300px;width:90%;box-shadow:var(--sombra-3);position:relative">
       <button onclick="document.getElementById('act-pop').remove()" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);line-height:1">✕</button>
       ${imgHtml}
       <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">${cfg.icon} ${cfg.label} · ${time}</div>

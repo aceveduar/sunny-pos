@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tema.css">
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="stats.css">
 <script>
@@ -304,11 +305,11 @@
         </div>
       </div>
       <div id="inv-valor-row" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap">
-        <div class="inv-valor-box" style="flex:1;min-width:130px;padding:10px 14px;border-radius:10px">
+        <div class="inv-valor-box" style="flex:1;min-width:130px;padding:10px 14px;border-radius:var(--radio-md)">
           <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px">Valor en venta</div>
           <div id="inv-valor-venta" style="font-size:1.05rem;font-weight:700;color:var(--charcoal)">$0</div>
         </div>
-        <div id="inv-valor-costo-wrap" class="inv-valor-box inv-valor-box-green" style="flex:1;min-width:130px;padding:10px 14px;border-radius:10px;display:none">
+        <div id="inv-valor-costo-wrap" class="inv-valor-box inv-valor-box-green" style="flex:1;min-width:130px;padding:10px 14px;border-radius:var(--radio-md);display:none">
           <div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:3px">Capital invertido</div>
           <div id="inv-valor-costo" style="font-size:1.05rem;font-weight:700;color:var(--charcoal)">$0</div>
           <div id="inv-valor-costo-note" style="font-size:.66rem;color:var(--muted);margin-top:3px;display:none"></div>
@@ -336,7 +337,7 @@
       <span id="clientes-label" style="font-size:.75rem;color:var(--muted)"></span>
     </div>
     <div class="card-body" style="padding-top:8px;padding-bottom:8px">
-      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="renderTopClientes()" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;outline:none;font-family:inherit;margin-bottom:10px;box-sizing:border-box">
+      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="renderTopClientes()" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radio-sm);font-size:16px;outline:none;font-family:inherit;margin-bottom:10px;box-sizing:border-box">
       <div id="clientes-body" style="max-height:400px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain">
         <div class="loading-state"><div class="loading-spinner"></div>Cargando…</div>
       </div>
@@ -364,7 +365,7 @@
           <div class="l">Baja &lt;10%</div>
         </div>
       </div>
-      <div id="rent-no-cost" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:8px;font-size:.78rem">
+      <div id="rent-no-cost" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:var(--radio-sm);font-size:.78rem">
         <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" style="vertical-align:-1px;margin-right:2px"><circle cx="12" cy="12" r="9"/></svg> <strong id="rent-no-cost-n">0</strong> productos sin costo registrado: sin costo no se ve su margen. <a href="admin.html#pendiente=sin-costo" style="color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px">Ver cuáles</a>
       </div>
       <div id="rent-list"></div>

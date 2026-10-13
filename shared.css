@@ -5,27 +5,11 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Variables ─────────────────────────────────────────────────────── */
-:root{
-  --cream:#FAF5EE;--brand:#4F7461;--brand-rgb:79,116,97;--brand-dark:#4F7461;--brand-light:#EAEEEC;--on-brand:#fff;
-  --charcoal:#1C1817;--charcoal-soft:#2E2825;
-  --red:#E85D5D;--green:#2D6A4F;
-  --border:#EAE0D4;--muted:#8A7564;--muted-light:#B5A696;
-  --r:10px;
-  --shadow-sm:0 1px 4px rgba(28,24,23,.07);
-  --shadow-lg:0 8px 40px rgba(28,24,23,.18);
-  /* Tokens de tema, compartidos por los 5 módulos admin — ver admin.css para
-     el bloque [data-theme="dark"] vigente hoy solo en Inventario. --ink/
-     --ink-soft son fijos a propósito (topbar, badges: chrome ya oscuro que
-     no debe invertirse). Un módulo que sume su propio modo oscuro solo
-     necesita definir su [data-theme="dark"] — estos defaults ya lo cubren. */
-  --ink:#1C1817;--ink-soft:#2E2825;
-  --surface:#fff;--surface-soft:#F8F4EF;
-}
 
 /* ── Esqueleto de carga ───────────────────────────────────────────────
    Bloques grises con la forma del contenido que viene (patrón Shopify):
    se siente más rápido que un círculo girando y la página no brinca. */
-.sk{display:block;border-radius:6px;
+.sk{display:block;border-radius:var(--radio-sm);
   background:linear-gradient(90deg,var(--surface-soft) 0%,var(--border) 50%,var(--surface-soft) 100%);
   background-size:200% 100%;animation:sk-shine 1.3s ease-in-out infinite}
 @keyframes sk-shine{from{background-position:100% 0}to{background-position:-100% 0}}
@@ -48,38 +32,38 @@ a{text-decoration:none}
 /* ── Dropdown de usuario ───────────────────────────────────────────── */
 #ud-pop{
   position:fixed;z-index:99999;
-  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radio-lg);
   padding:14px;min-width:210px;
-  box-shadow:0 8px 32px rgba(28,24,23,.18);
+  box-shadow:var(--sombra-3);
   animation:ud-in .15s ease;
 }
 @keyframes ud-in{from{opacity:0;transform:scale(.92) translateY(-6px)}to{opacity:1;transform:scale(1)}}
 .ud-info{margin-bottom:10px}
 .ud-name{font-weight:700;font-size:.88rem;color:var(--charcoal);margin-bottom:2px}
 .ud-email{font-size:.72rem;color:var(--muted);margin-bottom:6px;word-break:break-all}
-.ud-role{display:inline-block;font-size:.62rem;font-weight:700;background:rgba(var(--brand-rgb),.15);color:var(--brand-dark);border-radius:50px;padding:2px 8px;text-transform:uppercase;letter-spacing:.05em}
+.ud-role{display:inline-block;font-size:.62rem;font-weight:700;background:rgba(var(--brand-rgb),.15);color:var(--brand-dark);border-radius:var(--radio-pill);padding:2px 8px;text-transform:uppercase;letter-spacing:.05em}
 .ud-divider{height:1px;background:var(--border);margin:0 -14px 10px}
-.ud-link{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;color:var(--charcoal);font-size:.82rem;font-weight:600;text-decoration:none;transition:.15s;margin-bottom:2px}
+.ud-link{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:var(--radio-sm);color:var(--charcoal);font-size:.82rem;font-weight:600;text-decoration:none;transition:.15s;margin-bottom:2px}
 .ud-link:hover{background:var(--cream)}
 .ud-link svg{flex-shrink:0;color:var(--muted)}
 
 /* ── Toggles del dropdown de cuenta (modo oscuro, avisos de venta por
    dispositivo) — clase genérica, ya no exclusiva de "theme" desde que se le
    sumó un segundo toggle (2026-09-06). ── */
-.ud-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;border-radius:8px;color:var(--charcoal);font-size:.82rem;font-weight:600;margin-bottom:2px;cursor:pointer}
+.ud-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;border-radius:var(--radio-sm);color:var(--charcoal);font-size:.82rem;font-weight:600;margin-bottom:2px;cursor:pointer}
 .ud-toggle-row:hover{background:var(--cream)}
 .ud-toggle-row-label{display:flex;align-items:center;gap:8px}
 .ud-toggle-row-label svg{flex-shrink:0;color:var(--muted)}
 .ud-toggle-switch{position:relative;display:inline-block;width:36px;height:21px;flex-shrink:0}
 .ud-toggle-switch input{opacity:0;width:0;height:0;position:absolute}
-.ud-toggle-switch-slider{position:absolute;inset:0;background:var(--border);border-radius:50px;transition:.2s;pointer-events:none}
-.ud-toggle-switch-slider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:var(--surface);border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.ud-toggle-switch-slider{position:absolute;inset:0;background:var(--border);border-radius:var(--radio-pill);transition:.2s;pointer-events:none}
+.ud-toggle-switch-slider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:var(--surface);border-radius:50%;transition:.2s;box-shadow:var(--sombra-1)}
 .ud-toggle-switch input:checked + .ud-toggle-switch-slider{background:var(--brand-dark)}
 .ud-toggle-switch input:checked + .ud-toggle-switch-slider::before{transform:translateX(15px)}
 .ud-toggle-hint{padding:0 10px 6px;font-size:.7rem;line-height:1.35;color:var(--muted);margin-top:-2px}
 .ud-toggle-hint:empty{display:none}
-.ud-logout{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:8px;background:transparent;color:var(--red);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
-.ud-logout:hover{background:#FFF5F5}
+.ud-logout{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:var(--radio-sm);background:transparent;color:var(--red);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.ud-logout:hover{background:var(--tint-red-bg)}
 /* Sin bloque [data-theme="dark"] propio (shared.css es genérico a los 5
    módulos) -- reutiliza --tint-red-bg, hoy solo definido en el bloque
    oscuro de admin.css/pos.css. Donde ese token no existe (módulos sin modo
@@ -139,7 +123,7 @@ a{text-decoration:none}
 
 .tbn-icon{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;padding:5px 14px;border-radius:9px;min-width:48px;
+  gap:2px;padding:5px 14px;border-radius:var(--radio-sm);min-width:48px;
   text-decoration:none;background:transparent;color:color-mix(in srgb,var(--charcoal) 70%,transparent);
   transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   border:none;cursor:pointer;font-family:inherit;
@@ -155,7 +139,7 @@ a{text-decoration:none}
 }
 .tbn-sep{display:none}
 
-.tbn-icon.tbn-active{color:var(--brand-dark);background:var(--brand-light);border-radius:10px}
+.tbn-icon.tbn-active{color:var(--brand-dark);background:var(--brand-light);border-radius:var(--radio-md)}
 .tbn-icon.tbn-active svg{stroke-width:2.5}
 .tbn-icon:not(.tbn-active):hover{color:var(--charcoal);background:rgba(var(--brand-rgb),.08)}
 /* Lo que vive dentro de la barra (cada módulo lo pintaba para fondo negro) */
@@ -207,12 +191,12 @@ a{text-decoration:none}
 }
 #offline-banner.ob-offline {
   display: block;
-  background: #E85D5D;
+  background: var(--red);
   color: #fff;
 }
 #offline-banner.ob-online {
   display: block;
-  background: #2D6A4F;
+  background: var(--green);
   color: #fff;
 }
 
@@ -228,23 +212,23 @@ a{text-decoration:none}
   position:absolute;top:-2px;right:-2px;min-width:15px;height:15px;padding:0 3px;
   display:flex;align-items:center;justify-content:center;
   background:var(--red);color:#fff;font-size:.6rem;font-weight:700;
-  border-radius:50px;border:1.5px solid var(--surface);line-height:1;
+  border-radius:var(--radio-pill);border:1.5px solid var(--surface);line-height:1;
 }
 #notif-pop{
   position:fixed;z-index:99999;
-  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radio-lg);
   padding:10px;width:300px;max-width:calc(100vw - 16px);max-height:70vh;overflow-y:auto;
-  box-shadow:0 8px 32px rgba(28,24,23,.18);
+  box-shadow:var(--sombra-3);
   animation:ud-in .15s ease;
 }
 .notif-pop-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px}
 .notif-pop-title{font-weight:700;font-size:.82rem;color:var(--charcoal)}
-#notif-dismiss-all{background:none;border:none;font-family:inherit;font-size:.72rem;font-weight:600;color:var(--brand-dark);cursor:pointer;padding:2px 4px;flex-shrink:0;border-radius:6px}
+#notif-dismiss-all{background:none;border:none;font-family:inherit;font-size:.72rem;font-weight:600;color:var(--brand-dark);cursor:pointer;padding:2px 4px;flex-shrink:0;border-radius:var(--radio-sm)}
 #notif-dismiss-all:hover{background:var(--cream)}
 .notif-item{
   display:flex;align-items:flex-start;gap:10px;
   font-size:.8rem;line-height:1.45;color:var(--charcoal);
-  padding:9px 8px;border-radius:8px;border-bottom:1px solid var(--border);
+  padding:9px 8px;border-radius:var(--radio-sm);border-bottom:1px solid var(--border);
   transition:background .15s;
 }
 .notif-item:last-child{border-bottom:none}
@@ -278,11 +262,11 @@ a{text-decoration:none}
 .notif-item-expandable.open .notif-item-body{max-height:800px;opacity:1;margin-top:5px}
 /* Diálogo propio (teDialog en shared.js) en lugar de alert()/confirm() */
 .te-dialog-backdrop{position:fixed;inset:0;z-index:10500;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);animation:teDialogFade .15s ease-out}
-.te-dialog{width:100%;max-width:360px;background:var(--surface);color:var(--charcoal);border-radius:18px;padding:22px 20px 18px;box-shadow:0 12px 48px rgba(0,0,0,.3);animation:teDialogIn .18s ease-out}
+.te-dialog{width:100%;max-width:360px;background:var(--surface);color:var(--charcoal);border-radius:var(--radio-xl);padding:22px 20px 18px;box-shadow:var(--sombra-3);animation:teDialogIn .18s ease-out}
 .te-dialog-title{font-size:1.02rem;font-weight:700;line-height:1.35;color:var(--charcoal)}
 .te-dialog-msg{margin-top:8px;font-size:.9rem;line-height:1.5;color:var(--muted);white-space:pre-line}
 .te-dialog-actions{display:flex;gap:8px;margin-top:20px}
-.te-dialog-btn{flex:1;min-height:48px;padding:10px 12px;border-radius:12px;font-family:inherit;font-size:.92rem;font-weight:700;cursor:pointer;touch-action:manipulation;line-height:1.25}
+.te-dialog-btn{flex:1;min-height:48px;padding:10px 12px;border-radius:var(--radio-md);font-family:inherit;font-size:.92rem;font-weight:700;cursor:pointer;touch-action:manipulation;line-height:1.25}
 .te-dialog-cancel{border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal)}
 .te-dialog-ok{border:none;background:var(--brand);color:var(--on-brand)}
 .te-dialog-ok.is-danger{background:var(--red);color:#fff}
@@ -299,15 +283,15 @@ body{font-feature-settings:"lnum" 1}
 
 /* ── AYUDA (shared.js openHelp) ── */
 #help-overlay{position:fixed;inset:0;z-index:100000;background:rgba(20,15,12,.5);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
-#help-pop{background:var(--surface);color:var(--charcoal);width:100%;height:92dvh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,.18)}
-@media(min-width:641px){#help-overlay{align-items:center;padding:24px}#help-pop{max-width:620px;height:min(80vh,760px);border-radius:20px}}
+#help-pop{background:var(--surface);color:var(--charcoal);width:100%;height:92dvh;border-radius:var(--radio-xl) var(--radio-xl) 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,.18)}
+@media(min-width:641px){#help-overlay{align-items:center;padding:24px}#help-pop{max-width:620px;height:min(80vh,760px);border-radius:var(--radio-xl)}}
 .help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 8px}
 .help-head h2{font-family:'Playfair Display',serif;font-size:1.25rem;margin:0}
-.help-close{min-width:44px;min-height:44px;border:none;background:none;color:var(--muted);font-size:1.1rem;border-radius:10px;cursor:pointer;margin-right:-10px}
+.help-close{min-width:44px;min-height:44px;border:none;background:none;color:var(--muted);font-size:1.1rem;border-radius:var(--radio-md);cursor:pointer;margin-right:-10px}
 .help-close:hover{background:var(--surface-soft)}
 .help-search-wrap{position:relative;margin:0 20px 10px}
 .help-search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:1.75;stroke-linecap:round;pointer-events:none}
-#help-search{width:100%;box-sizing:border-box;min-height:48px;padding:10px 14px 10px 42px;border:1.5px solid var(--border);border-radius:12px;font-family:inherit;font-size:16px;background:var(--surface);color:var(--charcoal);outline:none}
+#help-search{width:100%;box-sizing:border-box;min-height:48px;padding:10px 14px 10px 42px;border:1.5px solid var(--border);border-radius:var(--radio-md);font-family:inherit;font-size:16px;background:var(--surface);color:var(--charcoal);outline:none}
 #help-search:focus{border-color:var(--brand)}
 .help-body{position:relative;flex:1;min-height:0}
 #help-list,#help-view{position:absolute;inset:0;overflow-y:auto;padding:4px 20px 24px;overscroll-behavior:contain}
@@ -315,10 +299,10 @@ body{font-feature-settings:"lnum" 1}
 #help-pop.show-view #help-view{display:block}
 #help-pop.show-view #help-list{visibility:hidden}
 .help-group{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 2px 6px}
-.help-item{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-family:inherit;color:var(--charcoal);cursor:pointer}
+.help-item{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);border-radius:var(--radio-md);background:var(--surface);font-family:inherit;color:var(--charcoal);cursor:pointer}
 .help-item:hover{border-color:var(--brand)}
 .help-item-title{display:block;font-size:.95rem;font-weight:700}
-.help-item-mod{display:inline-block;margin-top:3px;font-size:.72rem;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:50px;padding:1px 8px}
+.help-item-mod{display:inline-block;margin-top:3px;font-size:.72rem;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:var(--radio-pill);padding:1px 8px}
 .help-item-snip{display:block;margin-top:4px;font-size:.84rem;color:var(--muted);line-height:1.45}
 .help-empty{padding:28px 6px;text-align:center;color:var(--muted);font-size:.9rem;line-height:1.5}
 .help-back{min-height:44px;padding:0 4px;border:none;background:none;font-family:inherit;font-size:.9rem;font-weight:700;color:var(--brand-dark);cursor:pointer}
@@ -328,4 +312,4 @@ body{font-feature-settings:"lnum" 1}
 .help-view-body p{margin:0 0 12px}
 .help-view-body ol,.help-view-body ul{margin:0 0 12px;padding-left:22px}
 .help-view-body li{margin-bottom:6px}
-.help-view-body code{font-size:.9em;background:var(--surface-soft);padding:1px 5px;border-radius:5px}
+.help-view-body code{font-size:.9em;background:var(--surface-soft);padding:1px 5px;border-radius:var(--radio-xs)}

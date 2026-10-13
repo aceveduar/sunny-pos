@@ -1251,7 +1251,7 @@ function closeEditApt() {
 function renderEditAptItems() {
   const el = document.getElementById('edit-apt-items');
   if (!_editAptCtx.items.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:12px 0;border:1.5px dashed var(--border);border-radius:9px">Sin productos — agrega uno con el buscador</div>';
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:.82rem;padding:12px 0;border:1.5px dashed var(--border);border-radius:var(--radio-sm)">Sin productos — agrega uno con el buscador</div>';
     _updateEditAptTotal();
     return;
   }
@@ -1262,7 +1262,7 @@ function renderEditAptItems() {
         <div style="display:flex;align-items:center;gap:4px;margin-top:5px">
           <span style="font-size:.75rem;color:var(--muted)">$</span>
           <input type="number" value="${item.price}" min="0" step="1" inputmode="numeric"
-            style="width:72px;padding:4px 6px;border:1.5px solid var(--border);border-radius:7px;font-size:.84rem;outline:none;font-family:inherit"
+            style="width:72px;padding:4px 6px;border:1.5px solid var(--border);border-radius:var(--radio-sm);font-size:.84rem;outline:none;font-family:inherit"
             oninput="_editAptChangePrice(${idx},this.value)"
             onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'">
           <span style="font-size:.74rem;color:var(--muted);margin-left:2px">c/u</span>
@@ -1270,9 +1270,9 @@ function renderEditAptItems() {
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        <button onclick="_editAptChangeQty(${idx},-1)" aria-label="Quitar una unidad de ${_esc(item.name)}" style="width:44px;height:44px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:.95rem;line-height:1;font-family:inherit">−</button>
+        <button onclick="_editAptChangeQty(${idx},-1)" aria-label="Quitar una unidad de ${_esc(item.name)}" style="width:44px;height:44px;border:1.5px solid var(--border);border-radius:var(--radio-sm);background:var(--surface);cursor:pointer;font-size:.95rem;line-height:1;font-family:inherit">−</button>
         <span style="font-size:.9rem;font-weight:700;min-width:22px;text-align:center">${item.qty||1}</span>
-        <button onclick="_editAptChangeQty(${idx},1)" aria-label="Agregar una unidad de ${_esc(item.name)}" style="width:44px;height:44px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;font-size:.95rem;line-height:1;font-family:inherit">+</button>
+        <button onclick="_editAptChangeQty(${idx},1)" aria-label="Agregar una unidad de ${_esc(item.name)}" style="width:44px;height:44px;border:1.5px solid var(--border);border-radius:var(--radio-sm);background:var(--surface);cursor:pointer;font-size:.95rem;line-height:1;font-family:inherit">+</button>
       </div>
       <button onclick="_editAptRemove(${idx})" aria-label="Quitar ${_esc(item.name)} del apartado" style="width:44px;height:44px;background:none;border:none;cursor:pointer;color:var(--red);padding:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg aria-hidden="true" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>`).join('');
@@ -1372,7 +1372,7 @@ function searchEditApt(q) {
   res.innerHTML = matches.map(p => {
     const oos = !_editAptCanAdd(p.id);
     return `<button type="button" ${oos ? 'disabled' : `onclick="_editAptAddProduct(${p.id})"`} aria-disabled="${oos}" style="width:100%;cursor:${oos?'not-allowed':'pointer'};padding:8px 10px;display:flex;align-items:center;gap:8px;font-size:.82rem;border:0;border-bottom:1px solid var(--border);background:var(--surface);text-align:left;font-family:inherit;${oos?'opacity:.65':''}">
-      <img src="${_driveSz(p.image, 80)}" style="width:28px;height:28px;object-fit:cover;border-radius:5px;flex-shrink:0" onerror="this.style.display='none'">
+      <img src="${_driveSz(p.image, 80)}" style="width:28px;height:28px;object-fit:cover;border-radius:var(--radio-xs);flex-shrink:0" onerror="this.style.display='none'">
       <span style="flex:1;font-weight:600">${_esc(p.name)}</span>
       <span style="color:${oos?'var(--red)':'var(--muted)'};font-size:.74rem">${oos?'Sin stock':'$'+p.price.toLocaleString('es-MX')}</span>
     </button>`;

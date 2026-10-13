@@ -484,9 +484,9 @@ function _renderDriveAudit() {
     </label>
     <div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
       ${_driveAuditFiles.map((f, i) => `
-        <label style="display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--border);border-radius:var(--radio-sm);cursor:pointer">
           <input type="checkbox" ${f.selected ? 'checked' : ''} onchange="_toggleDriveAuditItem(${i}, this.checked)">
-          <img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w80" style="width:40px;height:40px;object-fit:cover;border-radius:6px;background:var(--surface-soft);flex-shrink:0" onerror="this.style.visibility='hidden'">
+          <img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w80" style="width:40px;height:40px;object-fit:cover;border-radius:var(--radio-sm);background:var(--surface-soft);flex-shrink:0" onerror="this.style.visibility='hidden'">
           <div style="flex:1;min-width:0">
             <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(f.name)}</div>
             <div style="font-size:.68rem;color:var(--muted)">${new Date(f.createdDate).toLocaleDateString('es-MX')} · ${((f.size||0)/1024).toFixed(0)} KB</div>
@@ -696,7 +696,7 @@ function renderCatList() {
         ondrop="_catDropSub(event,'${s.code}')"
         ondragend="_catDragEnd()">
         <span class="cat-drag-handle" title="Arrastrar">⠿</span>
-        <span class="cat-dot" style="background:${s.color||r.color||'#9B8B78'}" title="${s.code}"></span>
+        <span class="cat-dot" style="background:${s.color||r.color||'var(--muted)'}" title="${s.code}"></span>
         <input type="text" class="cat-sub-name" value="${escH(s.label)}"
           onblur="updateCatLabel(${si},this.value)"
           onkeydown="if(event.key==='Enter')this.blur()">
@@ -719,7 +719,7 @@ function renderCatList() {
         ondrop="_catDropOnHead(event,'${r.code}')">
         <span class="cat-drag-handle" title="Arrastrar para reordenar">⠿</span>
         <span class="cat-sec-arrow">▶</span>
-        <span class="cat-dot" style="background:${r.color||'#9B8B78'}" title="${r.code}"></span>
+        <span class="cat-dot" style="background:${r.color||'var(--muted)'}" title="${r.code}"></span>
         <input type="text" class="cat-sec-name" value="${escH(r.label)}"
           onclick="event.stopPropagation()"
           onblur="updateCatLabel(${ri},this.value)"
@@ -772,7 +772,7 @@ function _catAddSubInline(parentCode) {
   form.id = `cat-sub-form-${parentCode}`;
   form.className = 'cat-sub-inline-form';
   form.innerHTML = `
-    <span class="cat-dot" style="background:${parent.color||'#9B8B78'}"></span>
+    <span class="cat-dot" style="background:${parent.color||'var(--muted)'}"></span>
     <input id="cat-sub-inp-${parentCode}" type="text" placeholder="Nombre de la subcategoría…" class="cat-sub-new-inp"
       onkeydown="if(event.key==='Enter')_catSubConfirm('${parentCode}');if(event.key==='Escape')this.closest('.cat-sub-inline-form').remove()">
     <button onclick="_catSubConfirm('${parentCode}')" class="btn btn-gold btn-sm" style="flex-shrink:0;padding:6px 12px">✓</button>
@@ -1881,6 +1881,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dupCount = parseInt(localStorage.getItem('te_dup_last_count') || '0');
   const dupTag = document.getElementById('dup-count-tag');
   if (dupTag && dupCount > 0) {
-    dupTag.innerHTML = ` — <strong style="color:#D97706">${dupCount} posibles</strong>`;
+    dupTag.innerHTML = ` — <strong style="color:var(--tint-amber-strong)">${dupCount} posibles</strong>`;
   }
 });

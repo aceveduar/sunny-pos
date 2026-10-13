@@ -245,8 +245,8 @@ async function migrateBase64ToDrive() {
 
   const setProgress = (cur, total, name) => {
     overlay.innerHTML = `<div style="font-weight:600;margin-bottom:6px">Migrando imágenes a Drive…</div>
-      <div style="background:#444;border-radius:6px;height:6px;margin-bottom:8px">
-        <div style="background:var(--brand);height:6px;border-radius:6px;width:${Math.round(cur/total*100)}%;transition:width .3s"></div>
+      <div style="background:#444;border-radius:var(--radio-sm);height:6px;margin-bottom:8px">
+        <div style="background:var(--brand);height:6px;border-radius:var(--radio-sm);width:${Math.round(cur/total*100)}%;transition:width .3s"></div>
       </div>
       <div style="color:var(--muted-light);font-size:.78rem">${cur}/${total} — ${_esc(name)}</div>`;
   };

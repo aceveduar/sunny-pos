@@ -555,9 +555,9 @@ function _renderQV(p) {
           const baseBg = compOos ? 'var(--tint-red-bg)' : '';
           const rowStyle = `display:flex;align-items:center;gap:8px;padding:5px 6px;margin:0 -6px;border-radius:6px;background:${baseBg};${compOos ? '' : 'border-bottom:1px solid var(--border-light);'}`;
           const clickable = comp ? `onclick="_kitCompPopup(${comp.id},this)" style="${rowStyle}cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--brand-light)'" onmouseleave="this.style.background='${baseBg}'"` : `style="${rowStyle}"`;
-          const oosTag = compOos ? `<span style="font-size:.66rem;font-weight:700;color:var(--tint-red-strong);background:var(--tint-red-bg);padding:1px 7px;border-radius:50px;flex-shrink:0">Sin stock</span>` : '';
+          const oosTag = compOos ? `<span style="font-size:.66rem;font-weight:700;color:var(--tint-red-strong);background:var(--tint-red-bg);padding:1px 7px;border-radius:var(--radio-pill);flex-shrink:0">Sin stock</span>` : '';
           return `<div ${clickable}>
-            <img src="${_driveSz(comp?.image || DEFAULT_IMG, 80)}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface-soft)" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
+            <img src="${_driveSz(comp?.image || DEFAULT_IMG, 80)}" style="width:32px;height:32px;object-fit:cover;border-radius:var(--radio-sm);flex-shrink:0;background:var(--surface-soft)" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
             <span style="flex:1;font-size:.82rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(comp?.name || item.name)}</span>
             ${oosTag}
             <span style="font-size:.75rem;color:var(--muted);font-weight:600;flex-shrink:0">×${item.qty}</span>
@@ -565,7 +565,7 @@ function _renderQV(p) {
         }).join('');
     } else if (Array.isArray(p.kitItems)) {
       kitZone.style.display = '';
-      kitZone.innerHTML = `<div style="text-align:center;padding:12px;color:var(--muted);font-size:.82rem;border:1.5px dashed var(--border);border-radius:10px">${QV_ICO_GIFT(13)}Kit sin componentes · edita para agregar productos</div>`;
+      kitZone.innerHTML = `<div style="text-align:center;padding:12px;color:var(--muted);font-size:.82rem;border:1.5px dashed var(--border);border-radius:var(--radio-md)">${QV_ICO_GIFT(13)}Kit sin componentes · edita para agregar productos</div>`;
     } else {
       kitZone.style.display = 'none';
       kitZone.innerHTML = '';
@@ -600,7 +600,7 @@ function _renderQV(p) {
         <div class="qv-flag-active" style="border-color:var(--tint-red-border);background:var(--tint-red-bg)">
           <span class="qv-flag-title" style="color:var(--tint-red-strong)">${QV_ICO_WARN(13)}Marcado como apartado, pero sin apartado activo</span>
           <p class="qv-flag-note-text">No encontramos ningún apartado pendiente en Caja que lo respalde — probablemente quedó la marca pegada de un apartado ya cancelado. Verifica en Caja → Apartados antes de quitarlo si tienes dudas.</p>
-          ${can.editProduct ? `<button class="btn btn-sm" style="margin-top:8px;background:#B91C1C;color:#fff;border:none" onclick="_clearOrphanApartado(${p.id})">Quitar marca de apartado</button>` : ''}
+          ${can.editProduct ? `<button class="btn btn-sm" style="margin-top:8px;background:var(--tint-red-strong);color:#fff;border:none" onclick="_clearOrphanApartado(${p.id})">Quitar marca de apartado</button>` : ''}
         </div>`;
     } else {
       aptZone.innerHTML = '';
@@ -768,7 +768,7 @@ async function openProductTimeline(productId, productName) {
   overlay.onclick = e => { if (e.target === overlay) closeProductTimeline(); };
   overlay.innerHTML = `
     <style>@keyframes ap-in{from{opacity:0}to{opacity:1}}</style>
-    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:18px;padding:18px;max-width:340px;width:90%;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.28)">
+    <div onclick="event.stopPropagation()" style="background:var(--surface);border-radius:var(--radio-xl);padding:18px;max-width:340px;width:90%;max-height:78vh;display:flex;flex-direction:column;box-shadow:var(--sombra-3)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <h3 style="font-size:1rem;margin:0">${QV_ICO_CLOCK(15)} Historial</h3>
         <button onclick="closeProductTimeline()" style="background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;padding:4px" aria-label="Cerrar">✕</button>

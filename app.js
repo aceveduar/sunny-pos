@@ -231,7 +231,7 @@ function renderCartBody() {
     <button class="cqty-btn" onclick="updateCartQty(${item.id},-1)">−</button>
     <span class="cqty-num">${item.qty}</span>
     <button class="cqty-btn" onclick="updateCartQty(${item.id},1,this)">+</button>
-    <button class="cqty-btn" onclick="removeFromCart(${item.id})" style="border-color:#FECACA;color:#EF4444;margin-left:4px">✕</button>
+    <button class="cqty-btn" onclick="removeFromCart(${item.id})" style="border-color:var(--tint-red-border);color:#EF4444;margin-left:4px">✕</button>
   </div>
 </div>`).join('');
   if (foot) foot.style.display = 'block';
@@ -311,7 +311,7 @@ function showSkeleton() {
         <div class="skel-line" style="width:70%;height:11px;margin-bottom:16px"></div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="skel-line" style="width:35%;height:18px"></div>
-          <div class="skel-line" style="width:28%;height:36px;border-radius:50px"></div>
+          <div class="skel-line" style="width:28%;height:36px;border-radius:var(--radio-pill)"></div>
         </div>
       </div>
     </div>`).join('');
@@ -362,8 +362,8 @@ function _showCatalogError() {
   grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:56px 24px">
     <div style="margin-bottom:14px"><svg width="40" height="40" viewBox="0 0 24 24" stroke="var(--brand)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
     <p style="font-size:.95rem;color:#6B5C48;margin-bottom:6px;font-weight:600">No pudimos cargar el catálogo</p>
-    <p style="font-size:.82rem;color:#9B8B78;margin-bottom:22px">Revisa tu conexión e intenta de nuevo</p>
-    <button onclick="location.reload()" style="background:var(--brand);color:var(--on-brand);border:none;border-radius:50px;padding:12px 28px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Reintentar</button>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:22px">Revisa tu conexión e intenta de nuevo</p>
+    <button onclick="location.reload()" style="background:var(--brand);color:var(--on-brand);border:none;border-radius:var(--radio-pill);padding:12px 28px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Reintentar</button>
   </div>`;
 }
 
@@ -611,7 +611,7 @@ function cardHTML(p) {
   const pct = discountPct(p);
   const oosTag = apt
     ? `<span class="product-badge badge-apartado"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Apartado</span>`
-    : oos ? `<span class="product-badge badge-oos" style="background:#9B8B78">Agotado</span>` : '';
+    : oos ? `<span class="product-badge badge-oos" style="background:var(--muted)">Agotado</span>` : '';
 
   let badgeArea = '';
   const badgeIsPromo = !p.badgeType || p.badgeType === 'promo';
@@ -632,7 +632,7 @@ function cardHTML(p) {
   const lastPieceChip = (!oos && !apt && isLastPiece(p))
     ? `<p class="card-last-piece">⚡ Última pieza</p>` : '';
   const buyBtn = apt
-    ? `<button class="btn-buy btn-buy-oos" onclick="event.stopPropagation();whatsapp(${p.id},this)" style="background:#92400E">${WA_SVG} Consultar</button>`
+    ? `<button class="btn-buy btn-buy-oos" onclick="event.stopPropagation();whatsapp(${p.id},this)" style="background:var(--tint-amber-strong)">${WA_SVG} Consultar</button>`
     : oos ? `<button class="btn-buy btn-buy-oos" disabled>Agotado</button>`
     : `<button class="btn-buy btn-cart-add" onclick="event.stopPropagation();addToCartFromCard(${p.id},this)"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Agregar</button>`;
   return `
@@ -1107,7 +1107,7 @@ function openModal(id) {
     : '';
   const waDirectBtn = oos ? '' : `<button class="modal-wa-direct" onclick="whatsapp(${p.id})" title="Pedir por WhatsApp" aria-label="Pedir por WhatsApp">${WA_SVG}</button>`;
   const modalBtn = apt
-    ? `<button class="btn modal-btn-oos" onclick="whatsapp(${p.id})" style="background:#92400E;color:#fff;border-color:#92400E">${WA_SVG} Consultar por WhatsApp</button>`
+    ? `<button class="btn modal-btn-oos" onclick="whatsapp(${p.id})" style="background:var(--tint-amber-strong);color:#fff;border-color:var(--tint-amber-strong)">${WA_SVG} Consultar por WhatsApp</button>`
     : oos
     ? `<button class="btn modal-btn-oos" onclick="notifyRestock(${p.id},this)"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Avisarme cuando haya stock</button>`
     : `<div class="modal-qty-row">
@@ -1154,7 +1154,7 @@ function openModal(id) {
     ${galleryHTML}
     <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">✕</button>
     ${apt ? `<span class="product-badge badge-apartado" style="position:absolute;top:10px;left:10px"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Apartado</span>`
-      : oos ? `<span class="product-badge badge-oos" style="position:absolute;top:10px;left:10px;background:#9B8B78">Agotado</span>` : ''}
+      : oos ? `<span class="product-badge badge-oos" style="position:absolute;top:10px;left:10px;background:var(--muted)">Agotado</span>` : ''}
     ${modalBadgeArea}
   </div>
   <div class="modal-right">

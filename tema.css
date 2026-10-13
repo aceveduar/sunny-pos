@@ -1,0 +1,78 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   tema.css — Sistema de diseño de Sunny POS (único lugar con valores de diseño)
+   Se carga PRIMERO en todas las páginas. El resto del CSS usa estas variables
+   por nombre; no escribir colores, esquinas ni sombras sueltos.
+   El color de marca lo sobrescribe negocio.js con el de cada negocio.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+  /* ── Marca ─────────────────────────────────────────────────────────── */
+  --brand:#4F7461;          /* botones principales, activo, gráficas */
+  --brand-rgb:79,116,97;    /* para transparencias: rgba(var(--brand-rgb),.2) */
+  --brand-dark:#4F7461;     /* texto/íconos de marca sobre fondo claro (4.5:1) */
+  --brand-light:#EAEEEC;    /* fondo suave de marca (pestaña activa) */
+  --on-brand:#fff;          /* texto encima de --brand */
+
+  /* ── Neutros (cambian con modo oscuro) ─────────────────────────────── */
+  --cream:#F7F2EB;          /* fondo de página */
+  --surface:#fff;           /* tarjetas, barras, ventanas */
+  --surface-soft:#F8F4EF;   /* campos, encabezados de tabla, hover */
+  --charcoal:#1C1817;       /* texto principal */
+  --charcoal-soft:#2E2825;
+  --muted:#8A7564;          /* texto secundario */
+  --muted-light:#B5A696;    /* texto terciario, deshabilitado */
+  --border:#EAE0D4;
+  --border-light:#F0E8DF;
+
+  /* ── Fijos (NO cambian con modo oscuro): avisos flotantes, tooltips ──── */
+  --ink:#1C1817;
+  --ink-soft:#2E2825;
+
+  /* ── Estados ───────────────────────────────────────────────────────── */
+  --red:#E85D5D;
+  --green:#2D6A4F;
+  --amber:#F59E0B;
+  --violet:#7C5CBF;
+  --teal:#1F8A82;
+  --wa:#25D366;             /* verde de WhatsApp (marca ajena, no se toca) */
+  /* Tintes: fondo / borde / texto fuerte de avisos y chips de estado */
+  --tint-red-bg:#FEF2F2;    --tint-red-border:#FECACA;    --tint-red-strong:#B91C1C;   --tint-red-text:#5D4037;
+  --tint-amber-bg:#FFFBEB;  --tint-amber-border:#FDE68A;  --tint-amber-strong:#92400E; --tint-amber-text:#5D4037;
+  --tint-green-bg:#ECFDF5;  --tint-green-border:#A7F3D0;  --tint-green-strong:#065F46;
+  --tint-blue-bg:#EFF6FF;   --tint-blue-border:#BFDBFE;   --tint-blue-strong:#1D4ED8;
+  --tint-violet-bg:#F5F3FF; --tint-violet-border:#DDD6FE; --tint-violet-strong:#6D28D9;
+
+  /* ── Esquinas ──────────────────────────────────────────────────────── */
+  --radio-xs:4px;           /* insignias chicas, barras finas */
+  --radio-sm:8px;           /* botones chicos, campos compactos */
+  --radio-md:12px;          /* botones, campos, tarjetas de lista */
+  --radio-lg:16px;          /* tarjetas grandes, paneles */
+  --radio-xl:20px;          /* ventanas y hojas inferiores */
+  --radio-pill:999px;       /* píldoras y chips */
+
+  /* ── Sombras ───────────────────────────────────────────────────────── */
+  --sombra-1:0 1px 4px rgba(28,24,23,.07);   /* tarjetas en reposo */
+  --sombra-2:0 4px 20px rgba(28,24,23,.10);  /* tarjetas al pasar, menús */
+  --sombra-3:0 8px 40px rgba(28,24,23,.18);  /* ventanas, hojas, avisos flotantes */
+
+  /* ── Nombres heredados (equivalencias, para el código existente) ──── */
+  --r:var(--radio-md); --r-sm:var(--radio-sm); --r-lg:var(--radio-xl);
+  --shadow-sm:var(--sombra-1); --shadow:var(--sombra-2); --shadow-lg:var(--sombra-3);
+}
+
+:root[data-theme="dark"]{
+  --brand-light:#1F241F;
+  --cream:#15120E; --surface:#221D18; --surface-soft:#2A241D;
+  --charcoal:#F1E8DB; --charcoal-soft:#D8CBB8;
+  --muted:#B9A890; --muted-light:#6B5D4D;
+  --border:#3D352B; --border-light:#352E25;
+  --tint-red-bg:#332020;    --tint-red-border:rgba(248,113,113,.35);  --tint-red-strong:#F87171;   --tint-red-text:#E8D3CE;
+  --tint-amber-bg:#332A14;  --tint-amber-border:rgba(251,191,36,.4);  --tint-amber-strong:#FBBF24; --tint-amber-text:#E8DCC2;
+  --tint-green-bg:#1B2E22;  --tint-green-border:rgba(110,231,183,.35); --tint-green-strong:#6EE7B7;
+  --tint-blue-bg:#18263A;   --tint-blue-border:rgba(96,165,250,.35);  --tint-blue-strong:#7DB8F5;
+  --tint-violet-bg:#241C38; --tint-violet-border:rgba(196,168,245,.35); --tint-violet-strong:#C4A8F5;
+  --sombra-1:0 1px 4px rgba(0,0,0,.5);
+  --sombra-2:0 4px 20px rgba(0,0,0,.6);
+  --sombra-3:0 8px 45px rgba(0,0,0,.7);
+  /* Controles nativos (checkbox, selector de fecha, scrollbars) siguen color-scheme */
+  color-scheme:dark;
+}

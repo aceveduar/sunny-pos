@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tema.css">
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="admin.css">
 <script>
@@ -172,7 +173,7 @@
         <div class="kb-col-left">
           <div>
             <label class="kb-label">Foto del kit <span style="font-size:.7rem;color:var(--muted)">(opcional)</span></label>
-            <div id="kb-img-zone" onclick="document.getElementById('kb-img-input').click()" style="border:2px dashed var(--border);border-radius:12px;cursor:pointer;overflow:hidden;background:var(--surface-soft);display:flex;align-items:center;justify-content:center;min-height:80px;position:relative;transition:border-color .2s">
+            <div id="kb-img-zone" onclick="document.getElementById('kb-img-input').click()" style="border:2px dashed var(--border);border-radius:var(--radio-md);cursor:pointer;overflow:hidden;background:var(--surface-soft);display:flex;align-items:center;justify-content:center;min-height:80px;position:relative;transition:border-color .2s">
               <div id="kb-img-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:.82rem;padding:16px">
                 <span><svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span><span>Toca para agregar foto</span>
               </div>
@@ -193,7 +194,7 @@
           <div>
             <label class="kb-label">Categoría</label>
             <button type="button" id="kb-cat-btn" class="f-cat-btn" onclick="openKitCatPicker()">
-              <span id="kb-cat-dot" class="cat-dot" style="background:#9B8B78;width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
+              <span id="kb-cat-dot" class="cat-dot" style="background:var(--muted);width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
               <span id="kb-cat-label-display">Seleccionar categoría</span>
               <span class="f-cat-arrow">▾</span>
             </button>
@@ -208,16 +209,16 @@
                 <input id="kb-search" class="kb-input" type="text" placeholder="Buscar producto para agregar..." oninput="_kbSearch(this.value);document.getElementById('kb-search-clear').style.display=this.value?'flex':'none'" style="width:100%;margin-bottom:0;padding-right:32px;padding-left:34px">
                 <button type="button" id="kb-search-clear" onclick="document.getElementById('kb-search').value='';_kbSearch('');this.style.display='none'" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:none;background:var(--border);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;touch-action:manipulation">✕</button>
               </div>
-              <button type="button" onclick="openKitScanner()" style="flex-shrink:0;width:44px;height:44px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Escanear código de barras"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+              <button type="button" onclick="openKitScanner()" style="flex-shrink:0;width:44px;height:44px;border-radius:var(--radio-md);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Escanear código de barras"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
             </div>
-            <div id="kb-search-results" style="display:none;max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);margin-bottom:10px"></div>
+            <div id="kb-search-results" style="display:none;max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:var(--radio-md);background:var(--surface);margin-bottom:10px"></div>
             <div id="kb-components"></div>
             <div id="kb-stock-preview" style="font-size:.78rem;text-align:center;margin-top:8px;min-height:18px"></div>
           </div>
         </div>
       </div>
       <div style="padding:14px 20px 32px;flex-shrink:0;border-top:1px solid var(--border)">
-        <button id="kb-save-btn" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:12px;padding:15px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">Guardar Kit →</button>
+        <button id="kb-save-btn" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:var(--radio-md);padding:15px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">Guardar Kit →</button>
       </div>
     </div>
   </div>
@@ -253,7 +254,7 @@
         <div class="recv-list-head">
           <span>Recibidos en esta sesión</span>
           <span style="display:flex;align-items:center;gap:10px">
-            <button id="recv-undo-all-btn" onclick="recvUndoAll()" style="display:none;align-items:center;gap:4px;background:none;border:1.5px solid var(--red);border-radius:8px;padding:4px 10px;font-size:.7rem;font-weight:600;color:var(--red);cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">
+            <button id="recv-undo-all-btn" onclick="recvUndoAll()" style="display:none;align-items:center;gap:4px;background:none;border:1.5px solid var(--red);border-radius:var(--radio-sm);padding:4px 10px;font-size:.7rem;font-weight:600;color:var(--red);cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">
               <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Deshacer todo
             </button>
             <span id="recv-session-total" style="color:var(--brand);font-weight:600"></span>
@@ -596,7 +597,7 @@
         <!-- Zona de arrastre (drag & drop desktop) + botones de carga -->
         <div class="img-upload-zone" id="img-upload-zone">
           <div class="up-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
-          <div class="up-text">Arrastra fotos aquí · o <kbd style="font-size:.75rem;background:var(--surface-soft);border:1px solid var(--border);border-radius:4px;padding:1px 5px">Ctrl+V</kbd> para pegar</div>
+          <div class="up-text">Arrastra fotos aquí · o <kbd style="font-size:.75rem;background:var(--surface-soft);border:1px solid var(--border);border-radius:var(--radio-xs);padding:1px 5px">Ctrl+V</kbd> para pegar</div>
           <div class="img-btns">
             <button type="button" class="btn btn-outline btn-sm"
                     onclick="document.getElementById('f-img-file').click()">
@@ -648,7 +649,7 @@
           <label>Categoría</label>
           <select id="f-category" style="display:none"></select>
           <button type="button" id="f-category-btn" class="f-cat-btn" onclick="openFormCatPicker()">
-            <span id="f-cat-dot" class="cat-dot" style="background:#9B8B78"></span>
+            <span id="f-cat-dot" class="cat-dot" style="background:var(--muted)"></span>
             <span id="f-cat-label-display">Seleccionar categoría</span>
             <span class="f-cat-arrow">▾</span>
           </button>
@@ -659,7 +660,7 @@
         <div class="field">
           <label>Precio de venta (MXN)</label>
           <input type="number" id="f-price" min="0" step="1" inputmode="decimal" placeholder="$0" oninput="updateMarginDisplay()">
-          <p id="price-lock-hint" class="hint" style="display:none;color:#b45309"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Precio bloqueado — cambia la categoría para editarlo</p>
+          <p id="price-lock-hint" class="hint" style="display:none;color:var(--tint-amber-strong)"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Precio bloqueado — cambia la categoría para editarlo</p>
         </div>
         <div class="field">
           <label>Precio de costo (MXN) <span class="tag-internal">Solo interno</span></label>
@@ -771,8 +772,8 @@
             <button type="button" id="kit-search-clear" onclick="document.getElementById('kit-search').value='';document.getElementById('kit-search-results').style.display='none';this.style.display='none'" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:none;background:var(--border);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;touch-action:manipulation">✕</button>
           </div>
         </div>
-        <div id="kit-search-results" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:170px;overflow-y:auto;margin-bottom:10px;background:var(--surface)"></div>
-        <div id="kit-components-list" style="border:1px solid var(--border);border-radius:8px;padding:4px 6px;min-height:38px;background:var(--surface-soft)"></div>
+        <div id="kit-search-results" style="display:none;border:1px solid var(--border);border-radius:var(--radio-sm);max-height:170px;overflow-y:auto;margin-bottom:10px;background:var(--surface)"></div>
+        <div id="kit-components-list" style="border:1px solid var(--border);border-radius:var(--radio-sm);padding:4px 6px;min-height:38px;background:var(--surface-soft)"></div>
         <div id="kit-stock-calc" style="display:none;margin-top:8px;font-size:.8rem;align-items:center;gap:6px">
           <span style="font-weight:600;color:var(--charcoal)">Stock disponible:</span>
           <span id="kit-stock-val"></span>
@@ -873,7 +874,7 @@
       <div class="scanner-wrap">
         <div id="scanner-reader"></div>
       </div>
-      <p id="scanner-status" style="margin-top:10px;font-size:.82rem;color:#9B8B78;text-align:center">Iniciando cámara...</p>
+      <p id="scanner-status" style="margin-top:10px;font-size:.82rem;color:var(--muted);text-align:center">Iniciando cámara...</p>
     </div>
   </div>
 </div>
@@ -902,7 +903,7 @@
   <div id="sim-modal">
     <div style="position:relative">
       <img id="sim-img" class="sim-img" src="" alt="">
-      <button onclick="closeSimilarModal()" style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.92);color:var(--ink);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.18)">✕</button>
+      <button onclick="closeSimilarModal()" style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.92);color:var(--ink);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra-2)">✕</button>
     </div>
     <div class="sim-body">
       <div class="sim-tag" id="sim-cat"></div>
@@ -965,7 +966,7 @@
   <div style="padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div style="position:relative">
       <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;line-height:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input type="text" id="cat-sheet-search" placeholder="Buscar categoría..." oninput="_catSheetFilter(this.value)" autocomplete="off" style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit;color:var(--charcoal);background:var(--surface);outline:none;box-sizing:border-box">
+      <input type="text" id="cat-sheet-search" placeholder="Buscar categoría..." oninput="_catSheetFilter(this.value)" autocomplete="off" style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:var(--radio-sm);font-size:.84rem;font-family:inherit;color:var(--charcoal);background:var(--surface);outline:none;box-sizing:border-box">
     </div>
   </div>
   <div class="cat-sheet-list" id="cat-sheet-list"></div>

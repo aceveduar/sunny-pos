@@ -135,7 +135,7 @@ function _kbSearch(q) {
   const termEncoded = encodeURIComponent(term);
   const createBtn = `
     <div class="kb-result-item" onclick="_kbCreateDraft(decodeURIComponent('${termEncoded}'))">
-      <div style="width:36px;height:36px;border-radius:7px;background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--brand-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <div style="width:36px;height:36px;border-radius:var(--radio-sm);background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--brand-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:.84rem;font-weight:600;color:var(--brand-dark)">Crear "${term}" como borrador</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:1px">Stock 0 · Sin publicar · editar después</div>
@@ -153,7 +153,7 @@ function _kbSearch(q) {
       : `${p.stock} en stock`;
     return `
     <div class="kb-result-item" onclick="_kbAddComponent(${p.id})" style="${isOos ? 'opacity:.75' : ''}">
-      <img data-src="${_driveSz(p.image, 80)}" style="width:36px;height:36px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(p.image, 80) || ''}')">
+      <img data-src="${_driveSz(p.image, 80)}" style="width:36px;height:36px;object-fit:cover;border-radius:var(--radio-sm);flex-shrink:0;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(p.image, 80) || ''}')">
       <div style="flex:1;min-width:0">
         <div style="font-size:.84rem;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(p.name)}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${stockTxt}</div>
@@ -295,12 +295,12 @@ function _kbChangeQty(id, delta) {
 function _kbRenderComponents() {
   const el = document.getElementById('kb-components');
   if (!_kbComponents.length) {
-    el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:.8rem;border:1.5px dashed var(--border);border-radius:10px">Busca productos arriba para agregarlos al kit</div>';
+    el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:.8rem;border:1.5px dashed var(--border);border-radius:var(--radio-md)">Busca productos arriba para agregarlos al kit</div>';
     return;
   }
   el.innerHTML = _kbComponents.map(c => { const oos = _kbLiveStock(c.id) === 0; return `
     <div class="kb-comp">
-      <img data-src="${_driveSz(c.image, 80) || DEFAULT_IMG}" style="width:44px;height:44px;object-fit:cover;border-radius:9px;flex-shrink:0;cursor:zoom-in;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(c.image, 80) || ''}')" onclick="_kitCompPopover(${c.id},event)" title="Ver producto">
+      <img data-src="${_driveSz(c.image, 80) || DEFAULT_IMG}" style="width:44px;height:44px;object-fit:cover;border-radius:var(--radio-sm);flex-shrink:0;cursor:zoom-in;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(c.image, 80) || ''}')" onclick="_kitCompPopover(${c.id},event)" title="Ver producto">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="_kitCompPopover(${c.id},event)" title="Ver producto">
         <div style="font-size:.84rem;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(c.name)}</div>
         ${oos ? `<div style="font-size:.7rem;color:var(--red);margin-top:2px"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Agotado — disponibilidad calculada cuando haya stock</div>` : ''}

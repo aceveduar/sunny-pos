@@ -131,7 +131,7 @@ function recvSearch(q) {
         <input type="text" class="recv-search" placeholder="Nombre del producto…" oninput="recvSearchInNotFound(this.value)" style="width:100%;box-sizing:border-box">
         <div id="recv-nf-results" style="margin-top:6px"></div>
       </div>
-      <button onclick="recvCreateProduct('${safeVal}')" style="width:100%;padding:11px 16px;background:var(--ink);color:#fff;border:none;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">+ Crear producto nuevo →</button>
+      <button onclick="recvCreateProduct('${safeVal}')" style="width:100%;padding:11px 16px;background:var(--ink);color:#fff;border:none;border-radius:var(--radio-md);font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">+ Crear producto nuevo →</button>
     </div>`;
     return;
   }

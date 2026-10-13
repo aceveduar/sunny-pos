@@ -49,7 +49,7 @@ async function openTransactionTimeline(saleId) {
     const when = d.toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' }) + ' · ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
     const who = (ev.user_email || 'desconocido').split('@')[0];
     const reasonHTML = ev.meta?.reason
-      ? `<div style="font-size:.76rem;color:var(--charcoal);font-style:italic;margin-top:4px;background:var(--cream);border-radius:6px;padding:5px 8px">"${_esc(ev.meta.reason)}"</div>`
+      ? `<div style="font-size:.76rem;color:var(--charcoal);font-style:italic;margin-top:4px;background:var(--cream);border-radius:var(--radio-sm);padding:5px 8px">"${_esc(ev.meta.reason)}"</div>`
       : '';
     return `
 <div style="border-left:2px solid var(--brand);padding:2px 0 14px 14px;margin-left:4px;position:relative">
@@ -1037,7 +1037,7 @@ async function loadHistory() {
       } else {
         badgeText = `${methodIcon} Venta`;
       }
-      const payBadge = `<span class="pay-badge ${badgeClass}" style="font-size:.62rem;padding:2px 6px;border-radius:50px;font-weight:700">${badgeText}</span>`;
+      const payBadge = `<span class="pay-badge ${badgeClass}" style="font-size:.62rem;padding:2px 6px;border-radius:var(--radio-pill);font-weight:700">${badgeText}</span>`;
 
       const THUMB_PH = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2228%22 height=%2228%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23D1C4B8%22 stroke-width=%221.5%22%3E%3Crect x=%223%22 y=%223%22 width=%2218%22 height=%2218%22 rx=%222%22/%3E%3Ccircle cx=%228.5%22 cy=%228.5%22 r=%221.5%22/%3E%3Cpath d=%22m21 15-5-5L5 21%22/%3E%3C/svg%3E';
       const itemsHTML = items.map(i => {

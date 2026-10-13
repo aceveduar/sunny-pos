@@ -1479,7 +1479,7 @@ function productCard(p) {
     const hoy  = new Date(); hoy.setHours(0, 0, 0, 0);
     const days = Math.round((new Date(p.expiryDate + 'T00:00:00') - hoy) / 86400000);
     if (days < 0) expSub = ` · <span style="color:var(--red);font-weight:700">${_clockIconSvg(13)} Caducado</span>`;
-    else if (days <= 60) expSub = ` · <span style="color:#D97706;font-weight:700">${_clockIconSvg(13)} ${days}d</span>`;
+    else if (days <= 60) expSub = ` · <span style="color:var(--tint-amber-strong);font-weight:700">${_clockIconSvg(13)} ${days}d</span>`;
   }
   return `
 <div class="pos-prod" onclick="${oos ? `_showRestockPrompt(${p.id})` : `addToCart(${p.id},null,event)`}" ${oos ? '' : ''}>
