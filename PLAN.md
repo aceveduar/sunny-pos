@@ -11,7 +11,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Copia sin historial de git ni datos de Tres Encantos
 - [x] `negocio.js`: dirección y llave de Supabase en un solo lugar (vacías = aviso en pantalla)
 - [x] Google Analytics opcional (`NEGOCIO.analyticsId`)
-- [ ] **(Eduardo)** Crear repo privado en GitHub `sunny-pos`
+- [x] **(Eduardo)** Crear repo privado en GitHub `sunny-pos` (github.com/aceveduar/sunny-pos)
 - [ ] **(Eduardo)** Crear proyecto nuevo en Supabase para pruebas
 
 ## 2. Base de datos instalable
