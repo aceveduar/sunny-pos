@@ -284,10 +284,10 @@ a{text-decoration:none}
 .te-dialog-actions{display:flex;gap:8px;margin-top:20px}
 .te-dialog-btn{flex:1;min-height:48px;padding:10px 12px;border-radius:12px;font-family:inherit;font-size:.92rem;font-weight:700;cursor:pointer;touch-action:manipulation;line-height:1.25}
 .te-dialog-cancel{border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal)}
-.te-dialog-ok{border:none;background:var(--ink);color:#fff}
+.te-dialog-ok{border:none;background:var(--brand);color:var(--on-brand)}
 .te-dialog-ok.is-danger{background:var(--red);color:#fff}
 .te-dialog-btn:focus-visible{outline:3px solid rgba(var(--brand-rgb),.55);outline-offset:2px}
-:root[data-theme="dark"] .te-dialog-ok:not(.is-danger){background:var(--charcoal);color:var(--ink)}
+
 @keyframes teDialogFade{from{opacity:0}to{opacity:1}}
 @keyframes teDialogIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.te-dialog-backdrop,.te-dialog{animation:none}}
