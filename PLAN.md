@@ -34,8 +34,9 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Ubicación de la tienda → `config.ubicacion_tienda` `{lat,lng}` (sin dato no avisa) — falta capturarla en Configuración
 - [x] Natura/Avon/revista → opcional ("marca por catálogo": `NEGOCIO.tienda.catalogo`)
 - [x] `manifest.json`, íconos genéricos, títulos y mensajes de WhatsApp. Pendiente por negocio: `og:*` de `index.html` y sus íconos (WhatsApp no ejecuta JS)
-- [ ] `MANUAL.md` genérico
-- [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos (pruebas listas: personas temporales + kits/apartados; falta respaldo)
+- [x] `MANUAL.md` genérico (sin libreta; corte actualizado)
+- [x] Scripts: respaldo (`scripts/respaldo.py`, cualquier negocio vía negocio.js) y pruebas sin cuentas de Tres Encantos
+- [ ] **(Eduardo)** Tarea programada diaria del respaldo
 - [ ] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan

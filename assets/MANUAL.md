@@ -1,7 +1,7 @@
-# Manual de Usuario — Tres Encantos
+# Manual de Usuario — Sunny POS
 
 Guía para el equipo de la tienda: Caja, Inventario, Reportes, Actividad y Configuración.
-Última revisión: 2 de octubre de 2026.
+Última revisión: 13 de octubre de 2026.
 
 ---
 
@@ -25,7 +25,7 @@ Caja no deja vender sin turno abierto. Al entrar, escribe el **fondo inicial**: 
 4. En efectivo, toca el monto que te dieron (o escríbelo) y el sistema calcula el cambio.
 5. Pulsa **Cobrar**.
 
-En **Más opciones** están el descuento, la nota, el cliente y "Ya lo cobró Ofelia" (cuando el dinero lo recibió ella y no entra a tu cajón).
+En **Más opciones** están el descuento, la nota, el cliente y "Ya lo cobró la dueña" (cuando el dinero lo recibió ella y no entra a tu cajón; aparece si el negocio la configuró).
 
 **Transferencia:** confirma en la app del banco que llegó el dinero antes de entregar el producto.
 
@@ -42,20 +42,11 @@ Justo después de cobrar, en la ventana de confirmación, toca **Era apartado**.
 ### Abonos, liquidar, editar y cancelar apartados
 En **Apartados** busca a la clienta y abre su ficha para abonar, liquidar, editar productos/datos o cancelar. Después de cada pago el sistema ofrece enviarle el comprobante por WhatsApp; mándalo siempre, es su respaldo y el tuyo.
 
-### Pasar apartados de la libreta
-Para apartados que se anotaron en papel y no están en el sistema. En **Apartados** toca **Libreta** (en computadora: **Pasar de la libreta**).
-1. Escribe el **nombre** como viene en la libreta y, si lo tienes, su teléfono. Si ya hay un apartado con ese nombre, te avisa para que no la pases dos veces.
-2. **La cuenta:** si la libreta trae el total, escríbelo y toca **+ Anotar abono** por cada resta (Enter pasa al siguiente). Junto a cada abono ves cuánto quedaba, para compararlo con lo que dice la libreta. Si solo sabes cuánto debe, toca **Solo sé cuánto debe**.
-3. Lo demás es opcional: qué apartó, la fecha del apartado, la fecha límite y una foto de la página.
-4. Toca **Guardar**. La ventana se queda abierta para la siguiente clienta; ciérrala cuando termines.
-
-Lo que la clienta pagó en la libreta cuenta para su saldo, pero **no** aparece en Reportes ni en el corte de caja (ese dinero entró antes). Lo que te pague desde hoy se registra como cualquier abono. Si te equivocaste en un monto, abre su ficha y toca el lápiz para **corregir lo que debe**.
-
 ### Ver apartados sin abrir caja
-En la pantalla **Abrir caja**, toca **Solo ver apartados, sin abrir caja**. Puedes buscar, revisar cuánto deben, mandar recordatorios y pasar apartados de la libreta. Para cobrar un abono, liquidar o hacer un apartado nuevo, el sistema te pedirá abrir caja.
+En la pantalla **Abrir caja**, toca **Solo ver apartados, sin abrir caja**. Puedes buscar, revisar cuánto deben y mandar recordatorios. Para cobrar un abono, liquidar o hacer un apartado nuevo, el sistema te pedirá abrir caja.
 
 ### Fiado: cuando la persona se lleva el producto
-Si una persona de confianza se lleva el producto y paga después, al hacer el apartado toca **Se lo lleva hoy (fiado)**. Necesita el permiso **Dar fiado** (Ofelia lo tiene); si no lo tienes, el sistema pide el PIN de Ofelia. Si Ofelia lo indica por teléfono, registra un apartado normal y ella lo marca como fiado desde su celular (Apartados → abrir el apartado → lápiz → **Se lo llevó**; puede hacerlo con **Solo ver apartados**, sin abrir caja). Si ya existe el apartado, ábrelo, toca el lápiz y marca **Se lo llevó**. Un fiado nunca se libera: solo se le sigue cobrando, y sus recordatorios hablan de saldo pendiente, no de "pasar a recoger".
+Si una persona de confianza se lleva el producto y paga después, al hacer el apartado toca **Se lo lleva hoy (fiado)**. Necesita el permiso **Dar fiado** (la dueña lo tiene); si no lo tienes, el sistema pide el PIN de alguien que lo tenga. Si la dueña lo indica por teléfono, registra un apartado normal y ella lo marca como fiado desde su celular (Apartados → abrir el apartado → lápiz → **Se lo llevó**; puede hacerlo con **Solo ver apartados**, sin abrir caja). Si ya existe el apartado, ábrelo, toca el lápiz y marca **Se lo llevó**. Un fiado nunca se libera: solo se le sigue cobrando, y sus recordatorios hablan de saldo pendiente, no de "pasar a recoger".
 
 ### Apartado en tienda o fiado: cómo distinguirlos
 En la lista de Apartados, los que tienen el producto **guardado en la tienda** llevan la etiqueta **En tienda**. Los que no la llevan son fiado: la persona ya se llevó su producto. Al liquidar un apartado En tienda, el sistema te recuerda **entregarle su producto**.
@@ -79,7 +70,7 @@ Hazlo **al terminar tu jornada, todos los días**, aunque te vayas temprano.
 
 1. Abre **Corte**.
 2. **Cuenta el efectivo del cajón** y escríbelo en "Conteo físico". El sistema no te muestra cuánto debería haber hasta que comparas; así el conteo es real.
-3. Si alguien más cobró en efectivo mientras tu turno estaba abierto (por ejemplo, Ofelia desde su celular), Caja te pregunta si **ese dinero está en tu cajón**. Contesta Sí o No por cada persona.
+3. Lo que cobre **otra cuenta** no se espera en tu cajón (cada quien cuadra su propio efectivo). Si la dueña cobra en la tienda y deja el dinero en tu cajón, regístralo como **+ Ingreso**.
 4. Toca **Comparar conteo**. Si escribiste mal, toca "Corregir conteo".
 5. Toca **Cerrar turno**. Una diferencia de $100 o más necesita autorización.
 
@@ -91,7 +82,7 @@ Si se te olvidó cerrar, al día siguiente verás un aviso: cuenta el cajón y c
 En Corte → **Gastos y otros movimientos**, toca **+ Agregar** y elige:
 - **Gasto:** salida de efectivo para un pago (garrafones, taxi).
 - **Ingreso:** entrada que no es venta (recargas).
-- **Retiro:** dinero que alguien se lleva del cajón sin ser gasto, por ejemplo cuando Ofelia se lleva la venta del día o se hace un depósito. Escribe quién se lo lleva.
+- **Retiro:** dinero que alguien se lleva del cajón sin ser gasto, por ejemplo cuando la dueña se lleva la venta del día o se hace un depósito. Escribe quién se lo lleva.
 
 **Cada vez que salga dinero del cajón, regístralo en ese momento.** Si no, al cerrar el turno va a faltar exactamente esa cantidad. Los retiros quedan en Actividad y no cuentan como gasto en la utilidad.
 
@@ -172,4 +163,4 @@ Recarga la página y vuelve a entrar. Si Caja se ve rara después de una actuali
 
 ## Contacto técnico
 
-Eduardo — eacevedo@sunname.com.mx
+Soporte de Sunny POS (Sunname) — eacevedo@sunname.com.mx
