@@ -71,3 +71,15 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - **Etiquetas:** imprimir código de barras por variante (fase posterior).
 
 **Fases:** 1) modelo + matriz en Inventario · 2) Caja · 3) Tienda · 4) Reportes por talla.
+
+## 8. Rapidez (máxima velocidad de carga)
+**Punto de partida (2026-10-13, 5,000 productos, PC de Eduardo, sesión real):** Inventario 7–8 s · Caja ~5 s · Reportes ~6 s · Actividad ~6 s · Configuración ~4.5 s. Inventario descarga ~4 MB.
+- [ ] Medir con un script repetible (Playwright) antes y después de cada cambio.
+- [ ] Pedir solo las columnas que cada pantalla usa (Inventario hoy pide `select=*`).
+- [ ] Páginas de 1,000 en paralelo, no una tras otra.
+- [ ] Mostrar al instante la copia guardada y actualizar por detrás (Inventario y Caja).
+- [ ] Miniaturas del tamaño real en pantalla (las fotos de 1000 px para una miniatura de 80 px pesan de más; Drive ya usa `_driveSz`).
+- [ ] Reportes: que el servidor sume (RPC por día/categoría/producto) en vez de bajar todas las ventas.
+- [ ] Cargar Chart.js y librerías pesadas solo cuando se necesitan; revisar el orden de scripts.
+- [ ] Copia sin conexión que no se rompa arriba de ~6,000 productos (IndexedDB en vez de localStorage).
+
