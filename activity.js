@@ -129,7 +129,7 @@ function avatarInitial(email) {
   return name ? name[0].toUpperCase() : (email || '?')[0].toUpperCase();
 }
 function avatarColor(email) {
-  const palette = [NEGOCIO.color || '#F0A830','#0891B2','#D97706','#7C3AED','#E85D5D','#059669'];
+  const palette = [NEGOCIO.color || '#4F7461','#0891B2','#D97706','#7C3AED','#E85D5D','#059669'];
   let h = 0;
   for (const c of (email || '')) h = c.charCodeAt(0) + ((h << 5) - h);
   return palette[Math.abs(h) % palette.length];

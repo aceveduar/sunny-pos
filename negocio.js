@@ -24,7 +24,7 @@ window.NEGOCIO = {
   // Color de marca (botones, pestaña activa, precios destacados, gráficas).
   // Cualquier tono sirve: los tonos derivados y el color del texto encima
   // (blanco o casi negro, el que se lea mejor) se calculan solos.
-  color: '#F0A830',
+  color: '#4F7461',
 };
 
 // Título de la pestaña: "Caja — <nombre del negocio>"

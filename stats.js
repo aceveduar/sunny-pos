@@ -712,9 +712,9 @@ function dvToggle(idx) {
 }
 
 // Color de marca para las imágenes de relleno (data: URI no entiende variables CSS)
-const _BRAND_HEX = (window.NEGOCIO && NEGOCIO.color) || '#F0A830';
+const _BRAND_HEX = (window.NEGOCIO && NEGOCIO.color) || '#4F7461';
 const _brand = () => _cssVar('--brand') || _BRAND_HEX;
-const _brandA = a => `rgba(${_cssVar('--brand-rgb') || '240,168,48'},${a})`;
+const _brandA = a => `rgba(${_cssVar('--brand-rgb') || '79,116,97'},${a})`;
 const _DV_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="' + _BRAND_HEX + '" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
 function _dvImgErr(el) { el.onerror = null; el.src = _DV_PH; }
 function _prodImg(prod) {
@@ -1050,7 +1050,7 @@ function renderKPIs() {
   // calculadas aparte para no acoplar el sparkline al ciclo de vida de la
   // gráfica grande de Chart.js.
   _revSparkChart = _drawSparkline('kpi-revenue-spark', _revSparkChart, paymentsLoaded ? _sparklineBuckets(payments, _paymentAmount) : [], _cssVar('--green', '#2D6A4F'));
-  _unitsSparkChart = _drawSparkline('kpi-avg-spark', _unitsSparkChart, salesLoaded ? _sparklineBuckets(sales, s => _unitsOf(s.items), _completionDate) : [], _cssVar('--brand-dark', '#A86A0C'));
+  _unitsSparkChart = _drawSparkline('kpi-avg-spark', _unitsSparkChart, salesLoaded ? _sparklineBuckets(sales, s => _unitsOf(s.items), _completionDate) : [], _cssVar('--brand-dark', '#4F7461'));
 }
 
 // Agrupa una lista (pagos o ventas) en cubetas por hora (modo Día) o por día

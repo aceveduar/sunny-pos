@@ -1,6 +1,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --cream:#F7F2EB;--brand:#F0A830;--brand-rgb:240,168,48;--brand-dark:#A86A0C;--brand-light:#FEF5E4;--on-brand:#1F1B16;
+  --cream:#F7F2EB;--brand:#4F7461;--brand-rgb:79,116,97;--brand-dark:#4F7461;--brand-light:#EAEEEC;--on-brand:#fff;
   --charcoal:#1C1817;--charcoal-soft:#2E2825;
   --wa:#25D366;--red:#E85D5D;--green:#2D6A4F;
   --border:#EAE0D4;--border-light:#F0E8DF;
@@ -30,7 +30,7 @@
 :root[data-theme="dark"]{
   --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
   --charcoal:#F1E8DB;--charcoal-soft:#D8CBB8;
-  --brand-light:#3A2D17;
+  --brand-light:#1F241F;
   --border:#3D352B;--border-light:#352E25;
   --muted:#B9A890;--muted-light:#6B5D4D;
   --shadow-sm:0 1px 4px rgba(0,0,0,.5);
