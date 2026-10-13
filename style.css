@@ -380,6 +380,16 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
 .modal-gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#fff;aspect-ratio:4/3}
 .modal-gallery::-webkit-scrollbar{display:none}
 .modal-gallery-img{flex:0 0 100%;width:100%;object-fit:contain;background:#fff;scroll-snap-align:start;cursor:zoom-in}
+/* Mientras la foto descarga: brillo de carga en vez de un hueco blanco */
+.modal-gallery-img:not(.is-loaded){background:linear-gradient(90deg,var(--surface-soft) 0%,var(--border) 50%,var(--surface-soft) 100%);background-size:200% 100%;animation:sk-shine 1.3s ease-in-out infinite}
+/* Flechas de la galería: solo con mouse (en pantallas táctiles se desliza) */
+.mg-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);
+  background:rgba(255,255,255,.92);color:var(--charcoal);font-size:1.6rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--sombra-1);transition:background .15s}
+.mg-arrow:hover{background:#fff}
+.mg-arrow[hidden]{display:none}
+.mg-prev{left:12px}.mg-next{right:12px}
+@media (hover:none){.mg-arrow{display:none}}
 .modal-gallery-dots{display:flex;justify-content:center;gap:6px;padding:6px 0 2px;background:#fff;flex-shrink:0}
 .mgd{width:7px;height:7px;border-radius:50%;background:var(--muted-light);cursor:pointer;transition:.2s;flex-shrink:0;padding:8px;background-clip:content-box}
 .mgd-active{background-color:var(--brand);transform:scale(1.25)}
