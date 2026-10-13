@@ -21,7 +21,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
   - [ ] B. Con cambios chicos en la app: tabla de categorías (adiós productos huérfanos), quitar columnas viejas (`sales.type`, `abonos`, `legacy_key`, `is_estimated`, `category_label`), método Tarjeta
   - [ ] C. Grandes, decidir después: personas por id y no por correo; renglones de venta en su propia tabla (`sale_items`) para reportes rápidos; reportes calculados en el servidor
 - [x] Datos iniciales: categorías genéricas, configuración por defecto (`02_datos_iniciales.sql`; dueña con `03_primera_duena.sql`)
-- [ ] Probarlo en el proyecto nuevo y crear la primera cuenta (dueña)
+- [x] Probarlo en el proyecto nuevo y crear la primera cuenta (dueña): eacevedo@ — producto, venta, turno y Reportes OK (2026-10-13)
 - [ ] Desplegar las Edge Functions (`create-user`, `groq-proxy`, `drive-proxy`)
 - [ ] **(Eduardo)** Apps Script de Drive para el negocio de prueba
 - [ ] Control de versiones de la base (qué cambios tiene cada negocio)
