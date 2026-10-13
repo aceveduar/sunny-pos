@@ -17,7 +17,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 ## 2. Base de datos instalable
 - [x] Sacar de Tres Encantos un solo SQL con toda la estructura (sin datos): `supabase/instalar/01_estructura.sql`, generado con `scripts/instalar/` (instalado en Pruebas 2026-10-13)
 - [ ] Mejoras al modelo de datos (ahora que está vacía):
-  - [ ] A. Sin tocar la app: índices faltantes, código de barras único, precios/stock no negativos, fechas obligatorias
+  - [x] A. Sin tocar la app (`scripts/instalar/mejoras.sql`, aplicado y probado en Pruebas 2026-10-13): índices faltantes, código de barras único, precios/stock no negativos, fechas obligatorias
   - [ ] B. Con cambios chicos en la app: tabla de categorías (adiós productos huérfanos), quitar columnas viejas (`sales.type`, `abonos`, `legacy_key`, `is_estimated`, `category_label`), método Tarjeta
   - [ ] C. Grandes, decidir después: personas por id y no por correo; renglones de venta en su propia tabla (`sale_items`) para reportes rápidos; reportes calculados en el servidor
 - [ ] Datos iniciales: categorías genéricas, configuración por defecto

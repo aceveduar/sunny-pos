@@ -1,5 +1,10 @@
-"""Arma supabase/instalar/01_estructura.sql desde ddl.json (catálogo de la base piloto)."""
-import json, sys, re
+"""Arma supabase/instalar/01_estructura.sql.
+
+1. Correr leer_estructura.sql (solo lectura) contra la base piloto y guardar las filas en ddl.json.
+2. python generar_estructura.py ddl.json supabase/instalar/01_estructura.sql
+Agrega al final mejoras.sql (cambios de Sunny POS sobre el modelo del piloto).
+"""
+import json, sys, re, os
 
 src, out = sys.argv[1], sys.argv[2]
 rows = json.load(open(src, encoding='utf-8'))
@@ -63,9 +68,10 @@ parts.append("""DO $$ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
   END IF;
 END $$;
-
-COMMIT;
 """)
+h('Mejoras sobre el modelo del piloto (scripts/instalar/mejoras.sql)')
+parts.append(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mejoras.sql'), encoding='utf-8').read())
+parts.append('COMMIT;')
 
 text = '\n'.join(parts)
 # Nada específico del negocio piloto debe quedar en la estructura
