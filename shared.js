@@ -1287,3 +1287,13 @@ document.addEventListener('DOMContentLoaded', () => {
     _render(input.value);
   };
 })();
+
+// Nombre del negocio a la izquierda de la barra (solo se ve en escritorio)
+document.addEventListener('DOMContentLoaded', () => {
+  const left = document.querySelector('.topbar .topbar-left');
+  if (!left || left.querySelector('.topbar-brand') || !window.NEGOCIO?.nombre) return;
+  const el = document.createElement('span');
+  el.className = 'topbar-brand';
+  el.textContent = NEGOCIO.nombre;
+  left.prepend(el);
+});
