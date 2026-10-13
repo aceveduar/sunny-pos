@@ -35,7 +35,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Natura/Avon/revista → opcional ("marca por catálogo")
 - [ ] `manifest.json`, íconos, títulos de páginas, `og:*`
 - [ ] `MANUAL.md` genérico
-- [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos
+- [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos (pruebas listas: personas temporales + kits/apartados; falta respaldo)
 - [ ] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
