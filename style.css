@@ -287,15 +287,15 @@ body.admin-bar-shown .products-filters-row{top:124px}
 /* ── BARRA ADMIN (solo con sesión activa) ── */
 #admin-bar{
   display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-  height:54px;background:#1C1817;
+  height:54px;background:var(--surface);border-bottom:1px solid var(--border);
   align-items:center;justify-content:center;gap:1px;
 }
 /* Heredar estilos de shared.css — solo ajustes específicos del admin bar */
 #admin-bar .tbn-label{display:block;font-size:.69rem;letter-spacing:.01em}
-#admin-bar .tbn-icon{padding:6px 6px;min-width:48px;gap:3px;color:rgba(255,255,255,.75)}
+#admin-bar .tbn-icon{padding:6px 6px;min-width:48px;gap:3px}
 #admin-bar .tbn-icon svg{width:17px;height:17px}
 #admin-bar .tbn-sep{
-  width:1px;height:18px;background:rgba(255,255,255,.2);
+  width:1px;height:18px;background:var(--border);
   align-self:center;flex-shrink:0;margin:0 3px;
 }
 @media(min-width:641px){
@@ -381,8 +381,8 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
 .modal-gallery::-webkit-scrollbar{display:none}
 .modal-gallery-img{flex:0 0 100%;width:100%;object-fit:contain;background:#fff;scroll-snap-align:start;cursor:zoom-in}
 .modal-gallery-dots{display:flex;justify-content:center;gap:6px;padding:6px 0 2px;background:#fff;flex-shrink:0}
-.mgd{width:7px;height:7px;border-radius:50%;background:#D1C4B8;cursor:pointer;transition:.2s;flex-shrink:0;padding:8px;background-clip:content-box}
-.mgd-active{background:var(--brand);transform:scale(1.25)}
+.mgd{width:7px;height:7px;border-radius:50%;background:var(--muted-light);cursor:pointer;transition:.2s;flex-shrink:0;padding:8px;background-clip:content-box}
+.mgd-active{background-color:var(--brand);transform:scale(1.25)}
 .modal-close{position:absolute;top:8px;right:8px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.92);color:var(--charcoal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;transition:var(--ease);z-index:10;box-shadow:var(--sombra-2)}
 .modal-close:hover{background:#fff;box-shadow:var(--sombra-2)}
 
