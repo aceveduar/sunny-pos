@@ -2,7 +2,7 @@
    Todo lo demás (Caja, Inventario, Reportes, Tienda…) es igual para todos.
    Se carga antes que cualquier otro script en cada página. */
 window.NEGOCIO = {
-  nombre: 'Sunname Mostrador',
+  nombre: 'Sunny POS',
 
   // Supabase de ESTE negocio (Dashboard → Project Settings → API).
   // La anon key es pública por diseño; la service_role key NUNCA va aquí.

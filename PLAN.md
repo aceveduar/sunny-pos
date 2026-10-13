@@ -1,4 +1,4 @@
-# Plan — Sunname Mostrador
+# Plan — Sunny POS
 
 Sistema de punto de venta + inventario + reportes + tienda en línea con pedido por WhatsApp,
 para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres Encantos
@@ -11,7 +11,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Copia sin historial de git ni datos de Tres Encantos
 - [x] `negocio.js`: dirección y llave de Supabase en un solo lugar (vacías = aviso en pantalla)
 - [x] Google Analytics opcional (`NEGOCIO.analyticsId`)
-- [ ] **(Eduardo)** Crear repo privado en GitHub `sunname-mostrador`
+- [ ] **(Eduardo)** Crear repo privado en GitHub `sunny-pos`
 - [ ] **(Eduardo)** Crear proyecto nuevo en Supabase para pruebas
 
 ## 2. Base de datos instalable
@@ -31,7 +31,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] `manifest.json`, íconos, títulos de páginas, `og:*`
 - [ ] `MANUAL.md` genérico
 - [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos
-- [ ] Reescribir `CLAUDE.md` para Sunname Mostrador
+- [ ] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
 - [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Libreta, Fiado, Recepción con IA, Marca por catálogo

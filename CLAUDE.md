@@ -1,4 +1,4 @@
-# CLAUDE.md — Sunname Mostrador
+# CLAUDE.md — Sunny POS
 
 > **Este proyecto es una copia de Tres Encantos (2026-10-13) que se está volviendo genérica para venderla.** El avance y lo que falta está en [PLAN.md](PLAN.md): leerlo al empezar cada sesión y marcar lo terminado.
 > **Todo lo de abajo describe Tres Encantos** y se irá reescribiendo. Mientras tanto: la dirección de Supabase, cuentas (`ofe@`, `test@`), nombres (Ofelia, Areli, Renata), Natura y la tarea de respaldo que se mencionan son **de Tres Encantos — nunca usarlos ni conectarse a esa base desde aquí**. La configuración de cada negocio vive en `negocio.js`.
