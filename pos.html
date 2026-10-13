@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" href="img/icono-192.png">
-<title>Caja — Tres Encantos</title>
+<title>Caja</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
@@ -233,7 +233,7 @@
         </div>
         </div>
 
-        <button type="button" class="collected-by-btn" id="pos-collected-ofelia" onclick="this.classList.toggle('active');_updateMoreOptionsLabel()"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+        <button type="button" class="collected-by-btn" id="pos-collected-owner" onclick="this.classList.toggle('active');_updateMoreOptionsLabel()"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró <span class="owner-name">la dueña</span> (no está en la caja)</button>
 
         <!-- Nota -->
         <div class="note-cliente-row">
@@ -322,7 +322,7 @@
       <button class="abonar-pay-btn active" id="abpay-efectivo" onclick="setAbonarMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
       <button class="abonar-pay-btn" id="abpay-transferencia" onclick="setAbonarMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
     </div>
-    <button type="button" class="collected-by-btn" id="abonar-collected-ofelia" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+    <button type="button" class="collected-by-btn" id="abonar-collected-owner" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró <span class="owner-name">la dueña</span> (no está en la caja)</button>
     <div class="abonar-footer">
       <button class="btn-cancel" onclick="closeAbonarModal()">Cancelar</button>
       <button class="btn-confirm" id="abonar-confirm-btn" onclick="confirmAbonar()">Confirmar abono</button>
@@ -367,7 +367,7 @@
         <button class="pay-btn active" id="apt-pay-efectivo" onclick="setPayMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
         <button class="pay-btn" id="apt-pay-transferencia" onclick="setPayMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
       </div>
-      <button type="button" class="collected-by-btn" id="apt-collected-ofelia" style="margin-top:2px" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+      <button type="button" class="collected-by-btn" id="apt-collected-owner" style="margin-top:2px" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró <span class="owner-name">la dueña</span> (no está en la caja)</button>
     </div>
     <!-- Fuera del bloque del anticipo: ese bloque se oculta con anticipo $0 y el
          fiado casi siempre es sin anticipo. -->
@@ -620,7 +620,7 @@
       <button class="abonar-pay-btn active" id="liq-pay-efectivo" onclick="setLiqMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
       <button class="abonar-pay-btn" id="liq-pay-transf" onclick="setLiqMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
     </div>
-    <button type="button" class="collected-by-btn" id="liq-collected-ofelia" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+    <button type="button" class="collected-by-btn" id="liq-collected-owner" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró <span class="owner-name">la dueña</span> (no está en la caja)</button>
     <div class="abonar-footer">
       <button class="btn-cancel" onclick="closeLiqModal()">Cancelar</button>
       <button class="btn-confirm" id="liq-confirm-btn" onclick="confirmLiquidar()">✓ Liquidar</button>
@@ -759,7 +759,7 @@
               <button type="button" id="gasto-kind-ingreso" onclick="_setGastoKind('ingreso')" style="flex:1;min-height:40px;padding:7px 10px;border-radius:8px;border:none;background:none;color:var(--charcoal);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">+ Ingreso</button>
               <button type="button" id="gasto-kind-retiro" onclick="_setGastoKind('retiro')" style="flex:1;min-height:40px;padding:7px 10px;border-radius:8px;border:none;background:none;color:var(--charcoal);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">Retiro</button>
             </div>
-            <div id="gasto-kind-hint" class="corte-count-hint" style="display:none">Dinero que sale del cajón sin ser gasto (ej. Ofelia se lleva la venta).</div>
+            <div id="gasto-kind-hint" class="corte-count-hint" style="display:none">Dinero que sale del cajón sin ser gasto (ej. la dueña se lleva la venta).</div>
             <input id="gasto-desc" class="corte-input" type="text" placeholder="Descripción (ej: Refresco, Taxi, Recarga…)">
             <div style="display:flex;gap:8px">
               <input id="gasto-monto" class="corte-input" type="number" inputmode="decimal" placeholder="Monto $" min="0" style="flex:1;min-width:0">

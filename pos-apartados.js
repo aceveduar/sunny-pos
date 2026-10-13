@@ -171,7 +171,7 @@ function _moreOptionsActiveCount() {
   if ((parseFloat(document.getElementById('pos-discount')?.value) || 0) > 0) n++;
   if (document.getElementById('pos-note')?.value.trim()) n++;
   if (document.getElementById('pos-customer')?.value.trim()) n++;
-  if (document.getElementById('pos-collected-ofelia')?.classList.contains('active')) n++;
+  if (document.getElementById('pos-collected-owner')?.classList.contains('active')) n++;
   return n;
 }
 // El contador (N) es lo que evita que algo quede activo sin verse una vez
@@ -199,7 +199,7 @@ function toggleApartadoMode() {
   // Método de pago: en apartado vive dentro del sheet (junto al anticipo), no en la columna principal
   const payRowMain = document.getElementById('pay-method-row-main');
   if (payRowMain) payRowMain.style.display = isApt ? 'none' : '';
-  const collectedRow = document.getElementById('pos-collected-ofelia');
+  const collectedRow = document.getElementById('pos-collected-owner');
   if (collectedRow) collectedRow.style.display = isApt ? 'none' : '';
   document.getElementById('apartado-group')?.classList.toggle('active', isApt);
   if (isApt) {
@@ -227,7 +227,7 @@ function toggleApartadoMode() {
     });
     const aptHint = document.getElementById('pos-apt-customer-hint');
     if (aptHint) aptHint.style.display = 'none';
-    document.getElementById('apt-collected-ofelia')?.classList.remove('active');
+    document.getElementById('apt-collected-owner')?.classList.remove('active');
     document.getElementById('cliente-normal-row').style.display = '';
     document.querySelectorAll('.anticipo-quick button').forEach(b => b.classList.remove('active-cash'));
     const hint = document.getElementById('cobrar-hint');
@@ -782,10 +782,10 @@ function sendApartadoReminder(id, sale = null) {
         : `📅 Tu apartado vence el *${label}* (en ${dias} día${dias>1?'s':''}).`;
   }
   const msg = liquidado
-    ? `Hola *${nombre}* 👋\n\nTe confirmamos que tu apartado de *Tres Encantos* quedó liquidado ✅\n\n*Productos:*\n${productos}\n\n💰 Total pagado: *$${total.toLocaleString('es-MX')} MXN*\n\n¡Gracias por tu compra! 💛`
+    ? `Hola *${nombre}* 👋\n\nTe confirmamos que tu apartado de *${NEGOCIO.nombre}* quedó liquidado ✅\n\n*Productos:*\n${productos}\n\n💰 Total pagado: *$${total.toLocaleString('es-MX')} MXN*\n\n¡Gracias por tu compra! 💛`
     : s.se_lo_llevo
-      ? `Hola *${nombre}* 👋\n\nTe escribimos de *Tres Encantos* con un recordatorio de tu saldo 💛\n\n*Productos:*\n${productos}\n\n💰 Pagado: *$${pagado.toLocaleString('es-MX')}*\n⏳ Pendiente: *$${pendiente.toLocaleString('es-MX')}*\n${fechaTexto}\n\n¡Gracias por tu confianza! 🛍`
-      : `Hola *${nombre}* 👋\n\nTe escribimos de *Tres Encantos* con un recordatorio de tu apartado 📌\n\n*Productos:*\n${productos}\n\n💰 Anticipo pagado: *$${pagado.toLocaleString('es-MX')}*\n⏳ Pendiente: *$${pendiente.toLocaleString('es-MX')}*\n${fechaTexto}\n\n¡Te esperamos! 🛍`;
+      ? `Hola *${nombre}* 👋\n\nTe escribimos de *${NEGOCIO.nombre}* con un recordatorio de tu saldo 💛\n\n*Productos:*\n${productos}\n\n💰 Pagado: *$${pagado.toLocaleString('es-MX')}*\n⏳ Pendiente: *$${pendiente.toLocaleString('es-MX')}*\n${fechaTexto}\n\n¡Gracias por tu confianza! 🛍`
+      : `Hola *${nombre}* 👋\n\nTe escribimos de *${NEGOCIO.nombre}* con un recordatorio de tu apartado 📌\n\n*Productos:*\n${productos}\n\n💰 Anticipo pagado: *$${pagado.toLocaleString('es-MX')}*\n⏳ Pendiente: *$${pendiente.toLocaleString('es-MX')}*\n${fechaTexto}\n\n¡Te esperamos! 🛍`;
   const telLimpio = telRaw.replace(/\D/g, '');
   const url = telLimpio
     ? `https://wa.me/52${telLimpio}?text=${encodeURIComponent(msg)}`
@@ -971,7 +971,7 @@ function sendPaymentReceipt() {
   const saldoLine = c.esLiquidacion
     ? '✅ *Tu apartado quedó pagado por completo.*'
     : `⏳ Saldo pendiente: *$${c.pendiente.toLocaleString('es-MX')} MXN*`;
-  const msg = `✅ *Recibo de pago — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 ${c.esLiquidacion ? 'Pago recibido' : 'Abono recibido'}: *$${c.monto.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n${saldoLine}\nFolio #${c.id}\n\n¡Gracias por tu confianza! 💛`;
+  const msg = `✅ *Recibo de pago — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 ${c.esLiquidacion ? 'Pago recibido' : 'Abono recibido'}: *$${c.monto.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n${saldoLine}\nFolio #${c.id}\n\n¡Gracias por tu confianza! 💛`;
   c.sent = true;
   const telLimpio = telNum.replace(/\D/g, '');
   const url = telLimpio
@@ -1086,7 +1086,7 @@ function validateAbonarAmount() {
 function closeAbonarModal() {
   document.getElementById('abonar-overlay').style.display = 'none';
   _abonarCtx = null;
-  document.getElementById('abonar-collected-ofelia')?.classList.remove('active');
+  document.getElementById('abonar-collected-owner')?.classList.remove('active');
 }
 
 async function confirmAbonar() {
@@ -1106,7 +1106,7 @@ async function confirmAbonar() {
       p_expected_version: _abonarCtx.version,
       p_method: _abonarMethod,
       p_amount: monto,
-      p_collected_by_email: _collectedByEmailFromCheck('abonar-collected-ofelia')
+      p_collected_by_email: _collectedByEmailFromCheck('abonar-collected-owner')
     }
   });
   if (!r.ok) {
@@ -1511,7 +1511,7 @@ function setLiqMethod(m) {
 function closeLiqModal() {
   document.getElementById('liquidar-overlay').style.display = 'none';
   _liqCtx = null;
-  document.getElementById('liq-collected-ofelia')?.classList.remove('active');
+  document.getElementById('liq-collected-owner')?.classList.remove('active');
 }
 
 async function confirmLiquidar() {
@@ -1538,7 +1538,7 @@ async function confirmLiquidar() {
       p_expected_version: sale.version ?? 0,
       p_method: method,
       p_amount: null,
-      p_collected_by_email: _collectedByEmailFromCheck('liq-collected-ofelia')
+      p_collected_by_email: _collectedByEmailFromCheck('liq-collected-owner')
     }
   });
   btn.disabled = false; btn.textContent = '✓ Liquidar';

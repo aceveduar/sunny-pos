@@ -1195,9 +1195,9 @@ async function _sendApartadoOrSaleReceipt(payment, s, paymentId) {
 
   let msg;
   if (payment.kind === 'refund') {
-    msg = `↩️ *Comprobante de devolución — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 Devuelto: *$${amount.toLocaleString('es-MX')} MXN*\n📅 ${fechaTxt}\nFolio #${s.id}\n\nCualquier duda, con gusto te apoyamos. 💛`;
+    msg = `↩️ *Comprobante de devolución — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 Devuelto: *$${amount.toLocaleString('es-MX')} MXN*\n📅 ${fechaTxt}\nFolio #${s.id}\n\nCualquier duda, con gusto te apoyamos. 💛`;
   } else if (isApt && isLiquidation) {
-    msg = `✅ *Comprobante de pago — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 Pago recibido: *$${amount.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n✅ *Tu apartado quedó pagado por completo.*\nFolio #${s.id}\n\n¡Gracias por tu confianza! 💛`;
+    msg = `✅ *Comprobante de pago — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 Pago recibido: *$${amount.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n✅ *Tu apartado quedó pagado por completo.*\nFolio #${s.id}\n\n¡Gracias por tu confianza! 💛`;
   } else if (isApt) {
     let dueLine = '';
     if (s.due_date) {
@@ -1205,10 +1205,10 @@ async function _sendApartadoOrSaleReceipt(payment, s, paymentId) {
       dueLine = `\n📅 Fecha límite: *${due.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}*`;
     }
     const label = isCreated ? 'Apartado nuevo' : 'Abono recibido';
-    msg = `📌 *Comprobante — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 ${label}: *$${amount.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n⏳ Pendiente en esa fecha: *$${pendiente.toLocaleString('es-MX')} MXN*${dueLine}${historicoLine}\nFolio #${s.id}\n\n¡Gracias por tu confianza! 💛`;
+    msg = `📌 *Comprobante — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n💰 ${label}: *$${amount.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\n⏳ Pendiente en esa fecha: *$${pendiente.toLocaleString('es-MX')} MXN*${dueLine}${historicoLine}\nFolio #${s.id}\n\n¡Gracias por tu confianza! 💛`;
   } else {
     const lines = items.map(i => `• ${i.name} x${i.qty || 1} — $${(i.subtotal ?? i.price * (i.qty || 1)).toLocaleString('es-MX')}`).join('\n');
-    msg = `🛍 *Comprobante — Tres Encantos*\n━━━━━━━━━━━━━━\n${lines}\n━━━━━━━━━━━━━━\n*Total: $${total.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\nFolio #${s.id}\n\n¡Gracias por tu compra! 💛`;
+    msg = `🛍 *Comprobante — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n${lines}\n━━━━━━━━━━━━━━\n*Total: $${total.toLocaleString('es-MX')} MXN* (${metodoTxt})\n📅 ${fechaTxt}\nFolio #${s.id}\n\n¡Gracias por tu compra! 💛`;
   }
 
   // Sin teléfono guardado, un wa.me sin número no sirve de mucho (no hay a

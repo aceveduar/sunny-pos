@@ -29,11 +29,11 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 ## 3. Quitar lo que es solo de Tres Encantos
 - [ ] Tienda: nombre, logo, portada, "Nosotros", WhatsApp, redes, dirección → configurables
 - [ ] Quitar foto/historia de Ofelia, Facebook, Maquixco, textos de Natura en `index.html`
-- [ ] "Ya lo cobró Ofelia" → "Ya lo cobró [dueña]" configurable (`pos-core.js`)
-- [ ] Correos y horarios fijos en `activity.js`
-- [ ] Ubicación de la tienda (aviso GPS al cerrar turno) fija en `_te_distance_to_store_m` → configurable
+- [x] "Ya lo cobró Ofelia" → "Ya lo cobró [dueña]" configurable (`negocio.js` → `duena`)
+- [x] Correos y horarios fijos en `activity.js` (dueñas = superadmin de `user_permissions`)
+- [x] Ubicación de la tienda → `config.ubicacion_tienda` `{lat,lng}` (sin dato no avisa) — falta capturarla en Configuración
 - [ ] Natura/Avon/revista → opcional ("marca por catálogo")
-- [ ] `manifest.json`, íconos, títulos de páginas, `og:*`
+- [ ] `manifest.json`, íconos, `og:*` (títulos de páginas y nombre en mensajes de WhatsApp: listos, salen de `negocio.js`)
 - [ ] `MANUAL.md` genérico
 - [ ] Scripts: respaldo y pruebas sin cuentas/nombres de Tres Encantos (pruebas listas: personas temporales + kits/apartados; falta respaldo)
 - [ ] Reescribir `CLAUDE.md` para Sunny POS

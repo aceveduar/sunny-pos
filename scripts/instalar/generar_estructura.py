@@ -42,7 +42,14 @@ parts += [r['stmt'] for r in sec(30) if r['obj'] not in late_checks]
 h('Relaciones entre tablas')
 parts += [r['stmt'] for r in sec(40)]
 h('Funciones')
-parts += [r['stmt'] + '\n' for r in sec(50)]
+# Funciones que mejoras.sql reescribe: se usa directo la versión nueva (la del
+# piloto tenía datos del negocio, p. ej. la ubicación de la tienda)
+MEJORAS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mejoras.sql'), encoding='utf-8').read()
+def nueva(nombre):
+    m = re.search(r'CREATE OR REPLACE FUNCTION public\.' + re.escape(nombre) + r'\(.*?\$\$;', MEJORAS, re.S)
+    return m.group(0) if m else None
+for r in sec(50):
+    parts.append((nueva(r['obj'].split('(')[0]) or r['stmt']) + '\n')
 h('Restricciones que usan funciones')
 parts += [r['stmt'] for r in sec(30) if r['obj'] in late_checks]
 h('Índices')
@@ -77,7 +84,7 @@ text = '\n'.join(parts)
 # Nada específico del negocio piloto debe quedar en la estructura
 text = text.replace("'tresencantos.rpc_v2'", "'sunnypos.rpc_v2'").replace("'tresencantos:inventory'", "'sunnypos:inventory'")
 text = text.replace('pide el PIN de Ofelia', 'pide el PIN a quien pueda autorizarlo')
-left = re.findall(r'(?i)tres ?encantos|ofelia|areli|renata|maquixco', text)
+left = re.findall(r'(?i)tres ?encantos|ofelia|areli|renata|maquixco|19\.6868|-98\.8904', text)
 assert not left, left
 open(out, 'w', encoding='utf-8', newline='\n').write(text)
 print(len(text), 'bytes')

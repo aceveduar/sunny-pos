@@ -30,7 +30,7 @@ async function _qvShare(id) {
     desc = `\n${d}`;
   }
   const last = p.stock === 1 ? '\n⚡ ¡Última pieza!' : '';
-  const text = `✨ ${kit}${p.name} — ${price}${desc}${last}\n\n🛒 Tres Encantos 👇`;
+  const text = `✨ ${kit}${p.name} — ${price}${desc}${last}\n\n🛒 ${NEGOCIO.nombre} 👇`;
   if (navigator.share) {
     try { await navigator.share({ title: p.name, text, url }); return; } catch {}
   }

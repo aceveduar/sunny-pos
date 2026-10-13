@@ -391,7 +391,7 @@ async function analyzeFormImage() {
   lbl.textContent = 'Analizando imagen…';
   try {
     const catList = categories.map(c => `"${c.code}" (${c.label})`).join(', ');
-    const systemPrompt = `Eres copywriter senior de catálogo para Tres Encantos, boutique mexicana. Escribes copy listo para publicar — sin edición posterior — al nivel de Sephora, Liverpool, ZARA o Amazon MX.
+    const systemPrompt = `Eres copywriter senior de catálogo para ${NEGOCIO.nombre}, boutique mexicana. Escribes copy listo para publicar — sin edición posterior — al nivel de Sephora, Liverpool, ZARA o Amazon MX.
 
 ━━ PASO 0 (SIEMPRE primero) ━━
 Lee de arriba a abajo TODO el texto impreso en la imagen: marca, línea/colección, tipo, concentración, variante/aroma, volumen/peso (ml, g), género, ingrediente estrella. Ese texto manda sobre cualquier suposición tuya.

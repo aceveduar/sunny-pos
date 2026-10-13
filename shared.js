@@ -212,7 +212,7 @@ function _themeToggleRowHtml() {
       title: 'Apartados: fiado, liberar y saldo a favor',
       text: 'Ahora hay dos tipos de apartado:<br>'
         + '<b>Apartado:</b> el producto se queda en la tienda hasta que termine de pagar.<br>'
-        + '<b>Fiado:</b> una persona de confianza se lleva el producto hoy y paga después. Al hacer el apartado toca <b>Se lo lleva hoy (fiado)</b>. Lo autoriza Ofelia: si ella no está, se pide su PIN; si lo indica por teléfono, regístralo como apartado normal y ella lo marca como fiado desde su celular.<br><br>'
+        + '<b>Fiado:</b> una persona de confianza se lleva el producto hoy y paga después. Al hacer el apartado toca <b>Se lo lleva hoy (fiado)</b>. Lo autoriza la dueña: si ella no está, se pide su PIN; si lo indica por teléfono, regístralo como apartado normal y ella lo marca como fiado desde su celular.<br><br>'
         + 'Todos los apartados que ya existían quedaron marcados como <b>Se lo llevó</b>. Desde hoy, al hacer un apartado decidan si se queda en la tienda o se lo lleva. Si alguno está mal marcado, ábranlo, toquen el lápiz y cámbienlo.<br><br>'
         + '<b>Liberar producto:</b> si un apartado (no fiado) lleva 30 días o más vencido, aparece el botón <b>Liberar producto</b>. El producto vuelve a la venta y lo que pagó la clienta <b>queda a su favor</b>. Solo liberen si el producto sigue en la tienda.<br>'
         + '<b>Saldo a favor:</b> está en Apartados → Cancelados. Cuando la clienta regrese, toquen <b>Devolver saldo a favor</b>; si lo quiere usar para comprar algo, devuélvanselo y cobren la compra normal.<br><br>'

@@ -175,7 +175,7 @@ async function cobrar() {
       p_due_date:        saleData.due_date || null,
       p_override_tickets: _collectOverrideTickets(['canOverridePrice', 'canApplyDiscount']),
       p_customer_id:     customerId,
-      p_collected_by_email: _collectedByEmailFromCheck(isApartado ? 'apt-collected-ofelia' : 'pos-collected-ofelia')
+      p_collected_by_email: _collectedByEmailFromCheck(isApartado ? 'apt-collected-owner' : 'pos-collected-owner')
     }
   });
   if (!rpcResult.ok) {
@@ -227,7 +227,7 @@ async function cobrar() {
   }
   seLoLleva?.classList.remove('active');
   seLoLleva?.setAttribute('aria-pressed', 'false');
-  ['pos-collected-ofelia','apt-collected-ofelia'].forEach(id => { document.getElementById(id)?.classList.remove('active'); });
+  ['pos-collected-owner','apt-collected-owner'].forEach(id => { document.getElementById(id)?.classList.remove('active'); });
   document.getElementById('pos-is-apartado').checked = false;
   toggleApartadoMode(); // limpia phone/anticipo/pendiente/fecha/cliente-apartado y cierra el sheet
   clearNoteField();
@@ -355,7 +355,7 @@ function sendWhatsAppTicket() {
     const closing = s.apartadoLiquidado ? 'Tu apartado quedó pagado por completo. ¡Gracias! 💛'
       : s.fiado ? '¡Gracias por tu confianza! 💛'
       : 'Tu producto queda guardado aquí hasta tu fecha límite. ¡Gracias! 💛';
-    msg = `📌 *${title} — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total pedido: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${anticipoLine}${dueLine}${note}\n\n${closing}`;
+    msg = `📌 *${title} — ${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total pedido: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${anticipoLine}${dueLine}${note}\n\n${closing}`;
     const telLimpio = telNum.replace(/\D/g,'');
     window.open(telLimpio ? `https://wa.me/52${telLimpio}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     logActivity('comprobante_enviado',
@@ -368,7 +368,7 @@ function sendWhatsAppTicket() {
     const chng     = s.change > 0 ? `\n💵 Cambio: $${s.change.toLocaleString('es-MX')}` : '';
     const transAviso = s.payMethod === 'transferencia' ? `\n\n⚠️ _Pendiente confirmar recibo de transferencia_` : '';
     const saludo   = nombre ? `¡Gracias por tu compra, ${nombre}! 💛` : '¡Gracias por tu compra! 💛';
-    msg = `🛍 *Tres Encantos*\n━━━━━━━━━━━━━━\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${metodo}${chng}${note}${transAviso}\n\n${saludo}`;
+    msg = `🛍 *${NEGOCIO.nombre}*\n━━━━━━━━━━━━━━\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${metodo}${chng}${note}${transAviso}\n\n${saludo}`;
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   setTimeout(() => closeSaleDone(), 400);

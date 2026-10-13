@@ -2244,7 +2244,7 @@ function sendDailySummaryWA() {
   });
   const aperturaAmount = _paymentTotal(aperturaPayments);
   const fecha = _mxDateLabel(new Date(), {weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  let msg = `📊 *Resumen del día — Tres Encantos*\n${fecha}\n\n`;
+  let msg = `📊 *Resumen del día — ${NEGOCIO.nombre}*\n${fecha}\n\n`;
   msg += `💰 *Ingreso neto del día:* ${fmt(ingresos)}\n`;
   msg += `🔢 *Ventas directas:* ${ventas.length}\n`;
   if (efectivo !== 0) msg += `💵 Efectivo: ${fmt(efectivo)}\n`;
@@ -2256,7 +2256,7 @@ function sendDailySummaryWA() {
   if (todayLiquidatedSales.length) msg += `✅ *Apartados liquidados:* ${todayLiquidatedSales.length}\n`;
   if (!todayPayments.length && !ventas.length && !aptos.length && !todayLiquidatedSales.length) msg += `_Sin movimientos registrados hoy._\n`;
   msg += `\n¡Hasta mañana! 🌟`;
-  const WA = '5215534548417';
+  const WA = String(NEGOCIO.whatsapp || '').replace(/\D/g, '').replace(/^(?=\d{10}$)/, '52');
   window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 

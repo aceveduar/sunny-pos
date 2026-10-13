@@ -2,28 +2,24 @@
 const SUPABASE_URL      = NEGOCIO.supabaseUrl;
 const SUPABASE_ANON_KEY = NEGOCIO.supabaseAnonKey;
 const SESSION_KEY = 'te_admin_session';
-// Ofelia cobra en efectivo fuera de la tienda y le dicta a Areli que lo
-// capture en el sistema -- sin esto, ese efectivo (que nunca toca la caja
-// de Areli) se le sumaba a su turno como si lo tuviera ella. Hardcodeado a
-// propósito (mismo criterio que _NIGHT_EXEMPT_EMAILS en activity.js) -- el
-// servidor igual exige que sea una cuenta superadmin/dueña, esto solo evita
-// tener que armar un selector dinámico para un caso de una sola persona.
-const _COLLECTED_BY_ALT_EMAIL = 'ofe@tresencantos.com';
-const _COLLECTED_BY_ALT_LABEL = 'Ofelia';
-// Los 4 botones "Ya lo cobró Ofelia" (venta, apartado nuevo, abono, liquidar)
-// viven como HTML estático en pos.html -- un solo tap alterna su clase
-// .active (mismo patrón que .pay-btn/.discount-type-btn, no un checkbox
-// aparte -- colapsado por default para no sumarle una fila permanente más a
-// una pantalla ya de por sí cargada). Se ocultan solo para la propia Ofelia
-// (no tiene sentido que se atribuya el cobro a sí misma; el servidor además
-// exige que el target sea siempre una cuenta superadmin/dueña, así que
-// mostrárselo a alguien más nunca serviría de nada distinto).
-const _COLLECTED_BY_CHECK_IDS = ['pos-collected-ofelia', 'apt-collected-ofelia', 'abonar-collected-ofelia', 'liq-collected-ofelia'];
+// "Ya lo cobró <dueña>": la dueña cobra en efectivo fuera de la tienda y otra
+// persona lo captura; sin esto, ese efectivo (que nunca toca el cajón de quien
+// captura) se sumaba a su turno. La dueña se define en negocio.js (duena); el
+// servidor además exige que sea una cuenta superadmin. Los 4 botones (venta,
+// apartado nuevo, abono, liquidar) son HTML estático en pos.html; se quitan si
+// no hay dueña configurada o si la que cobra es ella misma.
+const _COLLECTED_BY_ALT_EMAIL = String(NEGOCIO.duena?.correo || '').trim().toLowerCase();
+const _COLLECTED_BY_ALT_LABEL = String(NEGOCIO.duena?.nombre || '').trim() || 'la dueña';
+const _COLLECTED_BY_CHECK_IDS = ['pos-collected-owner', 'apt-collected-owner', 'abonar-collected-owner', 'liq-collected-owner'];
 function _initCollectedByChecks() {
   const myEmail = (_posSession?.user?.email || '').toLowerCase();
-  if (myEmail !== _COLLECTED_BY_ALT_EMAIL) return;
+  const hide = !_COLLECTED_BY_ALT_EMAIL || myEmail === _COLLECTED_BY_ALT_EMAIL;
   for (const id of _COLLECTED_BY_CHECK_IDS) {
-    document.getElementById(id)?.remove();
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (hide) { el.remove(); continue; }
+    const name = el.querySelector('.owner-name');
+    if (name) name.textContent = _COLLECTED_BY_ALT_LABEL;
   }
 }
 function _collectedByEmailFromCheck(id) {

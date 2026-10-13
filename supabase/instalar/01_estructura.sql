@@ -262,31 +262,23 @@ ALTER TABLE public.sales ADD CONSTRAINT sales_customer_id_fkey FOREIGN KEY (cust
 -- ======================================================================
 
 CREATE OR REPLACE FUNCTION public._te_distance_to_store_m(p_lat double precision, p_lng double precision)
- RETURNS numeric
- LANGUAGE sql
- IMMUTABLE
- SET search_path TO 'public'
-AS $function$
-  SELECT CASE WHEN p_lat IS NULL OR p_lng IS NULL THEN NULL::numeric ELSE
-    ROUND((6371000 * acos(
-      LEAST(1.0, GREATEST(-1.0,
-        cos(radians(19.686827213571508)) * cos(radians(p_lat)) * cos(radians(p_lng) - radians(-98.89047855889557))
-        + sin(radians(19.686827213571508)) * sin(radians(p_lat))
-      ))
-    ))::numeric, 0)
-  END;
-$function$
-;
+RETURNS numeric LANGUAGE sql STABLE SET search_path TO 'public' AS $$
+  WITH t AS (
+    SELECT (value::jsonb ->> 'lat')::double precision AS lat, (value::jsonb ->> 'lng')::double precision AS lng
+    FROM public.config WHERE id = 'ubicacion_tienda'
+  )
+  SELECT CASE WHEN p_lat IS NULL OR p_lng IS NULL OR t.lat IS NULL OR t.lng IS NULL THEN NULL::numeric ELSE
+    ROUND((6371000 * acos(LEAST(1.0, GREATEST(-1.0,
+      cos(radians(t.lat)) * cos(radians(p_lat)) * cos(radians(p_lng) - radians(t.lng))
+      + sin(radians(t.lat)) * sin(radians(p_lat))))))::numeric, 0)
+  END
+  FROM (SELECT 1) one LEFT JOIN t ON true;
+$$;
 
 CREATE OR REPLACE FUNCTION public._te_is_far_from_store(p_lat double precision, p_lng double precision)
- RETURNS boolean
- LANGUAGE sql
- IMMUTABLE
- SET search_path TO 'public'
-AS $function$
-  SELECT public._te_distance_to_store_m(p_lat, p_lng) > 150;
-$function$
-;
+RETURNS boolean LANGUAGE sql STABLE SET search_path TO 'public' AS $$
+  SELECT COALESCE(public._te_distance_to_store_m(p_lat, p_lng) > 150, false);
+$$;
 
 CREATE OR REPLACE FUNCTION public._te_is_superadmin_email(p_email text)
  RETURNS boolean
@@ -4589,5 +4581,28 @@ GRANT EXECUTE ON FUNCTION public.te_log_failed_login(text) TO anon;
 
 -- Relación sin índice (señalada por el asesor de rendimiento de Supabase)
 CREATE INDEX IF NOT EXISTS pos_rpc_requests_sale_id_idx ON public.pos_rpc_requests (sale_id) WHERE sale_id IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Ubicación de la tienda (aviso "cerró/abrió caja lejos del local" en Actividad).
+-- El piloto la tenía fija en el código; ahora sale de config.ubicacion_tienda
+-- = {"lat": 19.4326, "lng": -99.1332}. Sin ese dato no se calcula ni se avisa.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public._te_distance_to_store_m(p_lat double precision, p_lng double precision)
+RETURNS numeric LANGUAGE sql STABLE SET search_path TO 'public' AS $$
+  WITH t AS (
+    SELECT (value::jsonb ->> 'lat')::double precision AS lat, (value::jsonb ->> 'lng')::double precision AS lng
+    FROM public.config WHERE id = 'ubicacion_tienda'
+  )
+  SELECT CASE WHEN p_lat IS NULL OR p_lng IS NULL OR t.lat IS NULL OR t.lng IS NULL THEN NULL::numeric ELSE
+    ROUND((6371000 * acos(LEAST(1.0, GREATEST(-1.0,
+      cos(radians(t.lat)) * cos(radians(p_lat)) * cos(radians(p_lng) - radians(t.lng))
+      + sin(radians(t.lat)) * sin(radians(p_lat))))))::numeric, 0)
+  END
+  FROM (SELECT 1) one LEFT JOIN t ON true;
+$$;
+CREATE OR REPLACE FUNCTION public._te_is_far_from_store(p_lat double precision, p_lng double precision)
+RETURNS boolean LANGUAGE sql STABLE SET search_path TO 'public' AS $$
+  SELECT COALESCE(public._te_distance_to_store_m(p_lat, p_lng) > 150, false);
+$$;
 
 COMMIT;

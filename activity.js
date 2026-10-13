@@ -129,13 +129,7 @@ function avatarInitial(email) {
   return name ? name[0].toUpperCase() : (email || '?')[0].toUpperCase();
 }
 function avatarColor(email) {
-  const fixed = {
-    'eacevedo@sunname.com.mx':       '#2D6A4F',
-    'ma.dolores.mtz.mtz@gmail.com':  '#6366F1',
-    'areli@tresencantos.com':        '#be185d',
-  };
-  if (fixed[email]) return fixed[email];
-  const palette = ['#C9A462','#0891B2','#D97706','#7C3AED','#E85D5D','#059669'];
+  const palette = [NEGOCIO.color || '#F0A830','#0891B2','#D97706','#7C3AED','#E85D5D','#059669'];
   let h = 0;
   for (const c of (email || '')) h = c.charCodeAt(0) + ((h << 5) - h);
   return palette[Math.abs(h) % palette.length];
@@ -143,11 +137,21 @@ function avatarColor(email) {
 
 /* ── LOAD NAME MAP ── */
 async function loadNameMap() {
-  const { ok, data } = await api('config?id=eq.user_names&select=value');
-  if (ok && data?.[0]?.value) {
+  const [names, perms] = await Promise.all([
+    api('config?id=eq.user_names&select=value'),
+    api('config?id=eq.user_permissions&select=value')
+  ]);
+  if (names.ok && names.data?.[0]?.value) {
     try {
-      nameMap = JSON.parse(data[0].value);
+      nameMap = JSON.parse(names.data[0].value);
       Object.keys(nameMap).filter(Boolean).forEach(email => _knownActivityUsers.add(email));
+    } catch {}
+  }
+  // Dueñas (superadmin) quedan fuera de "Fuera de horario": revisan de noche legítimamente
+  if (perms.ok && perms.data?.[0]?.value) {
+    try {
+      const map = JSON.parse(perms.data[0].value);
+      _nightExempt = new Set(Object.keys(map).filter(e => ['superadmin', 'duena'].includes(map[e]?.role)).map(e => e.toLowerCase()));
     } catch {}
   }
 }
@@ -167,19 +171,14 @@ function setType(btn, type) {
   render(allData);
 }
 
-// "Fuera de horario" (2026-09-04) -- Eduardo pidió un track de si se mueve
-// algo fuera de horario, pero los horarios varían demasiado por persona/día
-// (Areli 11-5, a veces 11-2, Eduardo a veces 9:30-1:30) para comparar contra
-// un horario fijo por empleado. En vez de eso: una franja nocturna amplia
-// (23:00-06:00 hora CDMX) donde nadie de piso debería estar vendiendo o
-// moviendo inventario, sin importar qué tan variable sea su horario del día
-// -- y se excluye a quienes sí trabajan de noche legítimamente en el sistema
-// (Ofelia revisando, Eduardo corrigiendo). Es independiente del filtro de
-// tipo (Ventas/Inventario/Apartados/Sistema) -- se pueden combinar.
-const _NIGHT_EXEMPT_EMAILS = ['eacevedo@sunname.com.mx', 'ma.dolores.mtz.mtz@gmail.com', 'ofe@tresencantos.com'];
+// "Fuera de horario": franja nocturna amplia (23:00-06:00 hora CDMX) donde
+// nadie de piso debería estar vendiendo o moviendo inventario, sin importar su
+// horario del día. Se excluye a las dueñas (superadmin), que revisan de noche
+// legítimamente. Independiente del filtro de tipo; se pueden combinar.
+let _nightExempt = new Set();
 
 function _isNightActivity(item) {
-  if (_NIGHT_EXEMPT_EMAILS.includes((item.user_email || '').toLowerCase())) return false;
+  if (_nightExempt.has((item.user_email || '').toLowerCase())) return false;
   const h = Number(new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Mexico_City', hour: '2-digit', hourCycle: 'h23'
   }).format(new Date(item.created_at)));

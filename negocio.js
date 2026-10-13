@@ -9,6 +9,15 @@ window.NEGOCIO = {
   supabaseUrl: 'https://aduahsqbmborplojhubw.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkdWFoc3FibWJvcnBsb2podWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5MDA0ODMsImV4cCI6MjEwNzQ3NjQ4M30._q99xYihkZ9so8Yh3NaabTllvU20AoqMATVV9ktVvw4',
 
+  // WhatsApp del negocio, 10 dígitos (México). Recibe los pedidos de la Tienda
+  // y el "Resumen del día" de Reportes.
+  whatsapp: '',
+
+  // Dueña: Caja muestra "Ya lo cobró <nombre>" para los cobros que ella hace
+  // fuera de la tienda (no cuentan en el cajón de quien captura). Debe ser una
+  // cuenta con rol de dueña/superadmin. Vacío = no se muestra el botón.
+  duena: { nombre: '', correo: '' },
+
   // Google Analytics de la Tienda (G-XXXXXXX). Vacío = sin Analytics.
   analyticsId: '',
 
@@ -17,6 +26,11 @@ window.NEGOCIO = {
   // (blanco o casi negro, el que se lea mejor) se calculan solos.
   color: '#F0A830',
 };
+
+// Título de la pestaña: "Caja — <nombre del negocio>"
+if (window.NEGOCIO.nombre && document.title && !document.title.includes(window.NEGOCIO.nombre)) {
+  document.title = document.title + ' — ' + window.NEGOCIO.nombre;
+}
 
 // Tema: aplica el color de marca antes de pintar (este archivo va en <head>,
 // después de las hojas de estilo). Los valores por defecto viven en shared.css

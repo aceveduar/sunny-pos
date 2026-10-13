@@ -1,4 +1,5 @@
-const WA = "5215534548417";
+// WhatsApp del negocio (negocio.js). Sin número, wa.me abre la lista de contactos.
+const WA = String(NEGOCIO.whatsapp || '').replace(/\D/g, '').replace(/^(?=\d{10}$)/, '52');
 const WA_BASE = `https://wa.me/${WA}`;
 
 const SUPABASE_URL = NEGOCIO.supabaseUrl;
@@ -261,7 +262,7 @@ function cartWhatsApp() {
     return `• ${x.name} x${x.qty} — $${(x.price * x.qty).toLocaleString('es-MX')} MXN${note}`;
   }).join('\n');
   const total = '$' + snapshot.reduce((s, x) => s + x.price * x.qty, 0).toLocaleString('es-MX') + ' MXN';
-  const msg = `¡Hola! 😊 Me gustaría hacer el siguiente pedido de Tres Encantos:\n\n${lines}\n\n*Total: ${total}*\n\n¿Está todo disponible?`;
+  const msg = `¡Hola! 😊 Me gustaría hacer el siguiente pedido de ${NEGOCIO.nombre}:\n\n${lines}\n\n*Total: ${total}*\n\n¿Está todo disponible?`;
   window.open(`${WA_BASE}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
@@ -834,7 +835,7 @@ function _shareText(p) {
     desc = `\n${d}`;
   }
   const lastPiece = p.stock === 1 && !p.isApartado ? '\n⚡ ¡Última pieza!' : '';
-  return `✨ ${kit}${p.name} — ${price}${desc}${lastPiece}\n\n🛒 Tres Encantos 👇`;
+  return `✨ ${kit}${p.name} — ${price}${desc}${lastPiece}\n\n🛒 ${NEGOCIO.nombre} 👇`;
 }
 
 async function shareProduct(id) {
@@ -885,7 +886,7 @@ function whatsapp(id, btn) {
   const urgencyNote = isLastPiece(p)
     ? '\n⚡ Vi que es la última pieza disponible.'
     : '';
-  const msg = `¡Hola! 😊 Me interesa este producto de Tres Encantos:\n\n*${p.name}*\nPrecio: ${priceText}${urgencyNote}\n\n¿Está disponible?`;
+  const msg = `¡Hola! 😊 Me interesa este producto de ${NEGOCIO.nombre}:\n\n*${p.name}*\nPrecio: ${priceText}${urgencyNote}\n\n¿Está disponible?`;
   window.open(`${WA_BASE}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 

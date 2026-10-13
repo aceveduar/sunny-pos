@@ -711,7 +711,7 @@ function _setGastoKind(kind) {
   const hint = document.getElementById('gasto-kind-hint');
   if (hint) hint.style.display = kind === 'retiro' ? '' : 'none';
   document.getElementById('gasto-desc')?.setAttribute('placeholder',
-    kind === 'retiro' ? '¿Quién se lo lleva o para qué? (ej: Ofelia, depósito)' : 'Descripción (ej: Refresco, Taxi, Recarga…)');
+    kind === 'retiro' ? '¿Quién se lo lleva o para qué? (ej: la dueña, depósito)' : 'Descripción (ej: Refresco, Taxi, Recarga…)');
   document.getElementById('gasto-monto')?.setAttribute('placeholder',
     kind === 'ingreso' ? 'Monto que entró $' : kind === 'retiro' ? 'Monto que sale $' : 'Monto $');
 }
@@ -926,8 +926,8 @@ function compartirCorteWA() {
   const gastos = _getGastos();
   const totalGastos = _netGastos(gastos);
   let msg = isGeneral
-    ? `🧾 *Corte general — Tres Encantos*\nHoy desde las ${inicioMX} · todas las cajeras\n${ahoraMX}\n\n`
-    : `🧾 *Corte de caja — Tres Encantos*\n${actorLabel} · desde ${inicioMX}\n${ahoraMX}\n\n`;
+    ? `🧾 *Corte general — ${NEGOCIO.nombre}*\nHoy desde las ${inicioMX} · todas las cajeras\n${ahoraMX}\n\n`
+    : `🧾 *Corte de caja — ${NEGOCIO.nombre}*\n${actorLabel} · desde ${inicioMX}\n${ahoraMX}\n\n`;
   if (numVentas > 0)      msg += `🛍 Ventas directas: ${numVentas}\n`;
   if (numLiquidados)      msg += `✅ Apartados liquidados: ${numLiquidados}\n`;
   if (numApartados)       msg += `📌 Apartados nuevos: ${numApartados}${anticipos > 0 ? ` (anticipos activos ${fmt(anticipos)})` : ''}\n`;
