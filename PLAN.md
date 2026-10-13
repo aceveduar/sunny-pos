@@ -43,7 +43,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Fiado, Recepción con IA, Marca por catálogo
 - [ ] Tienda apagada: sin ícono, la dirección principal lleva al inicio de sesión, sin "Publicar en web"
 
-- [ ] Quitar la Libreta (apartados de papel) del código: no se usará
+- [x] Quitar la Libreta (apartados de papel) del código: pantalla, archivo, interruptor, funciones en la base y pruebas
 
 ## 5. Orden en el código (sin framework)
 - [ ] Juntar en `shared.js` lo repetido: `_esc`, `api`, `_driveSz`, `toast`

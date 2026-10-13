@@ -195,29 +195,7 @@ function _themeToggleRowHtml() {
   // una sola línea, en el lenguaje de "qué cambia para ti", no un reporte
   // técnico del bug.
   const SYS_NOTICES = [
-    { id: 'inv-add-menu-2026-09', icon: 'plus',
-      title: 'En Inventario, en el celular, busca el botón + de abajo',
-      text: 'Ahí se juntaron: Producto nuevo, Captura rápida, Kit/Bundle, Recibir mercancía y Recepción con IA — antes estaban repartidos en varios botones distintos. Escanear código de barras sigue en su lugar de siempre, junto al buscador.',
-      until: '2026-10-03' },
-    { id: 'caja-libreta-2026-10', icon: 'book',
-      title: 'Nuevo en Caja: pasar los apartados de la libreta',
-      text: 'En <b>Apartados</b> toca el botón <b>Libreta</b>.<br>'
-        + '1. Escribe el nombre como viene en la libreta (el teléfono es opcional y sirve para mandarle su saldo).<br>'
-        + '2. Si la libreta trae el total, escríbelo y agrega cada abono con <b>+ Anotar abono</b>: junto a cada uno ves cuánto quedaba, para comparar. Si solo sabes cuánto debe, toca <b>Solo sé cuánto debe</b>.<br>'
-        + '3. Si quieres, anota qué apartó y la fecha, y tómale foto a la página.<br>'
-        + '4. Toca <b>Guardar</b>. La pantalla queda lista para la siguiente clienta.<br><br>'
-        + 'Lo que pagaron en la libreta cuenta para su saldo, pero no aparece en el corte ni en las ventas de hoy. Lo que paguen desde ahora se registra como cualquier abono. Si un monto quedó mal, abre su apartado y toca el lápiz para corregir lo que debe. Si te avisa que ya hay un apartado con ese nombre, revisa que no la estés pasando dos veces.',
-      until: '2026-10-31' },
-    { id: 'caja-fiado-liberar-2026-10', icon: 'info',
-      title: 'Apartados: fiado, liberar y saldo a favor',
-      text: 'Ahora hay dos tipos de apartado:<br>'
-        + '<b>Apartado:</b> el producto se queda en la tienda hasta que termine de pagar.<br>'
-        + '<b>Fiado:</b> una persona de confianza se lleva el producto hoy y paga después. Al hacer el apartado toca <b>Se lo lleva hoy (fiado)</b>. Lo autoriza la dueña: si ella no está, se pide su PIN; si lo indica por teléfono, regístralo como apartado normal y ella lo marca como fiado desde su celular.<br><br>'
-        + 'Todos los apartados que ya existían quedaron marcados como <b>Se lo llevó</b>. Desde hoy, al hacer un apartado decidan si se queda en la tienda o se lo lleva. Si alguno está mal marcado, ábranlo, toquen el lápiz y cámbienlo.<br><br>'
-        + '<b>Liberar producto:</b> si un apartado (no fiado) lleva 30 días o más vencido, aparece el botón <b>Liberar producto</b>. El producto vuelve a la venta y lo que pagó la clienta <b>queda a su favor</b>. Solo liberen si el producto sigue en la tienda.<br>'
-        + '<b>Saldo a favor:</b> está en Apartados → Cancelados. Cuando la clienta regrese, toquen <b>Devolver saldo a favor</b>; si lo quiere usar para comprar algo, devuélvanselo y cobren la compra normal.<br><br>'
-        + 'También nuevo: <b>Solo ver apartados</b> en la pantalla de Abrir caja, para consultar sin abrir turno.',
-      until: '2026-11-07' },
+    // { id: 'aviso-AAAA-MM', icon: 'info', title: '…', text: '…', until: 'AAAA-MM-DD' },
   ];
 
   const _NOTIF_ICONS = {
@@ -1081,7 +1059,6 @@ document.addEventListener('DOMContentLoaded', () => {
     turno: ['abrir caja', 'corte'],
     vencido: ['vencidos', 'liberar', 'recordar'],
     liberar: ['vencido', 'saldo a favor'],
-    libreta: ['papel', 'pasar de la libreta'],
     existencia: ['stock', 'piezas', 'agotado'],
     stock: ['piezas', 'agotado', 'reabastecer'],
     borrar: ['eliminar', 'archivar'],

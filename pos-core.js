@@ -26,6 +26,9 @@ function _collectedByEmailFromCheck(id) {
   const el = document.getElementById(id);
   return (el && el.classList.contains('active')) ? _COLLECTED_BY_ALT_EMAIL : null;
 }
+// La libreta (apartados de papel de Tres Encantos) no existe en Sunny POS: las
+// listas de apartados todavía preguntan por ella, siempre es "no".
+function _isLibretaSale() { return false; }
 const TE = null; // tracking removed — stub keeps TE?.track() calls safe
 const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const _giftIconSvg  = (px = 14) => `<svg style="width:${px}px;height:${px}px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>`;

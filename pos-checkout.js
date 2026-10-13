@@ -736,7 +736,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_av) _av.textContent = _initial;
   } catch {}
   initDivider();
-  await Promise.all([loadProducts(), loadPosCategories(), loadTopProductsFromSales(), loadPosNameMap(), loadPosConfig(), loadPosRecentlyEdited(), loadLibretaConfig()]);
+  await Promise.all([loadProducts(), loadPosCategories(), loadTopProductsFromSales(), loadPosNameMap(), loadPosConfig(), loadPosRecentlyEdited()]);
   renderCategoryChips();
   setPosView(posView);
   _restoreCart();

@@ -4605,4 +4605,9 @@ RETURNS boolean LANGUAGE sql STABLE SET search_path TO 'public' AS $$
   SELECT COALESCE(public._te_distance_to_store_m(p_lat, p_lng) > 150, false);
 $$;
 
+-- La libreta (apartados de papel) era solo del negocio piloto: Sunny POS no la usa
+DROP FUNCTION IF EXISTS public.te_libreta_apartado_create(uuid,text,text,numeric,numeric,jsonb,date,date,text,text,uuid[]);
+DROP FUNCTION IF EXISTS public.te_libreta_apartado_edit(uuid,bigint,bigint,text,text,date,text,numeric,uuid[]);
+DELETE FROM public.config WHERE id = 'show_libreta';
+
 COMMIT;

@@ -29,8 +29,7 @@ INSERT INTO public.config (id, value) VALUES
   ('show_creator',   'false'),  -- "Creado por" en Inventario
   ('show_restock',   'true'),   -- Reabastecer desde Caja
   ('show_recv',      'true'),   -- Recibir mercancía
-  ('show_recv_ia',   'false'),  -- Recepción con IA: se prende cuando haya clave de IA
-  ('show_libreta',   'false')
+  ('show_recv_ia',   'false')   -- Recepción con IA: se prende cuando haya clave de IA
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;
