@@ -37,7 +37,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] `MANUAL.md` genérico (sin libreta; corte actualizado)
 - [x] Scripts: respaldo (`scripts/respaldo.py`, cualquier negocio vía negocio.js) y pruebas sin cuentas de Tres Encantos
 - [ ] **(Eduardo)** Tarea programada diaria del respaldo
-- [ ] Reescribir `CLAUDE.md` para Sunny POS
+- [x] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
 - [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Fiado, Recepción con IA, Marca por catálogo
