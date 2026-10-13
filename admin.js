@@ -1180,8 +1180,21 @@ function mapProduct(p) {
   };
 }
 
+// Supabase entrega como máximo 1,000 renglones por consulta (max_rows): con un
+// catálogo más grande, pedirlo de un jalón dejaba fuera productos sin avisar.
+// Se pide por páginas; si una página falla, falla todo (nunca un catálogo a medias).
+async function _fetchAllPages(path, pageSize = 1000) {
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const r = await supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
+    if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
+    rows.push(...r.data);
+    if (r.data.length < pageSize) return { ...r, data: rows };
+  }
+}
+
 async function loadProductsFromSupabase() {
-  const result = await supabaseApi('products?select=*&order=position.asc');
+  const result = await _fetchAllPages('products?select=*&order=position.asc,id.asc');
   const data = result.data;
   if (result.ok && Array.isArray(data) && data.length) {
     products = data.map(mapProduct);

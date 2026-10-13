@@ -285,6 +285,19 @@ function supabaseApi(path, opts = {}) {
 }
 
 /* ── LOAD PRODUCTS ── */
+// Supabase entrega como máximo 1,000 renglones por consulta (max_rows): con un
+// catálogo más grande, pedirlo de un jalón dejaba fuera productos sin avisar.
+// Se pide por páginas; si una página falla, falla todo (nunca un catálogo a medias).
+async function _fetchAllPages(path, pageSize = 1000) {
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const r = await supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
+    if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
+    rows.push(...r.data);
+    if (r.data.length < pageSize) return { ...r, data: rows };
+  }
+}
+
 function showSkeleton() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
@@ -310,7 +323,7 @@ function showSkeleton() {
 // "cargando" para siempre sin un render() posterior).
 async function _fetchProductsList() {
   // Publicados con stock O apartados activos
-  const result = await supabaseApi('products?select=id,name,category,category_label,price,original_price,description,image,badge,badge_type,featured,out_of_stock,is_apartado,stock,images,kit_items&is_published=eq.true&category=neq.por_revisar&or=(out_of_stock.eq.false,is_apartado.eq.true)&order=position.asc');
+  const result = await _fetchAllPages('products?select=id,name,category,category_label,price,original_price,description,image,badge,badge_type,featured,out_of_stock,is_apartado,stock,images,kit_items&is_published=eq.true&category=neq.por_revisar&or=(out_of_stock.eq.false,is_apartado.eq.true)&order=position.asc,id.asc');
   if (result.ok && Array.isArray(result.data) && result.data.length) {
     return result.data.map(p => ({
       id: p.id,

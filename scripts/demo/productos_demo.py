@@ -137,12 +137,13 @@ while len(rows) < N:
         'created_by': 'demo',
     })
 
-data = json.dumps(rows, ensure_ascii=False).replace('$demo$', '')
-run_sql(f"""
-INSERT INTO public.products (name, category, category_label, price, original_price, cost, description, image, images,
-  stock, barcode, supplier_code, featured, is_published, is_archived, expiry_date, badge, badge_type, "position", created_by)
-SELECT name, category, category_label, price, original_price, cost, description, image, images,
-  stock, barcode, supplier_code, featured, is_published, is_archived, expiry_date, badge, badge_type, "position", created_by
+COLS = """name, category, category_label, price, original_price, cost, description, image, images,
+  stock, barcode, supplier_code, featured, is_published, is_archived, expiry_date, badge, badge_type, "position", created_by"""
+for k in range(0, len(rows), 1000):
+    data = json.dumps(rows[k:k + 1000], ensure_ascii=False).replace('$demo$', '')
+    run_sql(f"""
+INSERT INTO public.products ({COLS})
+SELECT {COLS}
 FROM jsonb_to_recordset($demo${data}$demo$::jsonb) AS x(
   name text, category text, category_label text, price numeric, original_price numeric, cost numeric, description text,
   image text, images jsonb, stock int, barcode text, supplier_code text, featured boolean, is_published boolean,
