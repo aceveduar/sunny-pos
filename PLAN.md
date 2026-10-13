@@ -22,7 +22,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
   - [ ] C. Grandes, decidir después: personas por id y no por correo; renglones de venta en su propia tabla (`sale_items`) para reportes rápidos; reportes calculados en el servidor
 - [x] Datos iniciales: categorías genéricas, configuración por defecto (`02_datos_iniciales.sql`; dueña con `03_primera_duena.sql`)
 - [x] Probarlo en el proyecto nuevo y crear la primera cuenta (dueña): eacevedo@ — producto, venta, turno y Reportes OK (2026-10-13)
-- [ ] Desplegar las Edge Functions (`create-user`, `groq-proxy`, `drive-proxy`)
+- [x] Desplegar las Edge Functions (`create-user`, `groq-proxy`, `drive-proxy`): sin secretos manuales (usan la service role que inyecta Supabase)
 - [ ] **(Eduardo)** Apps Script de Drive para el negocio de prueba
 - [ ] Control de versiones de la base (qué cambios tiene cada negocio)
 

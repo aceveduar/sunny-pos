@@ -24,16 +24,15 @@
 // service_role key. Nunca se confía en lo que el cliente diga sobre sí
 // mismo.
 //
-// Despliegue: `supabase functions deploy create-user` (requiere el CLI de
-// Supabase y estar logueado/linkeado al proyecto). Después, configurar el
-// secret SERVICE_ROLE_KEY desde el Dashboard o con
-// `supabase secrets set SERVICE_ROLE_KEY=...`.
+// Despliegue: `supabase functions deploy create-user --project-ref <ref> --use-api`.
+// Usa la service role que Supabase inyecta sola (SUPABASE_SERVICE_ROLE_KEY);
+// SERVICE_ROLE_KEY solo si se quiere sobrescribir.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVICE_ROLE_KEY  = Deno.env.get("SERVICE_ROLE_KEY")!;
+const SERVICE_ROLE_KEY  = Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const VALID_ROLES = ["superadmin", "encargado", "operador"];
 
