@@ -1,0 +1,515 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#F7F2EB;--gold:#C9A462;--gold-dark:#A67C3A;--gold-light:#FFF8EE;
+  --charcoal:#1C1817;--muted:#8A7564;--muted-light:#B5A696;
+  --red:#E85D5D;--green:#2D6A4F;--amber:#F59E0B;--violet:#7C5CBF;--teal:#1F8A82;
+  --border:#EAE0D4;--shadow:0 4px 20px rgba(28,24,23,.1);--r:14px;
+  --surface:#fff;--surface-soft:#F5EDE4;
+}
+
+/* ══ MODO OSCURO ═══════════════════════════════════════════════════════
+   Mismo mecanismo y misma paleta que Inventario/Caja (ver admin.css/
+   pos.css) — activado por [data-theme="dark"] en <html> (shared.js
+   _toggleTheme() / script anti-flash en <head> de stats.html).
+   --gold/--gold-dark/--red/--green/--amber/--violet/--teal se quedan
+   fijos a propósito (acentos ya legibles en ambos temas); --ink/--ink-soft
+   (shared.css) tampoco se redefinen — son el chrome intencionalmente
+   oscuro (topbar) que ya era oscuro en modo claro. --tint-*: solo se
+   definen aquí porque únicamente se usan dentro de este bloque, para las
+   parejas fondo-pastel+texto que sí necesitan invertirse (inventario,
+   badges, calendario) — sus valores claros originales se dejan intactos. */
+:root[data-theme="dark"]{
+  --cream:#15120E;--surface:#221D18;--surface-soft:#2A241D;
+  --charcoal:#F1E8DB;--muted:#B9A890;--muted-light:#6B5D4D;
+  --gold-light:#2C2415;--border:#3D352B;
+  --tint-red-bg:#332020;--tint-red-border:rgba(248,113,113,.35);--tint-red-strong:#F87171;
+  --tint-amber-bg:#332A14;--tint-amber-border:rgba(251,191,36,.4);--tint-amber-strong:#FBBF24;
+  --tint-green-bg:#1B2E22;--tint-green-border:rgba(110,231,183,.35);--tint-green-strong:#6EE7B7;
+  --tint-blue-bg:#18263A;--tint-blue-border:rgba(96,165,250,.35);--tint-blue-strong:#7DB8F5;
+  --tint-violet-bg:#241C38;--tint-violet-border:rgba(196,168,245,.35);--tint-violet-strong:#C4A8F5;
+  color-scheme:dark;
+}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal);min-height:100vh}
+button,select{font-family:inherit}
+*{-webkit-tap-highlight-color:transparent}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--ink);color:#fff;
+  padding:0 28px;height:62px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+  box-shadow:0 2px 12px rgba(28,24,23,.25);
+}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.topbar-left img{height:34px;border-radius:5px}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1rem;color:rgba(255,255,255,.9)}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(201,164,98,.25);color:var(--gold);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(201,164,98,.45);user-select:none}
+
+/* ── MAIN ── */
+main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
+
+/* ── PERIOD SELECTOR ── */
+.stats-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;position:sticky;top:0;z-index:20;background:var(--cream);padding:10px 0 8px;margin-top:-10px}
+.smode-bar{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:4px;gap:4px;box-shadow:0 2px 8px rgba(28,24,23,.07)}
+.smode-btn{padding:6px 16px;border-radius:50px;font-size:.82rem;font-weight:600;border:none;background:transparent;cursor:pointer;color:var(--muted);transition:.15s;white-space:nowrap}
+.smode-btn.active{background:var(--ink);color:#fff}
+.smode-btn:hover:not(.active){background:var(--cream);color:var(--charcoal)}
+.stats-range-nav{display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:4px 8px;box-shadow:0 2px 8px rgba(28,24,23,.07)}
+/* Se ven compactos (28px) pero el área de toque real es ~44px -- mismo
+   hit-slop que .hi-del en Historial de Caja. */
+.srn-btn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;cursor:pointer;color:var(--charcoal);font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;position:relative}
+.srn-btn::after{content:'';position:absolute;inset:-8px}
+.srn-btn:hover:not(:disabled){background:var(--cream)}
+.srn-btn:disabled{opacity:.3;cursor:default}
+.srn-label{font-size:.82rem;font-weight:600;color:var(--charcoal);min-width:110px;text-align:center;white-space:nowrap;padding:0 4px}
+.srn-wa{background:#E8F5E9;margin-left:2px}
+.srn-wa:hover{background:#C8E6C9}
+:root[data-theme="dark"] .srn-wa{background:var(--tint-green-bg)}
+:root[data-theme="dark"] .srn-wa:hover{background:var(--tint-green-border)}
+
+/* ── KPI — "Dinero de hoy": una sola tarjeta con jerarquía interna en vez
+   de 4 tarjetas repetidas con icono propio (el patrón "card salad" típico
+   de dashboards genéricos). Ingresos es el número dominante; Ventas/Abonos/
+   Apartados nuevos viven adentro, en una fila con divisores finos, cada uno
+   identificado por un punto de color -- el mismo color que su segmento en
+   la barra de composición de arriba, así el ojo conecta ambos sin leer
+   etiquetas. El color no decora: liga cada cifra a su parte de Ingresos. */
+/* :first-child eliminado a propósito -- desde que "Dinero de hoy" y "Otros
+   indicadores" viven cada uno en su propio div (.kpi-top-grid, para el
+   layout lado a lado en escritorio ancho), los dos rótulos son first-child
+   de su envoltorio y esta regla les habría quitado el margen superior a
+   los dos por igual (nunca se activaba antes -- el rótulo real nunca era
+   first-child de <main>, quedaba detrás de .stats-nav). */
+.kpi-section-label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px}
+
+.kpi-hero-card{
+  background:var(--surface);border-radius:var(--r);padding:24px 26px 20px;
+  border:1px solid var(--border);box-shadow:0 2px 8px rgba(28,24,23,.06);
+  margin-bottom:24px;
+}
+.kpi-hero-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.kpi-hero-value{font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:600;line-height:1;color:var(--charcoal)}
+.kpi-label{font-size:.72rem;color:var(--muted);margin-top:6px;letter-spacing:.07em;text-transform:uppercase;font-weight:600}
+.kpi-value-money{font-family:'Inter',sans-serif;font-size:.72rem;font-weight:600;color:var(--muted);vertical-align:middle}
+.kpi-sub{font-size:.72rem;color:var(--muted-light);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-hero-headline .kpi-sub{margin-top:8px}
+/* Mini-gráfica de tendencia -- solo tiene sentido cuando la tarjeta es lo
+   bastante ancha para no verse apretada junto al número; oculta por
+   default, aparece en el bloque ≥1300px de más abajo. Chart.js dibuja con
+   el tamaño fijo del atributo width/height del <canvas> (responsive:false)
+   -- por diseño, no depende de un observer aunque el elemento esté oculto. */
+.kpi-spark{display:none;flex-shrink:0}
+
+.kpi-hero-bar{display:flex;height:8px;border-radius:50px;overflow:hidden;background:var(--cream);gap:2px;margin-top:18px}
+.kpi-hero-bar-seg{height:100%;min-width:3px;transition:width .3s}
+.kpi-hero-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:.76rem;color:var(--muted)}
+.kpi-hero-legend-item{display:flex;align-items:center;gap:5px}
+.kpi-hero-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+.kpi-stat-row{display:flex;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.kpi-stat{flex:1;min-width:0;padding:0 18px}
+.kpi-stat:first-child{padding-left:0}
+.kpi-stat:last-child{padding-right:0}
+.kpi-stat+.kpi-stat{border-left:1px solid var(--border)}
+.kpi-stat-label{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-stat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.kpi-stat[data-accent="green"] .kpi-stat-dot{background:var(--green)}
+.kpi-stat[data-accent="violet"] .kpi-stat-dot{background:var(--violet)}
+.kpi-stat[data-accent="teal"] .kpi-stat-dot{background:var(--teal)}
+/* Sans, no Playfair Display -- Ingresos es el único número que se trata
+   como titular (la serif ornamentada); estos son cifras de apoyo, y
+   tratarlas todas igual de "elegantes" cancela la jerarquía en vez de
+   reforzarla. */
+.kpi-stat-value{font-family:'Inter',sans-serif;font-size:1.15rem;font-weight:700;line-height:1;color:var(--charcoal);display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+
+.kpi-best-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* Artículos vendidos / Por cobrar -- otra clase de dato (cantidad y saldo
+   histórico, no dinero de hoy), en su propia franja compacta para no
+   invitar a sumarlas con Ingresos: ni tarjetas separadas ni icono repetido,
+   solo dos cifras una junto a la otra con un divisor. */
+.kpi-strip{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 2px 8px rgba(28,24,23,.06);margin-bottom:24px}
+.kpi-strip-item{flex:1;min-width:0;padding:16px 20px}
+.kpi-strip-item+.kpi-strip-item{border-left:1px solid var(--border)}
+.kpi-strip-item-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.kpi-strip-value{font-family:'Inter',sans-serif;font-size:1.15rem;font-weight:700;line-height:1;color:var(--charcoal)}
+.kpi-strip-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:6px;font-weight:600}
+
+/* "Por cobrar" no tiene tendencia (es un saldo vivo, no dinero del período) --
+   en su lugar, qué fracción de ese saldo ya está vencida se ve de un
+   vistazo en una barra de dos colores, en vez de solo en el subtítulo
+   chico "65 apartados · 25 venc.". */
+.kpi-apt-ratio{margin-top:9px}
+/* Mismo riel que .tp-bar-wrap/.cl-bar-wrap (Top productos/categorías) --
+   un verde casi transparente sobre blanco se veía casi invisible, dejando
+   el segmento rojo flotando sin nada contra qué compararlo. */
+.kpi-apt-ratio-bar{height:5px;border-radius:50px;background:var(--surface-soft);overflow:hidden}
+.kpi-apt-ratio-fill{height:100%;background:var(--red);border-radius:50px;transition:width .3s}
+
+/* Apilado por default (mobile/tablet/desktop normal) -- ver el bloque
+   ≥1300px más abajo para el layout de escritorio ancho lado a lado. */
+.kpi-top-grid{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:0 2px 8px rgba(28,24,23,.06);overflow:hidden}
+.card-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-head h2{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--charcoal);display:flex;align-items:center;gap:7px}
+.card-h-icon{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold-dark)}
+.card-head span{font-size:.75rem;color:var(--muted)}
+.card-body{padding:20px 22px}
+
+/* ── CHARTS ROW ── */
+/* align-items:stretch (no "start") -- se había intentado antes que cada
+   tarjeta se quedara con su propio alto natural y llenar el hueco de
+   "Ingresos por hora" con day-hour-summary, pero ese balance depende de
+   cuántas categorías haya ese día (4 categorías = lista corta = "Por
+   categoría" queda visiblemente más baja que su vecina) -- frágil,
+   confirmado en vivo por Eduardo. Con stretch las 2 tarjetas SIEMPRE
+   miden lo mismo (la más corta se rellena con su propio fondo/borde en
+   vez de quedar despareja) -- no depende de cuánto contenido traiga cada
+   una ese día en particular. */
+.charts-row{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;align-items:stretch}
+.day-hour-summary{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.dhs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;font-size:.82rem}
+.dhs-row+.dhs-row{border-top:1px solid var(--surface-soft)}
+.dhs-label{color:var(--muted);display:flex;align-items:center;gap:6px}
+.dhs-value{font-weight:700;color:var(--charcoal);white-space:nowrap}
+.chart-canvas-wrap{position:relative;height:240px}
+
+/* ── CALENDAR HEATMAP ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+.cal-hdr{text-align:center;font-size:.72rem;font-weight:700;color:var(--muted);padding-bottom:4px;letter-spacing:.03em}
+.cal-cell{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:transform .12s,box-shadow .12s;position:relative;cursor:default}
+.cal-cell-n{font-size:.72rem;font-weight:600;line-height:1}
+.cal-cell-amt{font-size:.56rem;line-height:1.1;opacity:.85;font-weight:500}
+.cal-empty{background:transparent;pointer-events:none}
+.cal-future{background:repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(0,0,0,.025) 3px,rgba(0,0,0,.025) 5px);pointer-events:none;color:var(--muted);opacity:.5}
+:root[data-theme="dark"] .cal-future{background:repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(255,255,255,.04) 3px,rgba(255,255,255,.04) 5px)}
+.cal-zero{background:var(--cream);color:var(--muted);border:1px dashed var(--border)}
+.cal-l1{background:#FEF3CD;color:#92400E}
+.cal-l2{background:#FBBF24;color:#78350F}
+.cal-l3{background:#C9A462;color:#fff}
+.cal-l4{background:#A67C3A;color:#fff}
+.cal-l5{background:#7C5A2E;color:#fff}
+:root[data-theme="dark"] .cal-l1{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
+.cal-today{box-shadow:0 0 0 2.5px var(--gold-dark);z-index:1}
+.cal-today .cal-cell-n::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--gold-dark);margin:2px auto 0}
+.cal-cell.cal-l1:hover,.cal-cell.cal-l2:hover,.cal-cell.cal-l3:hover,.cal-cell.cal-l4:hover,.cal-cell.cal-l5:hover,.cal-cell.cal-zero:hover{transform:scale(1.1);box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:2}
+.cal-tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:600;white-space:nowrap;pointer-events:none;z-index:10}
+.cal-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--ink)}
+.cal-cell:hover .cal-tooltip{display:block}
+.cal-cell.cal-tap .cal-tooltip{display:block}
+.cal-cell.cal-tap{transform:scale(1.12);z-index:3}
+.cal-grid .cal-cell:nth-child(-n+14) .cal-tooltip{bottom:auto;top:calc(100% + 6px)}
+.cal-grid .cal-cell:nth-child(-n+14) .cal-tooltip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--ink)}
+/* El tooltip de cada celda es más ancho que la celda misma (7 columnas
+   apretadas en el ancho de la tarjeta) -- .card tiene overflow:hidden por
+   default (necesario para las esquinas redondeadas en el resto de
+   tarjetas), así que el tooltip se recortaba/desaparecía en cuanto se
+   salía del borde de la tarjeta -- en la práctica, para casi cualquier
+   columna que no fuera la del centro. Por eso el tap "no hacía nada" en
+   mobile: si visualmente se veía, pero recortado a casi nada. Esta
+   tarjeta en particular no tiene nada más que dependa del recorte
+   (el grid y la leyenda ya tienen su propio padding), así que es seguro
+   dejarla desbordar. */
+#calendar-card{overflow:visible}
+.cal-legend{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;font-size:.72rem;color:var(--muted);font-weight:500}
+.cal-legend-cell{width:14px;height:14px;border-radius:3px}
+
+
+/* ── TOP PRODUCTOS ── */
+.top-prod-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.top-prod-item:last-child{border-bottom:none}
+.tp-rank{width:22px;height:22px;border-radius:50%;background:var(--cream);color:var(--muted);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-prod-item:nth-child(1) .tp-rank{background:var(--gold);color:#fff}
+.top-prod-item:nth-child(2) .tp-rank{background:#9B8B78;color:#fff}
+.top-prod-item:nth-child(3) .tp-rank{background:#C9A07E;color:#fff}
+.tp-img{width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);background:var(--surface-soft)}
+.tp-info{flex:1;min-width:0}
+.tp-name{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--charcoal)}
+.tp-bar-wrap{height:4px;background:var(--surface-soft);border-radius:2px;margin-top:5px;overflow:hidden}
+.tp-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-dark));border-radius:2px;transition:width .4s ease}
+.tp-stats{text-align:right;flex-shrink:0}
+/* Sans, no Playfair -- son 8 productos al mismo nivel, ninguno es el
+   protagonista de la tarjeta (mismo criterio que .kpi-stat-value/
+   .inv-stat .n). */
+.tp-revenue{font-size:.82rem;font-weight:700;color:var(--charcoal)}
+.tp-qty{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* ── CATEGORY LIST (debajo del donut) ── */
+.cl-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.cl-item:last-child{border-bottom:none}
+.cl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+/* 110px cortaba nombres reales del catálogo a media palabra ("Bisutería &
+   Joye…") en la columna angosta (340px) de esta tarjeta -- 145px alcanza
+   para el nombre de categoría más largo sin apretar demasiado la barra. */
+.cl-name{font-size:.78rem;font-weight:600;color:var(--charcoal);flex-shrink:0;max-width:145px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-bar-wrap{flex:1;height:4px;background:var(--surface-soft);border-radius:2px;overflow:hidden;min-width:30px}
+.cl-bar{height:100%;border-radius:2px}
+.cl-val{font-size:.78rem;font-weight:700;color:var(--charcoal);flex-shrink:0}
+.cl-pct{font-size:.72rem;color:var(--muted);flex-shrink:0;width:28px;text-align:right}
+
+/* ── SEGUNDA FILA ── */
+.bottom-row{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+
+/* ── INVENTARIO / RENTABILIDAD — 3 cifras relacionadas en fila ──
+   Antes: 3 cajas de fondo sólido de color -- el mismo lenguaje "card
+   salad" que ya se dejó atrás en "Dinero de hoy" (arriba de esta
+   pantalla). Unificado al mismo patrón que .kpi-stat: solo un punto de
+   color junto a la etiqueta, número en Inter (no Playfair -- aquí no hay
+   un "héroe" entre los 3, son categorías al mismo nivel, así que ninguno
+   necesita el tratamiento de titular), divisores finos en vez de cajas.
+   Mismo componente para "Estado del inventario" (Agotados/Última unidad/
+   Con existencias) y "Rentabilidad" (Alta/Media/Baja). */
+.inv-summary{display:flex;margin-bottom:16px}
+.inv-stat{flex:1;min-width:0;padding:0 16px;display:flex;flex-direction:column-reverse}
+.inv-stat:first-child{padding-left:0}
+.inv-stat:last-child{padding-right:0}
+.inv-stat+.inv-stat{border-left:1px solid var(--border)}
+.inv-stat .n{font-family:'Inter',sans-serif;font-size:1.3rem;font-weight:700;color:var(--charcoal)}
+.inv-stat .l{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:6px}
+.inv-stat .l::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.inv-stat.red .l::before{background:var(--red)}
+.inv-stat.amber .l::before{background:var(--amber)}
+.inv-stat.green .l::before{background:var(--green)}
+
+.inv-valor-box{background:var(--gold-light);border:1px solid var(--border)}
+.inv-valor-box-green{background:#F0FDF4;border:1px solid #A7F3D0}
+:root[data-theme="dark"] .inv-valor-box-green{background:var(--tint-green-bg);border-color:var(--tint-green-border)}
+
+.inv-list-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.inv-list-item:last-child{border-bottom:none}
+.inv-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;margin-right:10px}
+.badge-sm{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:50px;white-space:nowrap}
+.badge-red{background:#FEE2E2;color:#991B1B}
+.badge-amber{background:#FEF3C7;color:#92400E}
+:root[data-theme="dark"] .badge-red{background:var(--tint-red-bg);color:var(--tint-red-strong)}
+:root[data-theme="dark"] .badge-amber{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
+
+.turno-chip{font-size:.72rem;font-weight:700;border-radius:50px;padding:2px 9px;white-space:nowrap}
+.turno-chip-open{color:var(--green);background:#EAF7EF}
+.turno-chip-noclose{color:var(--red);background:#FEF2F2}
+:root[data-theme="dark"] .turno-chip-open{background:var(--tint-green-bg)}
+:root[data-theme="dark"] .turno-chip-noclose{background:var(--tint-red-bg)}
+
+/* Texto de color plano, sin fondo -- 5-6 de estos pueden aparecer a la vez
+   en la misma pantalla (Ingresos + cada stat + Artículos vendidos); una
+   pastilla con relleno sólido por cada uno se acumula en "badge soup". El
+   color (verde/rojo, ya fijo en ambos temas por convención del proyecto)
+   sigue comunicando dirección sin la insignia de fondo. */
+.delta-pill{font-size:.72rem;font-weight:700}
+.delta-up{color:var(--green)}
+.delta-down{color:var(--red)}
+
+.mv-tag{font-size:.72rem;padding:1px 6px;border-radius:50px;font-weight:700;flex-shrink:0}
+.mv-tag-refund{background:#FEE2E2;color:#991B1B}
+.mv-tag-adjust{background:#FEF3C7;color:#92400E}
+.mv-tag-aptnew{background:#FFF8EE;color:#9A742D}
+.mv-tag-abono{background:#F1EAFB;color:#5B3FA0}
+.mv-tag-venta{background:#DCFCE7;color:#166534}
+:root[data-theme="dark"] .mv-tag-refund{background:var(--tint-red-bg);color:var(--tint-red-strong)}
+:root[data-theme="dark"] .mv-tag-adjust{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
+:root[data-theme="dark"] .mv-tag-aptnew{background:var(--tint-amber-bg);color:var(--tint-amber-strong)}
+:root[data-theme="dark"] .mv-tag-abono{background:var(--tint-violet-bg);color:var(--tint-violet-strong)}
+:root[data-theme="dark"] .mv-tag-venta{background:var(--tint-green-bg);color:var(--tint-green-strong)}
+
+/* ── VENTAS DEL DÍA ──
+   Jerarquía tipo estado de cuenta: quién/qué es lo primero que se lee
+   (nombre en negrita, con su etiqueta de tipo justo antes), hora y método
+   de pago son meta secundaria debajo, el monto es el ancla visual a la
+   derecha -- no una fila plana de 5 elementos del mismo peso compitiendo
+   por atención antes de llegar al nombre. */
+.dv-sale{border-bottom:1px solid var(--border)}
+.dv-sale:last-child{border-bottom:none}
+.dv-sale-head{display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;transition:background .15s;border-radius:8px;margin:0 -6px}
+.dv-sale-head:hover,.dv-sale-head:active{background:var(--gold-light)}
+.dv-sale-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.dv-sale-name-row{display:flex;align-items:center;gap:6px;min-width:0}
+.dv-sale-names{font-size:.85rem;font-weight:600;color:var(--charcoal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-sale-meta{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted)}
+.dv-sale-time{font-weight:500;white-space:nowrap}
+.dv-sale-pay{flex-shrink:0;display:flex}
+.dv-icon{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dv-sale-end{display:flex;align-items:center;gap:6px;flex-shrink:0}
+/* Sans, no Playfair -- cada renglón de esta lista es una transacción más
+   entre docenas, ninguna es "la" protagonista de la tarjeta. */
+.dv-sale-total{font-weight:700;font-size:.94rem;color:var(--green);white-space:nowrap}
+.dv-pay-efec{color:var(--green)}
+.dv-pay-trans{color:#1565C0}
+:root[data-theme="dark"] .dv-pay-trans{color:var(--tint-blue-strong)}
+.dv-sale-arrow{font-size:.72rem;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.dv-sale.open .dv-sale-arrow{transform:rotate(90deg)}
+.dv-body{display:none;padding:4px 0 8px}
+.dv-sale.open .dv-body{display:block}
+.dv-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--surface-soft)}
+.dv-item:last-child{border-bottom:none}
+.dv-thumb{width:34px;height:34px;object-fit:cover;border-radius:6px;background:var(--surface-soft);flex-shrink:0}
+.dv-item-name{font-size:.79rem;font-weight:600;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--charcoal)}
+.dv-item-meta{font-size:.72rem;color:var(--muted);margin-top:1px}
+.dv-item-sub{font-size:.8rem;font-weight:700;color:var(--charcoal);white-space:nowrap;flex-shrink:0}
+
+#rent-no-cost{background:var(--gold-light);color:var(--muted)}
+
+/* ── LOADING / EMPTY ── */
+.loading-state{text-align:center;padding:48px 20px;color:var(--muted);font-size:.88rem}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.no-data{text-align:center;padding:32px;color:var(--muted-light);font-size:.84rem}
+
+/* ── MOBILE ── */
+@media(max-width:1024px){
+  main{padding:16px 12px 48px}
+  /* Topbar: grid 3 col — [logo] [título centrado] [iconos] */
+  .topbar{
+    display:grid;grid-template-columns:1fr auto;
+    align-items:center;padding:0 12px;gap:0;
+  }
+  .topbar-left{display:contents}
+  .topbar-title{
+    font-style:italic;font-size:1rem;white-space:nowrap;
+  }
+  .user-avatar{width:24px;height:24px;font-size:.68rem}
+
+  /* Nav período en mobile */
+  .stats-nav{gap:6px}
+  .smode-bar{width:100%}
+  .smode-btn{flex:1;text-align:center;padding:10px 6px;font-size:.76rem;min-height:44px;display:flex;align-items:center;justify-content:center}
+  .stats-range-nav{width:100%;justify-content:space-between}
+  .srn-label{flex:1;min-width:0}
+
+  .kpi-section-label{margin:16px 0 8px;font-size:.7rem}
+  .kpi-hero-card{padding:18px 18px 16px;margin-bottom:14px}
+  .kpi-hero-value{font-size:1.9rem}
+  .kpi-hero-legend{font-size:.7rem;gap:8px 12px}
+  .kpi-stat-row{margin-top:16px;padding-top:14px}
+  .kpi-stat{padding:0 10px}
+  .kpi-stat-value{font-size:1.1rem}
+  .kpi-stat-label{font-size:.7rem}
+  .kpi-strip{margin-bottom:14px}
+  .kpi-strip-item{padding:12px 12px}
+  .kpi-strip-value{font-size:1.1rem}
+  .kpi-strip-label{font-size:.7rem}
+
+  .charts-row{grid-template-columns:1fr;gap:12px}
+  .chart-canvas-wrap{height:190px}
+  #cat-chart-wrap{height:180px}
+  .bottom-row{grid-template-columns:1fr;gap:12px}
+  .card-head{padding:13px 14px 11px}
+  .card-body{padding:12px 14px}
+
+  .inv-stat{padding:0 10px}
+  .inv-stat .n{font-size:1.1rem}
+  .inv-stat .l{font-size:.7rem}
+}
+
+@media(max-width:480px){
+  .kpi-hero-value{font-size:1.6rem}
+  .kpi-stat{padding:0 7px}
+  .kpi-stat-value{font-size:1rem}
+  .kpi-strip-item{padding:10px}
+  .inv-stat{padding:0 7px}
+  .inv-stat .n{font-size:1rem}
+}
+
+@media(max-width:640px){
+  /* Fix real: en 3 columnas, "APARTADOS NUEVOS" y el subtítulo "Período
+     ant.: N · $X" se truncaban a media palabra en ~390px (cada columna
+     quedaba en ~100px de ancho). Apiladas en una sola columna, cada stat
+     recibe el ancho completo -- nada se corta, no hace falta achicar más
+     la letra. */
+  .kpi-stat-row{flex-direction:column;gap:12px}
+  .kpi-stat{padding:0!important;width:100%}
+  .kpi-stat+.kpi-stat{border-left:none;border-top:1px solid var(--border);padding-top:12px!important}
+  .kpi-stat-label{white-space:normal;overflow:visible;text-overflow:clip}
+  .kpi-sub{white-space:normal;overflow:visible;text-overflow:clip}
+
+  /* Mismo fix, mismo motivo -- "Con existencias"/"Media 10–29%" en 3
+     columnas de ~100px también se hubieran apretado en este ancho. */
+  .inv-summary{flex-direction:column;gap:10px}
+  .inv-stat{padding:0!important;width:100%}
+  .inv-stat+.inv-stat{border-left:none;border-top:1px solid var(--border);padding-top:10px!important}
+
+  /* Ventas del día: scroll area más compacto */
+  #today-sales-list{max-height:240px!important}
+  /* Apartados pendientes: mismo trato, evita alargar toda la página con 40+ activos */
+  #apt-pending-body{max-height:240px!important}
+  /* Valor en venta por categoría: mismo trato con catálogos de muchas categorías */
+  #capital-cat-body{max-height:240px!important}
+  /* Calendar: montos ilegibles en celdas pequeñas — solo color y número */
+  .cal-cell-amt{display:none}
+  .cal-cell:hover .cal-tooltip{display:none}
+  .cal-cell:hover{transform:none!important}
+  /* Secciones de baja prioridad — ocultas en mobile. Rentabilidad se queda
+     visible: es información de decisión de negocio (qué surtir/descontar
+     según margen), no un extra de conveniencia como estas dos. */
+  #hora-pico-card{display:none!important}
+  #weekday-card{display:none!important}
+}
+
+@media(max-width:360px){
+  .smode-btn{font-size:.7rem;padding:10px 4px}
+  .kpi-stat{padding:0 4px}
+  .kpi-stat-label{font-size:.7rem;gap:4px}
+  .kpi-stat-value{font-size:.92rem;gap:4px}
+}
+
+/* stats-specific topbar overrides */
+@media(min-width:1025px){.topbar{background:var(--ink)}}
+
+/* ── ESCRITORIO ANCHO (≥1300px) ──────────────────────────────────────
+   Hasta aquí el contenido se quedaba centrado en 1080px sin importar
+   cuánto monitor sobrara -- a partir de este ancho el contenedor crece y
+   "Dinero de hoy"/"Otros indicadores" pasan de apilados a lado a lado
+   (columna angosta a la derecha, misma altura que la tarjeta hero), con
+   números un poco más grandes. Mobile/tablet no cambian -- este bloque
+   solo agrega reglas, nunca las de abajo. */
+@media(min-width:1300px){
+  main{max-width:1320px}
+  .kpi-hero-value{font-size:3.1rem}
+  .kpi-hero-card{padding:30px 32px 26px}
+  .kpi-stat-value{font-size:1.3rem}
+  /* El ancho real ya no se queda vacío junto al número -- las 2 mini-
+     gráficas (Ingresos, Artículos vendidos) solo se muestran aquí; en
+     tablet/mobile no caben con dignidad junto a un número tan grande. */
+  .kpi-spark{display:block}
+
+  /* Las tarjetas de adentro pierden su margin-bottom individual (abajo)
+     para poder estirarse parejo con align-items:stretch -- ese espacio
+     antes de "Movimientos de hoy" hay que ponerlo aquí, en el contenedor,
+     o las tarjetas quedan pegadas contra la siguiente sección. */
+  .kpi-top-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:24px;align-items:stretch;margin-bottom:24px}
+  .kpi-top-grid>div{display:flex;flex-direction:column}
+  .kpi-top-grid .kpi-hero-card{margin-bottom:0;flex:1}
+  .kpi-top-grid .kpi-strip{margin-bottom:0;flex:1;flex-direction:column}
+  .kpi-top-grid .kpi-strip-item{flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px 26px}
+  .kpi-top-grid .kpi-strip-item+.kpi-strip-item{border-left:none;border-top:1px solid var(--border)}
+  .kpi-top-grid .kpi-strip-value{font-size:1.7rem}
+  .kpi-top-grid .kpi-strip-item-row{align-items:center}
+}
+
+/* lightbox */
+.img-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s;padding:20px 16px;overscroll-behavior:none;touch-action:none}
+.img-lightbox.open{opacity:1;pointer-events:auto}
+.img-lightbox-img{max-width:100%;max-height:65dvh;border-radius:12px;object-fit:contain;display:block}
+.img-lightbox-info{width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 16px;backdrop-filter:blur(8px)}
+.img-lb-name{font-size:.92rem;font-weight:700;color:#fff;margin-bottom:6px;line-height:1.3}
+.img-lb-row{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;margin-top:4px}
+.img-lb-label{color:rgba(255,255,255,.5)}
+.img-lb-val{color:rgba(255,255,255,.9);font-weight:600}
+/* Botón "Resumen" por WhatsApp junto a la fecha (antes un punto verde) */
+.srn-btn.srn-wa{width:auto;padding:0 12px 0 10px;border-radius:50px;gap:6px;font-size:.8rem;font-weight:600;color:#128C4A}
+:root[data-theme="dark"] .srn-btn.srn-wa{color:#7EE2A8}
+/* Celular: listas sin scroll interno; primeros renglones + "Ver todo" */
+.list-more-btn{display:block;width:100%;min-height:44px;margin:0;padding:10px 16px;border:none;border-top:1px solid var(--border);background:none;font-family:inherit;font-size:.86rem;font-weight:600;color:var(--gold-dark);cursor:pointer}
+@media(max-width:640px){
+  #today-sales-list,#turnos-body,#apt-pending-body,#capital-cat-body,#clientes-body{max-height:300px!important;overflow:hidden!important;position:relative}
+  #today-sales-list.is-expanded,#turnos-body.is-expanded,#apt-pending-body.is-expanded,#capital-cat-body.is-expanded,#clientes-body.is-expanded{max-height:none!important}
+  .has-more::after{content:'';position:absolute;left:0;right:0;bottom:0;height:48px;background:linear-gradient(to bottom,transparent,var(--surface));pointer-events:none}
+  /* Encabezados: el título no se parte; el dato de la derecha baja si no cabe */
+  .card-head{flex-wrap:wrap;row-gap:4px;column-gap:10px}
+  .card-head > :first-child{white-space:nowrap}
+}
+

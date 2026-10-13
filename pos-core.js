@@ -1,0 +1,1501 @@
+/* ── CONFIG ── */
+const SUPABASE_URL      = NEGOCIO.supabaseUrl;
+const SUPABASE_ANON_KEY = NEGOCIO.supabaseAnonKey;
+const SESSION_KEY = 'te_admin_session';
+// Ofelia cobra en efectivo fuera de la tienda y le dicta a Areli que lo
+// capture en el sistema -- sin esto, ese efectivo (que nunca toca la caja
+// de Areli) se le sumaba a su turno como si lo tuviera ella. Hardcodeado a
+// propósito (mismo criterio que _NIGHT_EXEMPT_EMAILS en activity.js) -- el
+// servidor igual exige que sea una cuenta superadmin/dueña, esto solo evita
+// tener que armar un selector dinámico para un caso de una sola persona.
+const _COLLECTED_BY_ALT_EMAIL = 'ofe@tresencantos.com';
+const _COLLECTED_BY_ALT_LABEL = 'Ofelia';
+// Los 4 botones "Ya lo cobró Ofelia" (venta, apartado nuevo, abono, liquidar)
+// viven como HTML estático en pos.html -- un solo tap alterna su clase
+// .active (mismo patrón que .pay-btn/.discount-type-btn, no un checkbox
+// aparte -- colapsado por default para no sumarle una fila permanente más a
+// una pantalla ya de por sí cargada). Se ocultan solo para la propia Ofelia
+// (no tiene sentido que se atribuya el cobro a sí misma; el servidor además
+// exige que el target sea siempre una cuenta superadmin/dueña, así que
+// mostrárselo a alguien más nunca serviría de nada distinto).
+const _COLLECTED_BY_CHECK_IDS = ['pos-collected-ofelia', 'apt-collected-ofelia', 'abonar-collected-ofelia', 'liq-collected-ofelia'];
+function _initCollectedByChecks() {
+  const myEmail = (_posSession?.user?.email || '').toLowerCase();
+  if (myEmail !== _COLLECTED_BY_ALT_EMAIL) return;
+  for (const id of _COLLECTED_BY_CHECK_IDS) {
+    document.getElementById(id)?.remove();
+  }
+}
+function _collectedByEmailFromCheck(id) {
+  const el = document.getElementById(id);
+  return (el && el.classList.contains('active')) ? _COLLECTED_BY_ALT_EMAIL : null;
+}
+const TE = null; // tracking removed — stub keeps TE?.track() calls safe
+const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const _giftIconSvg  = (px = 14) => `<svg style="width:${px}px;height:${px}px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>`;
+const _clockIconSvg = (px = 14) => `<svg style="width:${px}px;height:${px}px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const _posSession = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; } })();
+const KNOWN_ROLES = ['superadmin', 'encargado', 'operador'];
+// Lee la sesión actual en cada llamada para evitar que quede cacheado si cambia la cuenta
+function getPosRole() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    const r = s?.user?.user_metadata?.role;
+    if (r && KNOWN_ROLES.includes(r)) return r;
+    const jr = JSON.parse(atob(s?.access_token?.split('.')[1]))?.user_metadata?.role;
+    return (jr && KNOWN_ROLES.includes(jr)) ? jr : 'operador';
+  } catch { return 'operador'; }
+}
+function canCancelSale() {
+  const up = _getMyPermsCached();
+  if (up && 'canCancelSale' in up) return up.canCancelSale;
+  const r = getPosRole(); return r === 'superadmin' || r === 'encargado';
+}
+function canEditApartado() {
+  const up = _getMyPermsCached();
+  if (up && 'canEditApartado' in up) return up.canEditApartado;
+  const r = getPosRole(); return r === 'superadmin' || r === 'encargado';
+}
+// Dar fiado ("Se lo lleva hoy"): solo superadmin por defecto; el servidor lo
+// vuelve a exigir en te_set_apartado_se_lo_llevo.
+function canGiveCredit() {
+  const up = _getMyPermsCached();
+  if (up && 'canGiveCredit' in up) return up.canGiveCredit;
+  return getPosRole() === 'superadmin';
+}
+function canCancelApartado() {
+  return canEditApartado() || canCancelSale();
+}
+// Reactivar un apartado cancelado es solo de superadmin, sin PIN de gerente:
+// cambia dinero y stock de un registro ya cerrado. El servidor lo vuelve a
+// exigir (reactivate_apartado_atomic), esto solo decide si se muestra el botón.
+function canReactivateApartado() {
+  const up = _getMyPermsCached();
+  return (up?.role || getPosRole()) === 'superadmin';
+}
+function canOverridePrice() {
+  const up = _getMyPermsCached();
+  if (up && 'canOverridePrice' in up) return up.canOverridePrice;
+  const r = getPosRole(); return r === 'superadmin' || r === 'encargado';
+}
+function canApplyDiscount() {
+  const up = _getMyPermsCached();
+  if (up && 'canApplyDiscount' in up) return up.canApplyDiscount;
+  const r = getPosRole(); return r === 'superadmin' || r === 'encargado';
+}
+function canCloseShiftUnsupervised() {
+  const up = _getMyPermsCached();
+  if (up && 'canCloseShiftUnsupervised' in up) return up.canCloseShiftUnsupervised;
+  const r = getPosRole(); return r === 'superadmin' || r === 'encargado';
+}
+function canManageSettings() {
+  const up = _getMyPermsCached();
+  if (up && 'canManageSettings' in up) return up.canManageSettings;
+  return getPosRole() === 'superadmin';
+}
+function canViewReports() {
+  const up = _getMyPermsCached();
+  if (up && 'canViewReports' in up) return up.canViewReports;
+  return getPosRole() === 'superadmin';
+}
+
+let _cancelAptCtx = null;
+
+// Desde la ficha/tarjeta de un apartado (Apartados). Historial usa deleteSale()
+// (pos-ui.js), que termina en el MISMO modal vía _openCancelModal(): antes ese
+// camino cancelaba apartados Y ventas con un solo confirm() nativo, sin motivo,
+// saltándose por completo las protecciones de este modal.
+async function cancelApartado(id, opts = {}) {
+  if (!canCancelApartado()) {
+    const granted = await requestOverride('canEditApartado', opts.liberar ? 'Liberar producto' : 'Cancelar apartado');
+    if (!granted) return;
+  }
+  const sale = (_apartadosData || {})[id];
+  if (!sale) { toast('Apartado no encontrado', 'error'); return; }
+  _openCancelModal(id, sale, 'apartado', opts);
+}
+
+// Modal único para cancelar un apartado ('apartado') o una venta directa
+// ('venta'): motivo obligatorio y, si hubo cobro, qué pasa con el dinero.
+// Apartado con dinero (2026-10-10): "Queda a su favor" (no sale dinero hoy;
+// sales.saldo_favor) o "Se lo devuelvo ahora" (devolución + casilla de
+// confirmación, exige caja abierta). opts.liberar = "Liberar producto" de un
+// apartado con 30+ días vencido: motivo y "a su favor" ya elegidos.
+function _openCancelModal(id, sale, kind, opts = {}) {
+  const isVenta   = kind === 'venta';
+  const custParts = (sale.customer || '').split(' · 📱 ');
+  const nombre    = custParts[0] || (isVenta ? 'Venta directa' : 'Sin nombre');
+  const total     = parseFloat(sale.total || 0);
+  // Venta directa: paid_amount guarda el efectivo recibido (puede ser mayor al
+  // total), lo que se devuelve es el total. Apartado: lo abonado.
+  const pagado    = isVenta ? total : parseFloat(sale.paid_amount || 0);
+  const nItems    = Array.isArray(sale.items) ? sale.items.length : 0;
+  const isActiveApt = !isVenta && sale.status === 'activo' && !sale.cancelled_at;
+  const liberar   = !!opts.liberar;
+  const fiado     = !isVenta && !!sale.se_lo_llevo;
+  const fmt = n => n.toLocaleString('es-MX');
+  // Con dinero en un apartado se elige qué pasa con él; al liberar, por
+  // defecto queda a su favor (casi nunca está la clienta presente).
+  const moneyChoice = !isVenta && pagado > 0 ? (liberar ? 'favor' : '') : (pagado > 0 ? 'devolver' : '');
+
+  _cancelAptCtx = { id, sale, kind, nombre, total, pagado, nItems, liberar, moneyChoice };
+
+  document.getElementById('cancel-apt-title').textContent = isVenta ? '¿Cancelar esta venta?'
+    : liberar ? '¿Liberar el producto?' : '¿Cancelar este apartado?';
+  const isLib = typeof _isLibretaSale === 'function' && _isLibretaSale(sale);
+  document.getElementById('cancel-apt-info').textContent = `${nombre} · $${fmt(total)} MXN · ${isLib ? 'apartado de libreta' : `${nItems} producto${nItems !== 1 ? 's' : ''}`}`;
+  _cancelAptReason = '';
+  // "No pagó (vencido)" solo tiene sentido en un apartado activo; en una venta
+  // o un apartado ya liquidado la 2ª opción es "Producto con defecto".
+  const labels = ['El cliente desistió', isActiveApt ? 'No pagó (vencido)' : 'Producto con defecto', 'Error de captura', 'Otro'];
+  document.querySelectorAll('#cancel-apt-reasons .cancel-reason-btn').forEach((b, i) => {
+    b.textContent = labels[i]; b.dataset.reason = labels[i];
+    b.classList.remove('active'); b.setAttribute('aria-checked', 'false');
+  });
+  if (liberar) {
+    const vencBtn = document.querySelector('#cancel-apt-reasons .cancel-reason-btn[data-reason="No pagó (vencido)"]');
+    if (vencBtn) { vencBtn.classList.add('active'); vencBtn.setAttribute('aria-checked', 'true'); _cancelAptReason = 'No pagó (vencido)'; }
+  }
+  const reasonEl = document.getElementById('cancel-apt-reason');
+  if (reasonEl) { reasonEl.value = ''; reasonEl.style.display = 'none'; }
+
+  const moneyWrap = document.getElementById('cancel-apt-money');
+  if (moneyWrap) {
+    moneyWrap.style.display = !isVenta && pagado > 0 ? '' : 'none';
+    document.getElementById('cancel-apt-money-title').textContent = `¿Qué pasa con los $${fmt(pagado)} que pagó?`;
+  }
+  const refundOk = document.getElementById('cancel-apt-refund-ok');
+  if (refundOk) refundOk.checked = false;
+  document.getElementById('cancel-apt-refund-txt').textContent =
+    `Confirmo que le voy a devolver $${fmt(pagado)} ${isVenta ? 'al cliente' : 'a la clienta'} por el mismo método con que pagó`;
+
+  const undoNote = isVenta ? 'Esta acción no se puede deshacer.' : 'Solo el administrador puede deshacerlo después.';
+  const warnIco = '<svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  const stockTxt = isLib || fiado ? '' : liberar
+    ? `${warnIco}<strong>Solo si el producto sigue en la tienda.</strong> Vuelve a la venta. Si la clienta se lo llevó, no lo liberes: márcalo como fiado en Editar (lápiz).<br>`
+    : 'El producto regresa al inventario. ';
+  document.getElementById('cancel-apt-warning').innerHTML =
+    (fiado ? `${warnIco}<strong>Este apartado se lo llevó.</strong> Cancelar regresa el producto al inventario: hazlo solo si de verdad lo devolvió.<br>` : '')
+    + (isVenta && pagado > 0
+        ? `${warnIco}Esta venta se cobró por <strong>$${fmt(pagado)}</strong>. Se registrará la devolución por el mismo método y el producto regresa al inventario.<br>`
+        : stockTxt)
+    + undoNote;
+  _syncCancelMoney();
+  document.getElementById('cancel-apt-overlay').style.display = 'flex';
+}
+
+function _selectCancelMoney(choice) {
+  if (!_cancelAptCtx) return;
+  _cancelAptCtx.moneyChoice = choice;
+  _syncCancelMoney();
+}
+
+// Botones "a su favor / devolver", casilla de devolución y texto del botón.
+function _syncCancelMoney() {
+  const ctx = _cancelAptCtx;
+  if (!ctx) return;
+  const choice = ctx.moneyChoice;
+  document.querySelectorAll('#cancel-apt-money .cancel-reason-btn').forEach(b => {
+    const on = b.dataset.money === choice;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+  const hint = document.getElementById('cancel-apt-money-hint');
+  if (hint) hint.textContent = choice === 'favor'
+    ? 'No sale dinero hoy. Queda guardado a su nombre en Cancelados: cuando vuelva, se le devuelve o lo usa para comprar.'
+    : choice === 'devolver' ? 'Sale del cajón de tu turno ahora.' : '';
+  const refundWrap = document.getElementById('cancel-apt-refund-wrap');
+  if (refundWrap) refundWrap.style.display = choice === 'devolver' && ctx.pagado > 0 ? 'flex' : 'none';
+  const confirmBtn = document.getElementById('cancel-apt-confirm-btn');
+  if (confirmBtn) confirmBtn.textContent = _cancelConfirmLabel();
+  _updateCancelAptConfirm();
+}
+
+function _cancelConfirmLabel() {
+  if (_cancelAptCtx?.kind === 'venta') return 'Sí, cancelar venta';
+  return _cancelAptCtx?.liberar ? 'Sí, liberar producto' : 'Sí, cancelar apartado';
+}
+
+// Motivo elegido en el modal de cancelar ('' = ninguno todavía).
+let _cancelAptReason = '';
+
+function _selectCancelReason(btn) {
+  document.querySelectorAll('#cancel-apt-reasons .cancel-reason-btn').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  _cancelAptReason = btn.dataset.reason || '';
+  const other = _cancelAptReason === 'Otro';
+  const inp = document.getElementById('cancel-apt-reason');
+  if (inp) {
+    inp.style.display = other ? '' : 'none';
+    if (other) inp.focus(); else inp.value = '';
+  }
+  _updateCancelAptConfirm();
+}
+
+// Lo que se manda como p_reason: la opción elegida, o el texto libre si eligió "Otro".
+function _cancelAptReasonValue() {
+  if (_cancelAptReason === 'Otro') return (document.getElementById('cancel-apt-reason')?.value || '').trim();
+  return _cancelAptReason;
+}
+
+// "Sí, cancelar" solo se habilita con motivo elegido y, si ya hay pagos, con la
+// casilla de la devolución marcada.
+function _updateCancelAptConfirm() {
+  const btn = document.getElementById('cancel-apt-confirm-btn');
+  if (!btn || !_cancelAptCtx) return;
+  const ctx = _cancelAptCtx;
+  const needsChoice = ctx.kind !== 'venta' && ctx.pagado > 0 && !ctx.moneyChoice;
+  const needsRefund = ctx.pagado > 0 && ctx.moneyChoice === 'devolver';
+  const refundOk = !needsRefund || !!document.getElementById('cancel-apt-refund-ok')?.checked;
+  btn.disabled = !(_cancelAptReasonValue() && refundOk && !needsChoice);
+  btn.title = btn.disabled
+    ? `Elige un motivo${needsChoice ? ', qué pasa con su dinero' : ''}${needsRefund ? ' y confirma la devolución' : ''} para continuar`
+    : '';
+}
+
+function _closeCancelAptModal() {
+  document.getElementById('cancel-apt-overlay').style.display = 'none';
+  _cancelAptCtx = null;
+}
+
+async function _confirmCancelApartado() {
+  if (!_cancelAptCtx) return;
+  const { id, sale, kind, nombre, total, pagado, nItems, liberar, moneyChoice } = _cancelAptCtx;
+  const isVenta = kind === 'venta';
+  const keepCredit = !isVenta && pagado > 0 && moneyChoice === 'favor';
+  // Devolver dinero sale del cajón: exige caja abierta ("Solo ver apartados").
+  if (pagado > 0 && !keepCredit && !_posNeedShift('Para devolver dinero abre la caja.')) { _closeCancelAptModal(); return; }
+  const btnLabel = _cancelConfirmLabel();
+  // Defensa en profundidad: el botón ya está deshabilitado sin motivo, pero un
+  // Enter o un click programático no debe saltarse el requisito.
+  const reasonVal = _cancelAptReasonValue();
+  if (!reasonVal) { toast('Elige un motivo para cancelar', 'error'); return; }
+  const btn = document.getElementById('cancel-apt-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Cancelando…';
+
+  // El modal puede abrirse desde la ficha de un apartado (que queda abierta
+  // detrás) o desde Historial (donde no hay ficha): solo se cierra si está abierta.
+  const closeDetailIfOpen = () => {
+    const detail = document.getElementById('apt-detail-modal');
+    if (detail && detail.style.display === 'flex') closeAptDetail();
+  };
+
+  // p_reason viaja hasta activity_log.meta.reason. Antes era texto libre
+  // opcional (casi siempre vacío); ahora es obligatorio: una de 4 opciones o,
+  // con "Otro", lo que escribió la cajera.
+  const delResult = await _posCancelSaleAtomic(id, sale, reasonVal, keepCredit);
+  if (!delResult.ok) {
+    toast(_posRpcError(delResult, `Error al cancelar ${isVenta ? 'la venta' : 'el apartado'}`), 'error');
+    btn.textContent = btnLabel;
+    _updateCancelAptConfirm();
+    if (delResult.resolvedPrior || delResult.staleConflict) {
+      _closeCancelAptModal();
+      closeDetailIfOpen();
+    }
+    return;
+  }
+
+  btn.disabled = false; btn.textContent = btnLabel;
+  _closeCancelAptModal();
+  closeDetailIfOpen();
+  delete salesCache[id]; // Historial: quita el registro cancelado de la caché local
+  await _refreshPosFinancialState();
+  const refundAmount = parseFloat(delResult.data?.sale?.refund_amount) || 0;
+  const credit = parseFloat(delResult.data?.sale?.saldo_favor) || 0;
+  const nom = _displayName(nombre);
+  toast(isVenta
+    ? `Venta cancelada${refundAmount > 0 ? ` — devolución de ${_fmtMx(refundAmount)} registrada` : ''}`
+    : `${liberar ? 'Producto liberado' : `Apartado de ${nom} cancelado`}${credit > 0 ? ` — ${_fmtMx(credit)} quedan a favor de ${nom}` : refundAmount > 0 ? ` — devolución de ${_fmtMx(refundAmount)} registrada` : ''}`, 'success');
+}
+
+// Deshace una cancelación hecha por error (solo superadmin — el servidor lo
+// exige de nuevo). No borra nada: agrega al libro la reversa de la devolución,
+// vuelve a descontar el stock y reabre el apartado. Si algún producto ya se
+// vendió o apartó a otra persona el servidor rechaza todo y dice cuáles faltan.
+let _reactivatingApt = false;
+async function reactivateApartado(id) {
+  if (_reactivatingApt) return;
+  if (!canReactivateApartado()) { toast('Solo el administrador puede reactivar un apartado', 'error'); return; }
+  const sale = (_apartadosData || {})[id];
+  if (!sale) { toast('Apartado no encontrado', 'error'); return; }
+
+  const nombre  = (sale.customer || '').split(' · 📱 ')[0] || 'Sin nombre';
+  const nItems  = Array.isArray(sale.items) ? sale.items.length : 0;
+  // Devoluciones de la cancelación: mismo instante que cancelled_at.
+  const cancelTs = sale.cancelled_at ? new Date(sale.cancelled_at).getTime() : 0;
+  const restored = (Array.isArray(sale.payment_history) ? sale.payment_history : [])
+    .filter(p => p.kind === 'refund' && cancelTs && Math.abs(new Date(p.paid_at || p.meta?.devuelto_en).getTime() - cancelTs) < 5000)
+    .reduce((n, p) => n + Math.abs(parseFloat(p.amount) || 0), 0);
+
+  const isLib = typeof _isLibretaSale === 'function' && _isLibretaSale(sale);
+  const ok = await teConfirm({ title: `¿Reactivar el apartado de ${nombre}?`, confirmText: 'Reactivar', message:
+    (isLib ? '• Vuelve a Activos con lo que debía.\n' : `• Se vuelven a apartar ${nItems} producto${nItems !== 1 ? 's' : ''} (se descuentan del stock).\n`) +
+    (restored > 0 ? `• Se revierte la devolución de $${restored.toLocaleString('es-MX')} — vuelve a contar como pagado.\n` : '') +
+    `• La reversa queda a nombre de quien registró la devolución, así su turno de caja cuadra.\n\n` +
+    `Si algún producto ya se vendió, no se reactiva y te diremos cuál.`
+  });
+  if (!ok) return;
+
+  _reactivatingApt = true;
+  const btn = document.getElementById('adm-reactivate-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reactivando…'; }
+  const result = await posRpc('reactivate_apartado_atomic', {
+    operation: 'reactivate_apartado',
+    context: id,
+    fingerprint: `${id}:${sale.version ?? 0}`,
+    body: {
+      p_sale_id: id,
+      p_expected_version: sale.version ?? 0,
+      p_reason: null
+    }
+  });
+  _reactivatingApt = false;
+
+  if (!result.ok) {
+    toast(_posRpcError(result, 'No se pudo reactivar el apartado'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Reactivar'; }
+    if (!result.ambiguous && !result.pendingConflict) {
+      await _refreshPosFinancialState();
+      if (result.resolvedPrior || result.staleConflict) closeAptDetail();
+    }
+    return;
+  }
+
+  closeAptDetail();
+  await _refreshPosFinancialState();
+  toast(`Apartado de ${nombre} reactivado ✓`, 'success');
+}
+
+/* ── AUTH CHECK ── */
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+function isAuthenticated() {
+  const s = getSession();
+  return !!(s?.access_token && s.expires_at > Math.floor(Date.now() / 1000) + 60);
+}
+if (!isAuthenticated()) {
+  window.location.href = 'admin.html';
+}
+
+async function doLogout() {
+  // Cerrar sesión y cerrar turno de caja son cosas independientes -- salir
+  // de la app nunca cierra el turno solo. Este es el único momento donde la
+  // intención de irse es clara (a diferencia de cerrar la pestaña sin
+  // querer), así que es el punto correcto para un recordatorio -- suave,
+  // no bloqueante: "Cancelar" solo cancela el logout, nunca fuerza cerrar
+  // el turno antes de poder salir.
+  if (_currentShift?.opened_at) {
+    const hoursOpen = Math.floor((Date.now() - new Date(_currentShift.opened_at).getTime()) / 3600000);
+    const ok = await teConfirm({ title: 'Tu turno de caja sigue abierto', message: `Lleva ${hoursOpen} h abierto. Puedes salir y cerrarlo después en Corte.`, confirmText: 'Salir sin cerrar', cancelText: 'Volver' });
+    if (!ok) return;
+  }
+  await logActivity('sesion_cerrada', 'Cerró sesión');
+  sessionStorage.removeItem('te_user_can');
+  localStorage.removeItem(SESSION_KEY);
+  window.location.href = 'admin.html';
+}
+
+/* ── STATE ── */
+let products      = [];
+let posCategories = [];
+let cart          = [];
+let salesCache  = {};
+let paymentsCache = {}; // sale_payments.id → payment row (para reenviar comprobante desde Historial)
+let currentCat  = 'all';
+let payMethod   = 'efectivo';
+let discType    = 'fixed';
+let _lastSale   = {};
+
+function _saveCart() {
+  try {
+    const data = cart.map(x => ({ id: x.product.id, qty: x.qty, cp: x.customPrice }));
+    localStorage.setItem('te_pos_cart', JSON.stringify(data));
+  } catch {}
+}
+function _restoreCart() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('te_pos_cart') || '[]');
+    if (!Array.isArray(raw) || !raw.length) return;
+    cart = raw.map(x => {
+      const p = products.find(pr => pr.id === x.id);
+      if (!p) return null;
+      const item = { product: p, qty: x.qty || 1 };
+      if (x.cp != null) item.customPrice = x.cp;
+      return item;
+    }).filter(Boolean);
+  } catch { cart = []; }
+}
+let posView     = (window.innerWidth <= 1024) ? 'list' : (localStorage.getItem('te_pos_view') || 'list');
+// Orden default del catálogo: recién dado de alta o con precio/stock recién
+// tocado primero (sin carril aparte -- se probó y se veía muy apretado con
+// nombres ilegibles) -- alimentado por recently_edited, mismo mecanismo ya
+// ampliado a edición inline y ambos flujos de recepción.
+let _posRecentOrder = JSON.parse(localStorage.getItem('te_recently_edited') || '[]');
+
+/* ── API ── */
+function _getPosToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return s?.access_token || SUPABASE_ANON_KEY;
+  } catch { return SUPABASE_ANON_KEY; }
+}
+// Sin timeout, un fetch() que nunca responde (red inestable, tienda con wifi
+// débil) deja la promesa colgada para siempre -- el botón de la acción
+// (ej. "Guardar cambios" al editar un apartado) se queda en su estado de
+// "procesando" sin ningún error visible, porque el catch/then que lo
+// resetearía nunca llega a ejecutarse. Afecta más a acciones donde la sesión
+// lleva rato abierta (editar un apartado: buscar, revisar, agregar) que a
+// una venta rápida, porque el token tiene más probabilidad de estar cerca de
+// expirar y disparar _refreshPosToken() justo antes de guardar. Reportado en
+// sucursal 2026-09-04 -- "Guardar cambios" se quedaba procesando sin avisar.
+function _posFetchTimeout(url, opts = {}, ms = 20000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
+async function _refreshPosToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.refresh_token) return false;
+    const r = await _posFetchTimeout(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d?.access_token) return false;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      access_token: d.access_token, refresh_token: d.refresh_token,
+      expires_at: Math.floor(Date.now()/1000) + (d.expires_in||3600),
+      email: d.user?.email || s.email, user: d.user || s.user
+    }));
+    return true;
+  } catch { return false; }
+}
+// El servidor atribuye cada cobro al email del token de la sesión que hace la
+// llamada (auth.jwt()->>'email'); si ese token no trae email, el pago igual
+// se registra pero queda sin dueño ("Sin cajero registrado" en el Corte).
+// posRpc() revisa esto antes de cualquier operación de dinero para atajarlo
+// en el momento, no días después en Reportes.
+function _posSessionEmailClaim() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (s?.user?.email) return String(s.user.email).toLowerCase();
+    const jwtEmail = JSON.parse(atob(s?.access_token?.split('.')[1]))?.email;
+    return jwtEmail ? String(jwtEmail).toLowerCase() : '';
+  } catch { return ''; }
+}
+
+async function api(path, opts = {}) {
+  const _call = (tk) => _posFetchTimeout(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${tk}`,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    }
+  }).then(async r => {
+    const text = await r.text();
+    let data; try { data = JSON.parse(text); } catch { data = null; }
+    return { ok: r.ok, status: r.status, data };
+  });
+  try {
+    const r = await _call(_getPosToken());
+    if (r.status === 401 && await _refreshPosToken()) return await _call(_getPosToken());
+    return r;
+  } catch {
+    return { ok: false, status: 0, data: null };
+  }
+}
+
+async function _posFetchAll(path, pageSize = 500, maxRows = 20000) {
+  return _posPaginatedFetch(path, { pageSize, maxRows, tooManyMessage: 'Hay demasiados movimientos para completar la consulta' });
+}
+
+function _posMexicoDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(date);
+}
+
+function _posDayKeyValue(dayKey) {
+  const [year, month, day] = String(dayKey || '').split('-').map(Number);
+  return Date.UTC(year || 0, (month || 1) - 1, day || 1);
+}
+
+function _posDayKeyDiff(dayKey, baseKey = _posMexicoDayKey()) {
+  return Math.round((_posDayKeyValue(dayKey) - _posDayKeyValue(baseKey)) / 86400000);
+}
+
+// Dinero para mostrar: "$40,749.80" (antes "$40,749.8" — toLocaleString
+// solo pone los decimales que hay). Sin centavos: "$1,040".
+function _fmtMx(n) {
+  const v = Number(n) || 0;
+  const abs = Math.abs(v);
+  return `${v < 0 ? '−' : ''}$${abs.toLocaleString('es-MX', { minimumFractionDigits: Math.round(abs * 100) % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
+}
+
+// Nombre de clienta con mayúscula inicial ("lucia cristal san juan" →
+// "Lucia Cristal San Juan"). Solo toca palabras escritas todo en minúscula
+// (respeta "TEST", "McDonald", "DIF"); conectores en minúscula salvo al
+// inicio ("Mama de Marisol").
+function _titleCaseName(name) {
+  const small = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'el']);
+  return String(name || '').trim().replace(/\s+/g, ' ').split(' ').map((w, i) => {
+    if (w !== w.toLowerCase()) return w;
+    if (i > 0 && small.has(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+
+// Para mostrar nombres capturados antes de _titleCaseName ("rosa" → "Rosa").
+// Solo cambia palabras todas en minúscula; no toca la base de datos.
+function _displayName(name) { return _titleCaseName(name); }
+
+function _posFormatDayKey(dayKey, options = {}) {
+  const date = new Date(`${dayKey}T12:00:00Z`);
+  return new Intl.DateTimeFormat('es-MX', {
+    timeZone: 'America/Mexico_City', ...options
+  }).format(date);
+}
+
+function _posFormatTimestamp(value, options = {}) {
+  return new Intl.DateTimeFormat('es-MX', {
+    timeZone: 'America/Mexico_City', ...options
+  }).format(new Date(value));
+}
+
+function _posCurrentUserEmail() {
+  return String(getSession()?.user?.email || '').trim().toLowerCase();
+}
+
+function _posShiftScope() {
+  return (_posCurrentUserEmail() || 'sin_usuario').replace(/[^a-z0-9]+/g, '_');
+}
+
+function _posShiftStorageKey(name) {
+  return `te_${name}_${_posShiftScope()}`;
+}
+
+function _posDailyStorageKey(name, date = null) {
+  const day = date || localStorage.getItem(_posShiftStorageKey('shift_date')) || _posMexicoDayKey();
+  return `te_${name}_${_posShiftScope()}_${day}`;
+}
+
+/* ── TURNO DE CAJA — apertura/cierre real, en servidor ──────────────
+ * Reemplaza el "turno" anterior (solo localStorage del dispositivo, creado
+ * en silencio al primer uso del día -- nunca visible para Ofelia). Ahora
+ * abrir/cerrar caja es una acción real: te_open_cash_shift/te_close_cash_shift
+ * (RPC) guardan hora, fondo, conteo y diferencia en cash_shifts, quedan en
+ * Actividad (turno_abierto/turno_cerrado/turno_cerrado_auto) y en Reportes.
+ * _posShiftGateInit() bloquea el resto de Caja (#open-shift-overlay) hasta
+ * que el usuario tenga un turno abierto -- ver init() en pos-checkout.js.
+ */
+let _currentShift = null;
+let _shiftGateResolve = null;
+let _shiftGateWired = false;
+let _shiftGateNotice = '';
+
+function _posShiftScopedKey(name) {
+  const id = _currentShift?.id ?? 'sin_turno';
+  return `te_${name}_${_posShiftScope()}_shift${id}`;
+}
+
+async function _posFetchOpenShift() {
+  const email = _posCurrentUserEmail();
+  if (!email) return { ok: false, shift: null };
+  const r = await api(`cash_shifts?user_email=eq.${encodeURIComponent(email)}&status=eq.abierto&order=opened_at.desc&limit=1&select=*`);
+  return { ok: r.ok, shift: r.ok ? (r.data?.[0] || null) : null };
+}
+
+// Sugerencia de fondo inicial: el conteo físico con el que cerró la persona
+// su último turno real es, casi siempre, el mismo monto con el que abre hoy
+// -- evita teclearlo de nuevo cada vez que abrir caja se volvió obligatorio.
+// A diferencia del "conteo a ciegas" al cerrar turno (que sí se oculta a
+// propósito para no invitar a copiar en vez de contar), este es el monto de
+// APERTURA, antes de que exista ninguna venta que reconciliar -- precargarlo
+// no compromete ningún control, y el campo sigue siendo 100% editable.
+async function _posFetchLastShiftFondo() {
+  const email = _posCurrentUserEmail();
+  if (!email) return null;
+  const r = await api(`cash_shifts?user_email=eq.${encodeURIComponent(email)}&status=in.(cerrado,cerrado_auto)&order=opened_at.desc&limit=1&select=conteo_final,fondo_inicial`);
+  if (!r.ok || !r.data?.[0]) return null;
+  const last = r.data[0];
+  // conteo_final es lo que quedó físicamente en la caja al cerrar -- el punto
+  // de partida más honesto para hoy. Si el turno se cerró solo sin conteo
+  // (cerrado_auto), no hay conteo_final; caemos al fondo con el que ese turno
+  // había abierto, mejor que dejar el campo vacío.
+  const val = last.conteo_final ?? last.fondo_inicial;
+  return (val === null || val === undefined) ? null : val;
+}
+
+async function _posShiftGateAttempt() {
+  const overlay   = document.getElementById('open-shift-overlay');
+  const checking  = document.getElementById('open-shift-checking');
+  const form      = document.getElementById('open-shift-form');
+  const retryWrap = document.getElementById('open-shift-retry-wrap');
+  const errBox    = document.getElementById('open-shift-error');
+  const fondoIn   = document.getElementById('open-shift-fondo');
+
+  overlay?.classList.add('open');
+  if (checking) checking.style.display = '';
+  if (form) form.style.display = 'none';
+  if (retryWrap) retryWrap.style.display = 'none';
+  if (errBox) errBox.style.display = 'none';
+
+  const { ok, shift } = await _posFetchOpenShift();
+  if (!ok) {
+    if (checking) checking.style.display = 'none';
+    if (retryWrap) retryWrap.style.display = '';
+    return;
+  }
+  if (shift) {
+    _currentShift = shift;
+    overlay?.classList.remove('open');
+    _posCheckShiftReminder();
+    const resolve = _shiftGateResolve;
+    _shiftGateResolve = null;
+    resolve?.();
+    return;
+  }
+  if (checking) checking.style.display = 'none';
+  if (form) form.style.display = '';
+  const notice = document.getElementById('open-shift-notice');
+  if (notice) {
+    notice.textContent = _shiftGateNotice;
+    notice.hidden = !_shiftGateNotice;
+  }
+  fondoIn?.focus();
+
+  // Sugerir el fondo en cuanto se resuelva -- no bloquea mostrar el
+  // formulario (ya visible arriba). Si el campo ya tiene algo escrito
+  // (usuario más rápido que la red) no se pisa.
+  if (fondoIn && !fondoIn.value && !fondoIn.dataset.touched) {
+    const lastFondo = await _posFetchLastShiftFondo();
+    // Un fondo sugerido de $0 no se escribe: el "0" gris del placeholder ya lo
+    // dice, y como valor quedaba el cursor tras él ("0" + "500" = "0500").
+    if (lastFondo && Number(lastFondo) > 0 && !fondoIn.value && !fondoIn.dataset.touched) {
+      fondoIn.value = lastFondo;
+      requestAnimationFrame(() => { if (!fondoIn.dataset.touched) fondoIn.select?.(); });
+    }
+  }
+}
+
+function _posWireShiftGateButtons() {
+  if (_shiftGateWired) return;
+  _shiftGateWired = true;
+  const errBox   = document.getElementById('open-shift-error');
+  const fondoIn  = document.getElementById('open-shift-fondo');
+  const openBtn  = document.getElementById('open-shift-btn');
+  const retryBtn = document.getElementById('open-shift-retry-btn');
+
+  fondoIn?.addEventListener('input', () => { fondoIn.dataset.touched = '1'; });
+  // El monto sugerido se reemplaza al escribir: tocar el campo en celular
+  // quitaba la selección y dejaba el cursor al final ("0" + "500" = "0500").
+  fondoIn?.addEventListener('focus', () => {
+    if (!fondoIn.dataset.touched) setTimeout(() => fondoIn.select?.(), 0);
+  });
+  retryBtn?.addEventListener('click', _posShiftGateAttempt);
+  openBtn?.addEventListener('click', async () => {
+    const raw = fondoIn?.value;
+    const fondo = raw === '' ? 0 : parseFloat(raw);
+    if (Number.isNaN(fondo) || fondo < 0) {
+      if (errBox) { errBox.textContent = 'Ingresa un fondo válido (puede ser $0).'; errBox.style.display = ''; }
+      return;
+    }
+    openBtn.disabled = true;
+    const prevLabel = openBtn.textContent;
+    openBtn.textContent = 'Abriendo…';
+    const geo = await _getGeoLocation();
+    const r = await api('rpc/te_open_cash_shift', {
+      method: 'POST',
+      body: JSON.stringify({ p_fondo_inicial: fondo, p_lat: geo?.lat ?? null, p_lng: geo?.lng ?? null })
+    });
+    openBtn.disabled = false;
+    openBtn.textContent = prevLabel;
+    if (!r.ok || !r.data) {
+      if (errBox) { errBox.textContent = 'No se pudo abrir la caja. Intenta de nuevo.'; errBox.style.display = ''; }
+      return;
+    }
+    _currentShift = r.data;
+    _shiftGateNotice = '';
+    _posViewOnly = false;
+    document.getElementById('open-shift-overlay')?.classList.remove('open');
+    // La misma cuenta ya tenía caja abierta hoy (otro dispositivo): el
+    // servidor regresa ese turno en vez de cerrarlo y abrir otro.
+    if (r.data.reused) {
+      const hora = _posFormatTimestamp(r.data.opened_at, { hour: 'numeric', minute: '2-digit' });
+      toast(`Ya tenías la caja abierta desde las ${hora}; sigues en el mismo turno.`, 'ok');
+    }
+    _posCheckShiftReminder();
+    const resolve = _shiftGateResolve;
+    _shiftGateResolve = null;
+    resolve?.();
+  });
+}
+
+// Punto de entrada: llamado en init() y otra vez tras cerrar un turno (para
+// exigir abrir uno nuevo antes de seguir vendiendo). Resuelve la promesa
+// solo cuando _currentShift queda listo (turno existente o recién abierto).
+function _posShiftGateInit() {
+  _posWireShiftGateButtons();
+  return new Promise(resolve => {
+    _shiftGateResolve = resolve;
+    _posShiftGateAttempt();
+  });
+}
+
+/* "Solo ver apartados" (2026-10-10): consultar, mandar recordatorios,
+   corregir datos o pasar de la libreta sin abrir caja (Ofelia desde casa).
+   Init sigue cargando todo; cobrar, liquidar, devolver o un apartado nuevo
+   piden abrir caja con _posNeedShift(). Cerrar Apartados regresa a
+   "Abrir caja". */
+let _posViewOnly = false;
+function _posViewApartadosOnly() {
+  _posViewOnly = true;
+  _shiftGateNotice = '';
+  document.getElementById('open-shift-overlay')?.classList.remove('open');
+  const resolve = _shiftGateResolve;
+  _shiftGateResolve = null;
+  resolve?.();
+  openApartados();
+}
+function _posBackToGateIfViewOnly() {
+  if (_posViewOnly && !_currentShift) _posShiftGateInit();
+}
+// true = hay caja abierta. Si no, cierra Apartados y pide abrirla.
+function _posNeedShift(message = 'Para cobrar o devolver dinero abre la caja.') {
+  if (_currentShift) return true;
+  document.getElementById('apt-detail-modal')?.style.display === 'flex' && closeAptDetail?.();
+  _posViewOnly = false;
+  if (document.getElementById('apt-offcanvas')?.classList.contains('open')) closeApartados();
+  if (document.getElementById('apt-page')?.style.display === 'flex') closeAptPage();
+  _posShiftLost(message);
+  return false;
+}
+
+/* Turno con varios dispositivos (2026-10-10): la misma cuenta puede tener
+   Caja abierta en la tablet y en su celular. Si el turno se cierra en uno,
+   el otro se entera (a) al volver a estar a la vista, (b) al abrir el Corte
+   o (c) al intentar cobrar -- el servidor rechaza cobros sin caja abierta
+   (te_assert_open_shift, HINT 'shift_closed'). En los tres casos se vuelve
+   a pedir "Abrir caja" en vez de seguir con un turno que ya no existe. */
+function _posShiftLost(message = 'Tu caja se cerró en otro dispositivo. Ábrela de nuevo para seguir cobrando.') {
+  if (_shiftGateResolve) return; // "Abrir caja" ya está a la vista
+  _currentShift = null;
+  _shiftGateNotice = message;
+  document.getElementById('shift-reminder-banner')?.classList.remove('show');
+  if (typeof closeCorte === 'function' && document.getElementById('corte-offcanvas')?.classList.contains('open')) closeCorte();
+  _posShiftGateInit();
+}
+
+// Revisa contra el servidor que el turno siga abierto (y sea el mismo).
+// Sin conexión no cambia nada: no se bloquea Caja por una red inestable.
+async function _posRecheckShift() {
+  if (!_currentShift || _shiftGateResolve) return;
+  const { ok, shift } = await _posFetchOpenShift();
+  if (!ok) return;
+  if (!shift) { _posShiftLost(); return; }
+  if (shift.id !== _currentShift.id) {
+    _currentShift = shift;
+    _posCheckShiftReminder();
+  }
+}
+
+let _posHiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { _posHiddenAt = Date.now(); return; }
+  if (_posHiddenAt && Date.now() - _posHiddenAt > 30000) _posRecheckShift();
+  _posHiddenAt = 0;
+});
+
+// Recordatorio de fin de turno (2026-09-04) -- abrir caja es obligatorio,
+// pero cerrarla depende de que alguien se acuerde de dar clic; sin este
+// aviso, un turno se puede quedar abierto días enteros sin que nadie haga un
+// conteo real (el auto-cierre al reabrir solo tapa el hueco, sin conteo).
+// No bloquea nada -- solo invita a cerrar, descartable por lo que dure este
+// turno (vuelve a aparecer en el turno siguiente si aplica).
+function _posShiftReminderDismissKey() { return _posShiftScopedKey('reminder_dismissed'); }
+
+function _posCheckShiftReminder() {
+  const banner = document.getElementById('shift-reminder-banner');
+  const txt = document.getElementById('shift-reminder-txt');
+  if (!banner || !txt || !_currentShift?.opened_at) return;
+  // Turno de un día anterior (2026-10-02): quien trabaja medio día se va
+  // antes de las 10 h / 21:00 y nunca ve el aviso; al volver al día siguiente
+  // el turno sigue sumando dos días en un solo corte. No se puede descartar:
+  // contar el cajón ahora sigue siendo un conteo real (nadie lo tocó de noche).
+  const openedDay = _posMexicoDayKey(new Date(_currentShift.opened_at));
+  if (openedDay < _posMexicoDayKey()) {
+    const opened = new Intl.DateTimeFormat('es-MX', {
+      timeZone: 'America/Mexico_City', weekday: 'long', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(_currentShift.opened_at));
+    txt.textContent = `Tu turno sigue abierto desde el ${opened}. Cuenta el cajón y ciérralo en Corte antes de vender hoy.`;
+    banner.classList.add('show', 'no-dismiss');
+    return;
+  }
+  banner.classList.remove('no-dismiss');
+  if (localStorage.getItem(_posShiftReminderDismissKey())) {
+    banner.classList.remove('show');
+    return;
+  }
+  const hoursOpen = (Date.now() - new Date(_currentShift.opened_at).getTime()) / 3600000;
+  const mxHour = Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Mexico_City', hour: '2-digit', hourCycle: 'h23'
+  }).format(new Date()));
+  if (hoursOpen < 10 && mxHour < 21) {
+    banner.classList.remove('show');
+    return;
+  }
+  txt.textContent = `Tu turno lleva ${Math.floor(hoursOpen)}h abierto — ¿ya terminaste? Ciérralo en Corte.`;
+  banner.classList.add('show');
+}
+
+function dismissShiftReminder() {
+  localStorage.setItem(_posShiftReminderDismissKey(), '1');
+  document.getElementById('shift-reminder-banner')?.classList.remove('show');
+}
+
+/* ── RPC IDEMPOTENTES ──
+ * Conserva el request_id antes de enviar. Si la red se corta después de que
+ * PostgreSQL hizo commit, el siguiente intento reutiliza el mismo UUID y el
+ * servidor devuelve la respuesta guardada sin repetir cobros ni movimientos.
+ */
+const _POS_RPC_PENDING_KEY = 'te_pos_pending_rpc_v2';
+
+function _posUuid() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+  });
+}
+
+function _posRpcPendingRead() {
+  try { return JSON.parse(localStorage.getItem(_POS_RPC_PENDING_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function _posRpcPendingWrite(all) {
+  try {
+    if (Object.keys(all).length) localStorage.setItem(_POS_RPC_PENDING_KEY, JSON.stringify(all));
+    else localStorage.removeItem(_POS_RPC_PENDING_KEY);
+  } catch {}
+}
+
+function _posRpcRequest(operation, context, fingerprint) {
+  const all = _posRpcPendingRead();
+  const key = `${operation}:${context}`;
+  const pending = all[key];
+  if (pending && pending.fingerprint !== fingerprint) {
+    return { key, conflict: true, requestId: pending.requestId, pending };
+  }
+  if (!pending) {
+    all[key] = { requestId: _posUuid(), fingerprint, createdAt: new Date().toISOString() };
+    _posRpcPendingWrite(all);
+  }
+  return { key, conflict: false, requestId: (pending || all[key]).requestId };
+}
+
+function _posRpcRequestDone(key) {
+  const all = _posRpcPendingRead();
+  delete all[key];
+  _posRpcPendingWrite(all);
+}
+
+async function posRpc(path, { operation, context = 'global', fingerprint = '', body = {} }) {
+  if (!_posSessionEmailClaim()) {
+    const refreshed = await _refreshPosToken().catch(() => false);
+    if (!refreshed || !_posSessionEmailClaim()) {
+      return {
+        ok: false,
+        status: 401,
+        data: { message: 'Tu sesión no tiene email registrado — cierra sesión y vuelve a entrar antes de continuar, así el cobro queda bien atribuido.' }
+      };
+    }
+  }
+  const requestFingerprint = fingerprint || JSON.stringify(body);
+  let request = _posRpcRequest(operation, context, requestFingerprint);
+  if (request.conflict) {
+    // Después de una respuesta perdida, una recarga puede cambiar el formulario.
+    // Preguntar al servidor bajo el mismo advisory lock evita tanto duplicar como
+    // dejar el dispositivo bloqueado para siempre con un UUID pendiente.
+    try {
+      const check = await api('rpc/get_pos_rpc_result', {
+        method: 'POST',
+        body: JSON.stringify({ p_request_id: request.requestId })
+      });
+      if (check.ok && check.data?.found === false) {
+        _posRpcRequestDone(request.key);
+        request = _posRpcRequest(operation, context, requestFingerprint);
+      } else if (check.ok && check.data?.found === true) {
+        _posRpcRequestDone(request.key);
+        return {
+          ok: false,
+          status: 409,
+          resolvedPrior: true,
+          priorResponse: check.data.response,
+          data: { message: 'La operación anterior sí quedó registrada. Actualizamos los datos; revisa el resultado y vuelve a intentar la nueva operación.' }
+        };
+      } else {
+        return {
+          ok: false,
+          status: check.status || 0,
+          pendingConflict: true,
+          data: { message: 'Hay una operación anterior sin confirmar. Repite primero esa operación con los mismos datos.' }
+        };
+      }
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        pendingConflict: true,
+        data: { message: 'Hay una operación anterior sin confirmar. Repite primero esa operación con los mismos datos.' }
+      };
+    }
+  }
+  try {
+    const result = await api(`rpc/${path}`, {
+      method: 'POST',
+      body: JSON.stringify({ p_request_id: request.requestId, ...body })
+    });
+    if (result.status === 0) {
+      return {
+        ...result,
+        ambiguous: true,
+        data: { message: 'No se pudo confirmar la operación. Reintenta para consultar el mismo movimiento sin duplicarlo.' }
+      };
+    }
+    // PostgreSQL usa 40001 para avisar que la versión leída por la caja ya
+    // cambió. PostgREST puede exponerlo como HTTP 500, pero la transacción hizo
+    // rollback: es un conflicto definitivo, no una respuesta ambigua.
+    if (result?.data?.hint === 'shift_closed') setTimeout(() => _posShiftLost(), 0);
+    const staleConflict = result?.data?.code === '40001';
+    if (result.ok || staleConflict || (result.status >= 400 && result.status < 500 && ![408, 429].includes(result.status))) {
+      _posRpcRequestDone(request.key);
+    }
+    return staleConflict ? { ...result, staleConflict: true } : result;
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      ambiguous: true,
+      data: { message: 'No se pudo confirmar la operación. Reintenta para consultar el mismo movimiento sin duplicarlo.' }
+    };
+  }
+}
+
+function _posRpcError(result, fallback) {
+  const message = result?.data?.message || result?.data?.details || '';
+  if (result?.pendingConflict || result?.ambiguous) return message;
+  if (result?.status === 404 || /function .* does not exist|schema cache|PGRST202/i.test(message)) {
+    return 'Falta aplicar la migración de Apartados en Supabase. No se modificó ningún dato.';
+  }
+  return message || fallback;
+}
+
+// Única fuente de verdad para "¿este apartado ya está liquidado?", usada por
+// pos-apartados.js y pos-ui.js. Las dos cláusulas !sale.status son compat con
+// filas anteriores a la migración v2 (sin status poblado todavía) — sin ese
+// guard, un apartado reabierto por refund_apartado_atomic (status vuelve a
+// 'activo' pero type puede seguir en 'venta', legacy) se clasificaría como
+// liquidado otra vez. No quitar el guard sin volver a probar ese flujo.
+function _isApartadoLiquidado(sale) {
+  if (!sale) return false;
+  if (sale.status === 'liquidado') return true;
+  if (sale.status) return false;
+  if (sale.origin_type === 'apartado' && sale.type === 'venta') return true;
+  const abonos = Array.isArray(sale.payment_history) ? sale.payment_history
+    : Array.isArray(sale.abonos) ? sale.abonos : [];
+  return sale.type === 'venta' && abonos.length > 0;
+}
+
+async function _refreshPosFinancialState() {
+  const tasks = [];
+  if (typeof loadProducts === 'function') tasks.push(loadProducts());
+  if (typeof loadApartados === 'function') tasks.push(loadApartados());
+  if (typeof loadApartadosLiquidados === 'function') tasks.push(loadApartadosLiquidados());
+  if (typeof loadApartadosCancelados === 'function') tasks.push(loadApartadosCancelados());
+  if (typeof loadHistory === 'function') tasks.push(loadHistory());
+  if (typeof loadTodayStats === 'function') tasks.push(loadTodayStats());
+  await Promise.allSettled(tasks);
+  if (typeof showAllProducts === 'function') showAllProducts();
+  if (typeof filterApartadosWithDue === 'function') {
+    filterApartadosWithDue(document.getElementById('apt-search')?.value || '', 'offcanvas');
+    filterApartadosWithDue(document.getElementById('apt-page-search')?.value || '', 'page');
+  }
+}
+
+// Suma el descuento implícito en items con precio editado a mano en el
+// carrito (item.original_price != item.price), separado del campo plano
+// "Agregar descuento" (sales.discount). Usado por el modal post-venta, el
+// ticket de WhatsApp, Historial y la ficha de apartado para que un precio
+// negociado por producto también cuente como descuento visible.
+function _itemsDiscountTotal(items) {
+  return (Array.isArray(items) ? items : []).reduce((sum, i) =>
+    sum + (i.original_price != null ? (i.original_price - i.price) * (i.qty || 1) : 0), 0);
+}
+
+// Único punto de entrada para cancel_sale_atomic — usado tanto desde el
+// panel de Apartados como desde Historial, para que ambos flujos no puedan
+// desincronizarse en el fingerprint, el pago considerado o cuándo refrescar.
+// Refresca en cualquier falla que no sea ambiguous/pendingConflict (no solo
+// resolvedPrior/staleConflict), igual que ya hacían abonar/editar/reembolsar
+// en pos-apartados.js — evita dejar el botón de cancelar accionable sobre
+// datos locales desactualizados tras un rechazo del servidor.
+async function _posCancelSaleAtomic(id, sale, reason, keepCredit = false) {
+  const pagado = parseFloat(sale?.paid_amount ?? sale?.total) || 0;
+  const result = await posRpc('cancel_sale_atomic', {
+    operation: 'cancel_sale',
+    context: id,
+    fingerprint: `${id}:${sale?.version ?? 0}:${pagado}:${keepCredit ? 'favor' : 'devolver'}`,
+    body: {
+      p_sale_id: id,
+      p_expected_version: sale?.version ?? 0,
+      p_reason: reason,
+      p_keep_credit: !!keepCredit,
+      p_override_tickets: _collectOverrideTickets(['canCancelSale', 'canEditApartado'])
+    }
+  });
+  if (!result.ok && !result.ambiguous && !result.pendingConflict) {
+    await _refreshPosFinancialState();
+  }
+  return result;
+}
+
+/* ── LOAD PRODUCTS ── */
+function _mapPosProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    category: p.category,
+    // "por_revisar" es un código interno: a la vista dice "Sin categoría"
+    categoryLabel: p.category === 'por_revisar' ? 'Sin categoría' : p.category_label,
+    price: p.price,
+    originalPrice: p.original_price,
+    description: p.description || '',
+    image: p.image,
+    barcode: p.barcode || null,
+    stock: p.stock ?? 0,
+    outOfStock: p.out_of_stock,
+    badge: p.badge,
+    badgeType: p.badge_type,
+    kitItems: p.kit_items || null,
+    expiryDate: p.expiry_date || null
+  };
+}
+
+let _productsLoadGeneration = 0;
+async function loadProducts() {
+  const loadGeneration = ++_productsLoadGeneration;
+  const result = await _posFetchAll('products?select=id,name,category,category_label,price,original_price,description,image,barcode,stock,out_of_stock,badge,badge_type,kit_items,expiry_date&is_archived=eq.false&order=position.asc,id.asc');
+  if (loadGeneration !== _productsLoadGeneration) return false;
+  if (result.ok && Array.isArray(result.data)) {
+    products = result.data.map(_mapPosProduct);
+    try {
+      localStorage.setItem('te_pos_products_cache', JSON.stringify(result.data));
+      localStorage.setItem('te_pos_products_cache_ts', Date.now());
+    } catch {}
+  } else {
+    // Fallback: cargar desde caché local si no hay conexión
+    try {
+      const cached = localStorage.getItem('te_pos_products_cache');
+      if (cached) {
+        products = JSON.parse(cached).map(_mapPosProduct);
+        const ts = parseInt(localStorage.getItem('te_pos_products_cache_ts') || '0');
+        const mins = Math.round((Date.now() - ts) / 60000);
+        const age = mins < 60 ? `${mins} min` : `${Math.round(mins/60)} h`;
+        toast(`Sin conexión — catálogo de hace ${age}. Las ventas no se pueden registrar.`, 'error');
+      }
+    } catch {}
+  }
+  renderFrecuentes();
+}
+
+/* ── SUPABASE REALTIME ── */
+function initRealtime() {
+  const load = new Promise((res, rej) => {
+    if (window.supabase) { res(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  load.then(() => {
+    try {
+      const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${_getPosToken()}` } }
+      });
+      client
+        .channel('pos-products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, _handleRealtimeProduct)
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime no disponible:', err);
+    }
+  }).catch(() => console.warn('No se pudo cargar supabase.js para Realtime'));
+}
+
+function _driveSz(url, w) {
+  if (!url || !url.includes('drive.google.com')) return url;
+  return url.replace(/sz=w\d+/, `sz=w${w}`);
+}
+
+function _handleRealtimeProduct({ eventType, new: row, old }) {
+  if (eventType === 'INSERT') {
+    if (!row.is_archived && !products.find(x => x.id === row.id)) products.push(_mapPosProduct(row));
+  } else if (eventType === 'UPDATE') {
+    const idx = products.findIndex(x => x.id === row.id);
+    if (row.is_archived) {
+      if (idx >= 0) products.splice(idx, 1);
+    } else if (idx >= 0) {
+      products[idx] = { ...products[idx], ..._mapPosProduct(row) };
+    } else {
+      products.push(_mapPosProduct(row));
+    }
+  } else if (eventType === 'DELETE') {
+    const idx = products.findIndex(x => x.id === old.id);
+    if (idx >= 0) products.splice(idx, 1);
+  }
+  searchProducts(document.getElementById('pos-search')?.value || '');
+}
+
+/* ── KIT STOCK ── */
+function getKitStock(p) {
+  if (!Array.isArray(p.kitItems)) return p.stock;
+  if (!p.kitItems.length) return 0;
+  let min = Infinity;
+  for (const comp of p.kitItems) {
+    const c = products.find(x => x.id === comp.id);
+    if (!c || c.outOfStock || c.stock === 0) return 0;
+    const avail = Math.floor(c.stock / comp.qty);
+    if (avail < min) min = avail;
+  }
+  return min === Infinity ? 0 : min;
+}
+
+/* ── LOAD CATEGORIES ── */
+// Stock/precio de productos ya se sincronizan solos via Realtime
+// (initRealtime() arriba) -- esto solo refresca lo que Realtime no cubre:
+// "Hoy", Frecuentes y recientemente editados, que pueden quedar desfasados
+// si otra caja vende mientras esta pantalla sigue abierta. Antes era un
+// botón manual (#pos-refresh-btn) que casi nadie usaba a media venta;
+// ahora corre solo, en silencio, sin pedirle nada a la cajera.
+let _lastStatsRefresh = 0;
+async function _silentStatsRefresh() {
+  const nowTs = Date.now();
+  if (nowTs - _lastStatsRefresh < 30000) return;
+  _lastStatsRefresh = nowTs;
+  await Promise.all([
+    loadTopProductsFromSales(),
+    loadPosRecentlyEdited(),
+    typeof loadTodayStats === 'function' ? loadTodayStats() : Promise.resolve()
+  ]);
+  showAllProducts();
+}
+
+async function loadPosRecentlyEdited() {
+  try {
+    const r = await api('recently_edited?select=product_id&order=edited_at.desc&limit=60');
+    if (r.ok && Array.isArray(r.data)) {
+      _posRecentOrder = r.data.map(d => d.product_id);
+      localStorage.setItem('te_recently_edited', JSON.stringify(_posRecentOrder));
+    }
+  } catch {}
+}
+
+async function loadPosCategories() {
+  try {
+    const r = await api('config?id=eq.categories&select=value');
+    if (r.ok && r.data?.length && r.data[0].value) posCategories = JSON.parse(r.data[0].value);
+  } catch {}
+}
+
+async function loadPosConfig() {
+  try {
+    const r = await api('config?id=eq.show_restock&select=id,value');
+    if (r.ok && r.data?.length) _showRestock = r.data[0].value !== 'false';
+  } catch {}
+}
+
+function catMatchesFilter(productCat, filterCat) {
+  if (filterCat === 'all') return true;
+  if (productCat === filterCat) return true;
+  if (productCat.startsWith(filterCat + '_')) return true;
+  let cat = posCategories.find(c => c.code === productCat);
+  while (cat?.parent) {
+    if (cat.parent === filterCat) return true;
+    cat = posCategories.find(c => c.code === cat.parent);
+  }
+  return false;
+}
+
+/* ── ACTIVITY LOG ── */
+function getCurrentUserEmail() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.access_token) return 'desconocido';
+    return JSON.parse(atob(s.access_token.split('.')[1])).email || 'desconocido';
+  } catch { return 'desconocido'; }
+}
+function logActivity(action, summary, meta = null) {
+  return api('activity_log', {
+    method: 'POST',
+    body: JSON.stringify({ user_email: getCurrentUserEmail(), action, summary, meta })
+  }).catch(() => {});
+}
+
+/* ── VIEW TOGGLE ── */
+function setPosView(view) {
+  posView = view;
+  localStorage.setItem('te_pos_view', view);
+  document.getElementById('pos-vbtn-list')?.classList.toggle('active', view === 'list');
+  document.getElementById('pos-vbtn-cards')?.classList.toggle('active', view === 'cards');
+  showAllProducts();
+}
+
+function posCard(p) {
+  const effStock = getKitStock(p);
+  const isKit = Array.isArray(p.kitItems);
+  const oos = isKit ? effStock === 0 : (effStock === 0 || p.outOfStock);
+  const stockCls = isKit ? (oos ? 'stock-sold' : 'stock-ok') : (effStock === 0 ? 'stock-sold' : effStock === 1 ? 'stock-one' : 'stock-ok');
+  const stockTxt = isKit
+    ? (isKit && !p.kitItems.length ? 'Sin componentes' : oos ? 'Sin stock' : `${_giftIconSvg(13)} ${effStock} kit${effStock!==1?'s':''}`)
+    : (effStock === 0 ? 'Sin stock' : `${effStock} ud${effStock!==1?'s':''}`);
+  const kitComps = isKit && p.kitItems.length
+    ? p.kitItems.map(c => `<div style="font-size:.6rem;color:var(--muted);line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.qty > 1 ? c.qty + '× ' : ''}${_esc(c.name)}</div>`).join('')
+    : '';
+  let expBadge = '';
+  if (p.expiryDate) {
+    const hoy  = new Date(); hoy.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(p.expiryDate + 'T00:00:00') - hoy) / 86400000);
+    if (days < 0) expBadge = `<span class="pos-card-stock stock-sold" style="margin-left:4px" title="Caducó hace ${Math.abs(days)}d">${_clockIconSvg(13)}</span>`;
+    else if (days <= 60) expBadge = `<span class="pos-card-stock stock-one" style="margin-left:4px" title="Caduca en ${days}d">${_clockIconSvg(13)} ${days}d</span>`;
+  }
+  return `
+<div class="pos-card${oos?' card-sold':''}" onclick="${oos?`_showRestockPrompt(${p.id})`:` addToCart(${p.id},this.querySelector('.pos-card-add-icon'),event)`}">
+  <div class="pos-card-img-wrap">
+    <img class="pos-card-img" src="${_driveSz(p.image,200)}" alt="${_esc(p.name)}" loading="lazy"
+         onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'"
+         onclick="event.stopPropagation();openPosPreview(${p.id})" style="cursor:zoom-in">
+    <div class="pos-card-add">
+      <div class="pos-card-add-icon">+</div>
+    </div>
+  </div>
+  <div class="pos-card-body">
+    <div class="pos-card-name">${isKit ? _giftIconSvg(14) + ' ' : ''}${_esc(p.name)}</div>
+    ${kitComps}
+    <div class="pos-card-price">$${p.price.toLocaleString('es-MX')}</div>
+    <span class="pos-card-stock ${stockCls}">${stockTxt}</span>${expBadge}
+  </div>
+</div>`;
+}
+
+/* ── CATEGORY CHIPS ── */
+function renderCategoryChips() {
+  const bar = document.getElementById('cat-chip-bar');
+  if (!bar) return;
+  const roots = posCategories.filter(c => !c.parent && c.code !== 'por_revisar' && products.some(p => catMatchesFilter(p.category, c.code)));
+  const chips = roots.length
+    ? roots
+    : [...new Map(products.map(p => [p.category, { code: p.category, label: p.categoryLabel }])).values()];
+  bar.innerHTML = `<button class="cat-chip active" data-cat="all" onclick="setCategory('all')">Todos</button>` +
+    chips.map(c => `<button class="cat-chip" data-cat="${c.code}" onclick="setCategory('${c.code}')">${_esc(c.label)}</button>`).join('');
+  _catChipScroll();
+}
+
+/* Oculta el indicador "›" de .cat-chip-bar-wrap cuando ya no hay más chips a la derecha */
+function _catChipScroll() {
+  const el = document.getElementById('cat-chip-bar');
+  const wrap = document.getElementById('cat-chip-bar-wrap');
+  if (!el || !wrap) return;
+  const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+  wrap.classList.toggle('at-end', atEnd);
+}
+
+function setCategory(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
+  const q = document.getElementById('pos-search').value;
+  searchProducts(q);
+}
+
+const _normCache = new Map();
+const _norm = s => {
+  const k = s || '';
+  if (_normCache.has(k)) return _normCache.get(k);
+  const v = k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  _normCache.set(k, v);
+  return v;
+};
+
+/* ── SEARCH ── */
+function getFilteredProducts(q = '', includeOos = false) {
+  const groups = _norm(q).split(',').map(g => g.trim().split(/\s+/).filter(Boolean)).filter(g => g.length);
+  const filtered = products.filter(p => {
+    const effStock = getKitStock(p);
+    const isOos = Array.isArray(p.kitItems) ? effStock === 0 : (p.outOfStock || p.stock === 0);
+    if (isOos && !includeOos) return false;
+    const matchCat = catMatchesFilter(p.category, currentCat);
+    const matchQ   = !groups.length || groups.some(g => g.every(t =>
+      _norm(p.name).includes(t) ||
+      (p.barcode && p.barcode.includes(t)) ||
+      _norm(p.categoryLabel).includes(t)
+    ));
+    return matchCat && matchQ;
+  });
+  // Orden default: recién dado de alta o con precio/stock recién tocado
+  // primero (_posRecentOrder, tabla recently_edited) -- lo no tocado cae al
+  // final, más nuevo (id más alto) primero entre sí.
+  const recentIdx = new Map(_posRecentOrder.map((id, i) => [id, i]));
+  const sorted = [...filtered].sort((a, b) => {
+    const ia = recentIdx.has(a.id) ? recentIdx.get(a.id) : _posRecentOrder.length;
+    const ib = recentIdx.has(b.id) ? recentIdx.get(b.id) : _posRecentOrder.length;
+    if (ia !== ib) return ia - ib;
+    return b.id - a.id;
+  });
+  // OOS al final cuando se incluyen
+  if (includeOos) {
+    sorted.sort((a, b) => {
+      const aOos = Array.isArray(a.kitItems) ? getKitStock(a) === 0 : (a.outOfStock || a.stock === 0);
+      const bOos = Array.isArray(b.kitItems) ? getKitStock(b) === 0 : (b.outOfStock || b.stock === 0);
+      return aOos - bOos;
+    });
+  }
+  return sorted;
+}
+
+/* ── PAGINACIÓN DEL CATÁLOGO — evita renderizar ~800 tarjetas de un jalón ── */
+let _posPage = 1;
+const POS_PAGE_SIZE = 50;
+let _posLoadObserver = null;
+let _posLastRenderList = [];
+
+function renderPosProducts(list) {
+  const el = document.getElementById('pos-results');
+  if (!list.length) return;
+  _posLastRenderList = list;
+  const visible = list.slice(0, _posPage * POS_PAGE_SIZE);
+  const hasMore = visible.length < list.length;
+  const sentinelHTML = hasMore
+    ? `<div id="pos-load-sentinel" style="padding:16px;text-align:center;color:var(--muted);font-size:.85rem">Cargando más…</div>`
+    : '';
+  if (posView === 'cards') {
+    el.innerHTML = `<div class="pos-grid">${visible.map(p => posCard(p)).join('')}</div>` + sentinelHTML;
+  } else {
+    el.innerHTML = visible.map(p => productCard(p)).join('') + sentinelHTML;
+  }
+  _setupPosLoadSentinel(hasMore);
+}
+
+function _setupPosLoadSentinel(hasMore) {
+  if (_posLoadObserver) { _posLoadObserver.disconnect(); _posLoadObserver = null; }
+  if (!hasMore) return;
+  const sentinel = document.getElementById('pos-load-sentinel');
+  if (!sentinel) return;
+  _posLoadObserver = new IntersectionObserver(entries => {
+    if (!entries[0].isIntersecting) return;
+    _posLoadObserver.disconnect();
+    _posLoadObserver = null;
+    _posPage++;
+    renderPosProducts(_posLastRenderList);
+  }, { rootMargin: '400px' });
+  _posLoadObserver.observe(sentinel);
+}
+
+function showAllProducts() {
+  _posPage = 1;
+  const el = document.getElementById('pos-results');
+  if (!products.length) {
+    el.innerHTML = '<div class="pos-empty"><div class="em"><svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>No hay productos cargados</div>';
+    return;
+  }
+  const filtered = getFilteredProducts();
+  if (!filtered.length) {
+    el.innerHTML = '<div class="pos-empty"><div class="em"><svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>Sin productos en esta categoría</div>';
+    return;
+  }
+  renderPosProducts(filtered);
+}
+
+function _togglePosSearchClear() {
+  const btn = document.getElementById('pos-search-clear');
+  if (btn) btn.style.display = document.getElementById('pos-search')?.value ? '' : 'none';
+}
+function clearPosSearch() {
+  const s = document.getElementById('pos-search');
+  if (s) { s.value = ''; s.focus(); }
+  _togglePosSearchClear();
+  searchProducts('');
+}
+
+let _posSearchDebTimer = null;
+function _posSearchDebounce(q) {
+  _togglePosSearchClear();
+  clearTimeout(_posSearchDebTimer);
+  _posSearchDebTimer = setTimeout(() => searchProducts(q), 180);
+}
+
+function searchProducts(q) {
+  renderFrecuentes(!!q.trim());
+  // Sin texto de búsqueda (con o sin categoría elegida) = navegar, no buscar
+  // -- usa showAllProducts(), que ya pagina de verdad (50/lote) y ya sabe
+  // mostrar "Sin productos en esta categoría". Antes solo delegaba ahí con
+  // "Todos" seleccionado; con una categoría específica el catálogo se
+  // recortaba a 40 sin aviso, escondiendo el resto sin que nadie lo notara.
+  if (!q.trim()) { showAllProducts(); return; }
+  _posPage = 1;
+  const el = document.getElementById('pos-results');
+  const matches = getFilteredProducts(q, true).slice(0, 40);
+  if (!matches.length) {
+    el.innerHTML = `<div class="pos-empty"><div class="em"><svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>Sin resultados</div>`;
+    return;
+  }
+  renderPosProducts(matches);
+}
+
+const PROD_PLACEHOLDER = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22400%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23F7F2EB%22%2F%3E%3Crect%20x%3D%22130%22%20y%3D%22100%22%20width%3D%22140%22%20height%3D%22140%22%20rx%3D%2210%22%20fill%3D%22none%22%20stroke%3D%22%23D4BC94%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%22127%22%20r%3D%2214%22%20fill%3D%22%23D4BC94%22%2F%3E%3Cpath%20d%3D%22M130%20210%20L175%20165%20L210%20195%20L255%20150%20L280%20180%20L280%20240%20L130%20240Z%22%20fill%3D%22%23D4BC94%22%20fill-opacity%3D%22.4%22%2F%3E%3C%2Fsvg%3E';
+
+function productCard(p) {
+  const effStock = getKitStock(p);
+  const isKit    = Array.isArray(p.kitItems);
+  const oos      = isKit ? effStock === 0 : (effStock === 0 || p.outOfStock);
+  const disabled = oos ? 'style="opacity:.5;cursor:not-allowed"' : '';
+  const kitCompsLine = isKit && p.kitItems.length
+    ? p.kitItems.map(c => `<div style="font-size:.7rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.qty > 1 ? c.qty + '× ' : ''}${_esc(c.name)}</div>`).join('')
+    : '';
+  const stockSub = isKit
+    ? (isKit && !p.kitItems.length ? ' · <span style="color:var(--red)">Sin componentes</span>' : oos ? ' · <span style="color:var(--red)">Sin stock</span>' : ` · <span style="color:#6B9E78;font-weight:600">${_giftIconSvg(13)} ${effStock} kit${effStock!==1?'s':''}</span>`)
+    : effStock === 1
+      ? ' · <span style="color:var(--gold);font-weight:700">Última</span>'
+      : effStock >= 2 && effStock <= 5
+        ? ` · <span style="color:#6B9E78;font-weight:600">${effStock} pzas</span>`
+        : effStock > 5
+          ? ` · <span style="color:var(--muted)">${effStock} pzas</span>`
+          : '';
+  let expSub = '';
+  if (p.expiryDate) {
+    const hoy  = new Date(); hoy.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(p.expiryDate + 'T00:00:00') - hoy) / 86400000);
+    if (days < 0) expSub = ` · <span style="color:var(--red);font-weight:700">${_clockIconSvg(13)} Caducado</span>`;
+    else if (days <= 60) expSub = ` · <span style="color:#D97706;font-weight:700">${_clockIconSvg(13)} ${days}d</span>`;
+  }
+  return `
+<div class="pos-prod" onclick="${oos ? `_showRestockPrompt(${p.id})` : `addToCart(${p.id},null,event)`}" ${oos ? '' : ''}>
+  <img class="pos-prod-img" src="${_driveSz(p.image,200)}" alt="${_esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'" onclick="event.stopPropagation();${oos ? `_showRestockPrompt(${p.id})` : `openPosPreview(${p.id})`}" style="cursor:${oos?'pointer':'zoom-in'}">
+  <div class="pos-prod-info">
+    <div class="pos-prod-name">${isKit ? _giftIconSvg(14) + ' ' : ''}${_esc(p.name)}</div>
+    ${kitCompsLine}
+    <div class="pos-prod-sub"${kitCompsLine ? ' style="margin-top:5px;padding-top:4px;border-top:1px solid var(--border)"' : ''}>${_esc(p.categoryLabel)}${stockSub}${expSub}</div>
+  </div>
+  <div class="pos-prod-right">
+    <div class="pos-prod-price">$${p.price.toLocaleString('es-MX')}</div>
+    <button class="pos-prod-add${oos ? ' btn-stock-oos' : ''}" onclick="event.stopPropagation();${oos ? `_showRestockPrompt(${p.id})` : `addToCart(${p.id},this,event)`}" title="${oos ? 'Sin stock — toca para reabastecer' : 'Agregar'}">+</button>
+  </div>
+</div>`;
+}

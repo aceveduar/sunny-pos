@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tres Encantos">
+<link rel="apple-touch-icon" href="img/icono-192.png">
+<title>Tres Encantos — Detalles que enamoran · Maquixco, San Juan Teotihuacán</title>
+<meta name="description" content="Bolsos, accesorios, maquillaje, Natura y Avon en San Juan Teotihuacán. Pedidos fáciles por WhatsApp. Entregamos en tu puerta. Visítanos en Maquixco.">
+<meta name="keywords" content="bolsos dama, accesorios, Natura México, Avon México, maquillaje, aretes, pulseras, mochilas, loncheras, perfumes Natura, perfumes Avon, San Juan Teotihuacán, Maquixco, tienda moda mujer">
+<meta property="og:title" content="Tres Encantos — Detalles que enamoran">
+<meta property="og:description" content="Tu tienda de bolsos, accesorios, maquillaje, Natura y Avon en San Juan Teotihuacán. Pedidos por WhatsApp.">
+<meta property="og:image" content="https://aceveduar.github.io/tresencantos/img/portada.jpg">
+<meta property="og:image:width" content="2560">
+<meta property="og:image:height" content="1352">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://aceveduar.github.io/tresencantos/">
+<meta property="og:site_name" content="Tres Encantos">
+<meta property="og:locale" content="es_MX">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tres Encantos — Detalles que enamoran">
+<meta name="twitter:description" content="Tu tienda de bolsos, accesorios, maquillaje, Natura y Avon en San Juan Teotihuacán. Pedidos por WhatsApp.">
+<meta name="twitter:image" content="https://aceveduar.github.io/tresencantos/img/portada.jpg">
+<link rel="canonical" href="https://aceveduar.github.io/tresencantos/">
+<meta name="theme-color" content="#C9A462">
+<link rel="icon" type="image/png" href="img/icono-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<!-- BARRA DE ACCESO RÁPIDO ADMIN (solo con sesión activa) -->
+<div id="admin-bar">
+  <a href="pos.html" class="tbn-icon" title="Caja">
+    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    <span class="tbn-label">Caja</span>
+  </a>
+  <a href="admin.html" class="tbn-icon" title="Inventario">
+    <svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+    <span class="tbn-label">Inventario</span>
+  </a>
+  <a href="stats.html" class="tbn-icon" title="Reportes">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span class="tbn-label">Reportes</span>
+  </a>
+  
+  
+  <span class="tbn-sep"></span>
+  <span class="tbn-icon tbn-active" title="Tienda" aria-current="page">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    <span class="tbn-label">Tienda</span>
+  </span>
+  
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <nav class="nav">
+    <a href="#inicio" class="nav-logo">
+      <img src="img/logo.png" alt="Tres Encantos — Detalles que enamoran">
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#productos">Productos</a></li>
+      <li><a href="#natura">Natura</a></li>
+      <li><a href="#nosotros">Nosotros</a></li>
+      <li><a href="#entregas">Entregas</a></li>
+      <li>
+        <a href="https://wa.me/5215534548417?text=¡Hola!%20Estoy%20en%20la%20página%20de%20Tres%20Encantos%20y%20quiero%20saber%20más%20🛍️"
+           class="nav-cta" target="_blank" rel="noopener">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+          WhatsApp
+        </a>
+      </li>
+    </ul>
+    <div class="nav-actions">
+      <button class="nav-cart-btn" id="nav-cart-btn" onclick="openCart()" aria-label="Ver carrito">
+        <svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> <span id="nav-cart-badge" class="nav-cart-badge">0</span>
+      </button>
+      <a href="pos.html" class="admin-link" title="Acceso staff" aria-label="Acceso staff"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Menú">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<!-- CARRITO -->
+<div id="cart-overlay" onclick="if(event.target===this)closeCart()">
+  <div class="cart-sheet">
+    <div class="cart-sheet-handle"></div>
+    <div class="cart-sheet-head">
+      <span class="cart-sheet-title"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Mi pedido</span>
+      <button class="cart-sheet-close" onclick="closeCart()">✕</button>
+    </div>
+    <div class="cart-sheet-body" id="cart-body"></div>
+    <div class="cart-sheet-foot" id="cart-foot" style="display:none">
+      <div class="cart-total-row">
+        <span class="cart-total-lbl">Total estimado</span>
+        <span class="cart-total-amt" id="cart-total">$0</span>
+      </div>
+      <button class="btn-cart-wa" onclick="cartWhatsApp()">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+        Enviar pedido por WhatsApp
+      </button>
+      <button class="btn-cart-clear" onclick="clearCart()">Vaciar carrito</button>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<section id="inicio" class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-tag">
+        <span class="dot"></span>
+        Teotihuacán · Envíos a domicilio
+      </div>
+      <h1>Porque tú te mereces<br>lo más <em>bonito</em> que existe.</h1>
+      <p>Bolsos, mochilas, belleza y Natura — pídelo por WhatsApp.</p>
+      <div class="hero-btns">
+        <a href="#productos" class="btn btn-gold">Ver productos</a>
+        <a href="https://wa.me/5215534548417?text=¡Hola!%20Quiero%20ver%20qué%20tienen%20disponible%20en%20Tres%20Encantos%20"
+           class="btn btn-wa" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+          Pedir por WhatsApp
+        </a>
+      </div>
+      <!-- Strip de productos visible solo en mobile -->
+      <p class="hms-label">✦ Más buscados</p>
+      <div class="hero-mobile-strip" id="hero-mobile-strip" aria-hidden="true"></div>
+    </div>
+    <div class="hero-visual" id="hero-visual" aria-hidden="true"></div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section id="productos" class="products-section">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Catálogo</span>
+      <h2>Lo que más te va a encantar</h2>
+      <p>Todo lo que necesitas, a un mensaje&nbsp;de&nbsp;distancia.</p>
+    </div>
+    <div class="products-search reveal">
+      <input type="search" id="products-search-input" placeholder="Buscar producto..." oninput="onSearchInput(this.value)" autocomplete="off">
+      <button class="products-search-clear" id="products-search-clear" onclick="clearProductsSearch()" title="Borrar búsqueda" aria-label="Borrar búsqueda" style="display:none">✕</button>
+    </div>
+    <div class="products-filters-row">
+      <div class="products-filters-wrap" id="products-filters-wrap">
+        <div class="products-filters" id="products-filters" onscroll="_filtersScroll()">
+          <!-- generado dinámicamente por initFilters() -->
+        </div>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="setSortOption(this.value)" aria-label="Ordenar por">
+        <option value="default">Nuestra selección</option>
+        <option value="recent">Más recientes</option>
+        <option value="price-asc">Precio: menor</option>
+        <option value="price-desc">Precio: mayor</option>
+        <option value="name">Nombre A-Z</option>
+      </select>
+    </div>
+    <div class="products-grid" id="products-grid"></div>
+  </div>
+</section>
+
+<!-- NATURA -->
+<section id="natura" class="natura-section">
+  <div class="container">
+    <div class="natura-grid">
+
+      <!-- TEXTO -->
+      <div class="natura-text reveal">
+        <span class="section-tag section-tag-dark">Consultora Diamante Natura ✦</span>
+        <h2 class="natura-h2">La belleza<br>que cuida</h2>
+        <p>Natura nació con una idea poderosa: la belleza no debería hacerle daño al planeta. Cuando le compras a Ofelia, tienes la asesoría de alguien que los usa, los conoce y <strong>los recomienda con honestidad</strong>.</p>
+        <div class="natura-btns">
+          <a href="https://wa.me/5215534548417?text=¡Hola!%20Me%20interesan%20los%20productos%20Natura%20🌿%20¿Qué%20tienen%20disponible?"
+             class="btn btn-white" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+            Ver disponibilidad
+          </a>
+        </div>
+      </div>
+
+      <!-- CARRUSEL -->
+      <div class="natura-carousel reveal">
+        <div class="nc-wrap" id="nc-wrap"></div>
+        <div class="nc-nav" id="nc-nav" style="display:none">
+          <button class="nc-arrow" onclick="naturaNav(-1)" aria-label="Anterior">&#8249;</button>
+          <div class="nc-dots" id="nc-dots"></div>
+          <button class="nc-arrow" onclick="naturaNav(1)" aria-label="Siguiente">&#8250;</button>
+        </div>
+      </div>
+
+    </div>
+
+    <a class="revista-banner reveal" id="revista-banner" href="#" target="_blank" rel="noopener">
+      <img src="" alt="" class="rb-cover" id="rb-cover">
+      <div class="rb-overlay"></div>
+      <div class="rb-content">
+        <span class="rb-tag">✦ Revista interactiva</span>
+        <h3 class="rb-title">Revista<br>Natura</h3>
+        <p class="rb-sub">Ofertas exclusivas, lanzamientos y todo el catálogo — hojéala aquí</p>
+        <div class="rb-actions">
+          <span class="rb-cta">Abrir revista →</span>
+          <button class="rb-share" onclick="event.preventDefault();event.stopPropagation();shareRevista()" aria-label="Compartir revista"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
+        </div>
+      </div>
+      <div class="rb-shimmer"></div>
+    </a>
+
+  </div>
+</section>
+
+<!-- PILLARS -->
+<section class="pillars">
+  <div class="container">
+    <div class="pillars-grid">
+      <div class="pillar-card reveal">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        </div>
+        <h3>Calidad que se siente</h3>
+        <p>Cada producto que vendemos lo elegimos con cuidado. Si lleva el sello de Tres Encantos, es porque nos encantó primero a nosotras.</p>
+      </div>
+      <div class="pillar-card reveal">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h3>Trato de persona</h3>
+        <p>No eres un número de pedido. Eres alguien que merece atención real. Por eso estamos en WhatsApp, listos para responder.</p>
+      </div>
+      <div class="pillar-card reveal">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Llegamos a tu puerta</h3>
+        <p>Entregamos en San Juan Teotihuacán y comunidades cercanas. O visítanos en nuestro local en Maquixco.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="nosotros" class="about-section">
+  <div class="container">
+    <div class="about-grid">
+      <div class="about-img-wrap reveal">
+        <img class="about-img-main"
+             src="img/ofelia.jpeg"
+             alt="Ofelia Díaz — Fundadora de Tres Encantos, Consultora Diamante Natura, reconocida como Mejor Consultora 2026">
+        <div class="about-badge">
+          <span class="big">Diamante</span>
+          <span class="lbl">Consultora 2026</span>
+        </div>
+        <div class="about-recognition reveal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+          Reconocida por Natura México · 2026
+        </div>
+      </div>
+      <div class="about-content reveal">
+        <span class="section-tag">Nuestra historia</span>
+        <h2>Tres hijos,<br><em>un proyecto de corazón.</em></h2>
+        <p>Tres Encantos es el proyecto de <strong>Ofelia Díaz</strong>, mamá de tres — dos hijas y un hijo. El nombre no es casualidad: cada producto que elige, cada pedido que hace llegar, lleva el mismo cuidado con el que cuida a sus tres encantos.</p>
+        <p>Como <strong>Consultora Diamante de Natura México</strong> — un nivel que se gana con años de trabajo, constancia y clientes que regresan — Ofelia no solo vende: conoce los productos de adentro hacia afuera. Lleva años usándolos y comprobando que funcionan.</p>
+        <p>Nació en Maquixco y aquí sigue. Su misión: que cada mujer de su comunidad tenga acceso a productos bonitos, de calidad y a precio que le lata. Sin rodeos. Sin complicaciones.</p>
+        <div class="about-features">
+          <div class="af">
+            <span class="af-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            Local en Maquixco
+          </div>
+          <div class="af">
+            <span class="af-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+            Entregas a domicilio
+          </div>
+          <div class="af">
+            <span class="af-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            Atención por WhatsApp
+          </div>
+          <div class="af">
+            <span class="af-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12C12 7 7 3 2 4c0 6 4 10 10 8zM12 12c0-5 5-9 10-8 0 6-4 10-10 8z"/></svg></span>
+            Consultora Diamante Natura
+          </div>
+        </div>
+        <a href="https://wa.me/5215534548417?text=¡Hola!%20Quiero%20saber%20más%20sobre%20Tres%20Encantos%20"
+           class="btn btn-dark" target="_blank" rel="noopener">Hablar con Ofelia</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DELIVERY -->
+<section id="entregas" class="delivery-section">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-tag">Envíos & Ubicación</span>
+      <h2>Te llegamos donde&nbsp;vayas</h2>
+      <p>En San Juan Teotihuacán somos tu tienda de siempre. Si no puedes salir, nosotras vamos a ti.</p>
+    </div>
+    <div class="delivery-grid">
+      <div class="d-card reveal">
+        <span class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span>
+        <h3>Visítanos en el local</h3>
+        <address class="d-address">
+          <span class="d-addr-main">Hacienda 1424</span>
+          <span class="d-addr-ref">Entre calle Petirrojo y Ángeles</span>
+          <span class="d-addr-col">Maquixco, C.P. 55840</span>
+          <span class="d-addr-city">Teotihuacán de Arista, Méx.</span>
+        </address>
+        <div class="d-card-links">
+          <a href="https://maps.app.goo.gl/rKAMFoki2aRaaHfM7"
+             class="d-link" target="_blank" rel="noopener">Ver en Google Maps →</a>
+          <a href="https://wa.me/5215534548417?text=¡Hola!%20Voy%20a%20ir%20al%20local%20en%20Maquixco%20😊%20¿Están%20abiertos?"
+             class="d-link" target="_blank" rel="noopener">Confirmar horario →</a>
+        </div>
+      </div>
+      <div class="d-card reveal">
+        <span class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+        <h3>Entrega a domicilio</h3>
+        <p>Llevamos tu pedido directo a tu casa en San Juan Teotihuacán y comunidades cercanas. Escríbenos para coordinar.</p>
+        <a href="https://wa.me/5215534548417?text=¡Hola!%20¿Hacen%20entregas%20a%20domicilio%20en%20mi%20zona?%20📦"
+           class="d-link" target="_blank" rel="noopener">Preguntar disponibilidad →</a>
+      </div>
+      <div class="d-card reveal">
+        <span class="d-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <h3>Pide por WhatsApp</h3>
+        <p>Elige tu producto, presiona "Pedir" y te contactamos. Coordinamos entrega o paso por él en el local.</p>
+        <a href="https://wa.me/5215534548417" class="d-link" target="_blank" rel="noopener">
+          +52 1 55 3454 8417 →
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL -->
+<section class="social-section">
+  <div class="social-inner">
+    <h2 class="social-title">Encuéntranos aquí</h2>
+    <p class="social-sub">Novedades, productos nuevos y ofertas exclusivas — síguenos.</p>
+    <div class="social-links">
+      <a href="https://www.facebook.com/ofelia.martinez.58910" target="_blank" rel="noopener" class="soc-link fb">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Síguenos en Facebook
+      </a>
+      <a href="https://wa.me/5215534548417?text=¡Hola!%20Quiero%20ver%20qué%20tienen%20disponible%20en%20Tres%20Encantos%20" target="_blank" rel="noopener" class="soc-link wa">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+        Pedir por WhatsApp
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <img src="img/logo.png" alt="Tres Encantos">
+      <p>Tu boutique de bolsos, accesorios y Natura en Teotihuacán.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Productos</h4>
+      <ul>
+        <li><a href="#productos" onclick="filterTo('bolsos')">Bolsos</a></li>
+        <li><a href="#productos" onclick="filterTo('mochilas')">Mochilas</a></li>
+        <li><a href="#productos" onclick="filterTo('accesorios')">Accesorios</a></li>
+        <li><a href="#productos" onclick="filterTo('belleza')">Belleza</a></li>
+        <li><a href="#natura">Natura</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Tienda</h4>
+      <ul>
+        <li><a href="#nosotros">Nuestra historia</a></li>
+        <li><a href="#entregas">Envíos & Ubicación</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contacto</h4>
+      <ul>
+        <li><a href="https://wa.me/5215534548417" target="_blank">+52 1 55 3454 8417</a></li>
+        <li><a href="https://www.facebook.com/ofelia.martinez.58910" target="_blank">Facebook</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Tres Encantos · Maquixco, San Juan Teotihuacán</span>
+    <span>Hecho con ❤️ en el corazón de México</span>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay"></div>
+
+
+
+<script src="negocio.js"></script>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    // Desregistrar SWs viejos que quedaron registrados en scope raíz (antes de mover a subdirectorio)
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => { if (!r.scope.includes('/tresencantos/')) r.unregister(); });
+    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+<!-- BOTÓN FLOTANTE WHATSAPP -->
+<div class="img-lightbox" id="img-lightbox" onclick="_closeLB()">
+  <img class="img-lightbox-img" id="img-lb-img" src="" alt="">
+  <div class="img-lightbox-info" onclick="event.stopPropagation()">
+    <div class="img-lb-name" id="img-lb-name"></div>
+    <div class="img-lb-row"><span class="img-lb-label">Precio</span><span class="img-lb-val" id="img-lb-price"></span></div>
+  </div>
+</div>
+
+<a id="wa-float"
+   href="https://wa.me/5215534548417?text=¡Hola!%20Quiero%20ver%20qué%20tienen%20disponible%20en%20Tres%20Encantos%20"
+   target="_blank" rel="noopener" aria-label="Pedir por WhatsApp">
+  <svg width="28" height="28" fill="#fff" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0zm0 21.799c-1.891 0-3.653-.507-5.18-1.394l-.371-.22-3.422.897.914-3.329-.242-.384A9.783 9.783 0 012.2 12c0-5.404 4.396-9.799 9.8-9.799 5.403 0 9.798 4.395 9.798 9.8 0 5.403-4.395 9.798-9.798 9.798z"/></svg>
+</a>
+</body>
+</html>

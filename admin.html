@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="es" data-theme-ready="1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="img/icono-192.png">
+<title>Inventario — Tres Encantos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="admin.css">
+<script>
+/* Aplica el modo oscuro guardado ANTES del primer paint, para que no haya
+   flash claro→oscuro. data-theme-ready marca qué módulos ya tienen su
+   propia paleta oscura — ver shared.js _initThemeToggle(). */
+(function(){try{if(localStorage.getItem('te_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+</script>
+</head>
+<body>
+
+<!-- Input trampa: captura pistola lectora USB/Bluetooth en tablet sin abrir teclado virtual -->
+<input id="admin-scan-trap" type="text" inputmode="none" tabindex="-1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+  style="position:fixed;top:-200px;left:-200px;width:1px;height:1px;opacity:0;border:none;outline:none;padding:0;margin:0;pointer-events:none">
+
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <img src="img/logo.png" alt="Tres Encantos">
+    <h1>Iniciar sesión</h1>
+    <p>Ingresa tus credenciales para continuar</p>
+    <input type="email" id="email-input" name="email" autocomplete="username" autofocus placeholder="Email" onkeydown="if(event.key==='Enter')doLoginEmail()">
+    <div style="position:relative;margin-top:10px">
+      <input type="password" id="pwd-input" name="password" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLoginEmail()" style="padding-right:44px">
+      <button type="button" id="pwd-toggle-btn" onclick="_toggleLoginPwd()" aria-label="Mostrar contraseña" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;background:transparent;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation">
+        <svg id="pwd-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <p class="err" id="pwd-err">Credenciales incorrectas. Inténtalo de nuevo.</p>
+    <button class="btn-login" onclick="doLoginEmail()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="topbar-left"></div>
+    <div class="topbar-right">
+      <!-- Navegación unificada — íconos en todos los dispositivos -->
+      <nav class="topbar-nav-mobile" aria-label="Módulos">
+        <a href="pos.html" class="tbn-icon" title="Caja">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          <span class="tbn-label">Caja</span>
+        </a>
+        <a href="admin.html" class="tbn-icon tbn-active" title="Inventario" aria-current="page">
+          <svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          <span class="tbn-label">Inventario</span>
+        </a>
+        <a href="stats.html" class="tbn-icon" title="Reportes">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span class="tbn-label">Reportes</span>
+        </a>
+        <span class="tbn-sep"></span>
+        <a href="index.html" class="tbn-icon" title="Tienda">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="tbn-label">Tienda</span>
+        </a>
+      </nav>
+      <span class="tbn-sep"></span>
+      <span class="user-avatar" id="user-avatar" style="cursor:pointer" title="Mi cuenta">?</span>
+    </div>
+  </div>
+
+  <!-- FAB: + Agregar/Recibir (mobile y tablet chico, ≤768px) -- un solo punto
+       de entrada para las 5 formas de meter/reponer stock. Reemplaza el FAB
+       de Kit y la fila Captura/Escanear/Recibir/Importar (2026-09-12,
+       rediseño aprobado con mockup). Escanear se queda fuera de este menú a
+       propósito -- es una forma de BUSCAR (por código en vez de texto), se
+       usa muchísimo, vive junto al buscador como #search-scan-btn. -->
+  <button class="fab-add" onclick="openAddMenu()" aria-label="Agregar o recibir producto">+</button>
+
+  <div id="add-menu-overlay" onclick="if(event.target===this)closeAddMenu()">
+    <div id="add-menu-sheet">
+      <div class="sheet-only"><div class="cat-sheet-pill"></div><div class="cat-sheet-header"><span class="cat-sheet-title">Agregar</span><button type="button" class="cat-sheet-close" onclick="closeAddMenu()" aria-label="Cerrar">✕</button></div></div>
+      <button class="bmo-item" onclick="closeAddMenu();openForm()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Producto nuevo</button>
+      <button class="bmo-item" id="add-menu-capture" onclick="closeAddMenu();openCaptureMode()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>Captura rápida</button>
+      <button class="bmo-item" onclick="closeAddMenu();openKitBuilder()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Kit / Bundle</button>
+      <button class="bmo-item" id="add-menu-recv" onclick="closeAddMenu();openRecvMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Recibir mercancía</button>
+      <button class="bmo-item" id="add-menu-recv-ia" onclick="closeAddMenu();openRecvIaMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Recepción con IA</button>
+    </div>
+  </div>
+
+  <!-- PENDIENTES: filtros de "qué falta corregir" (sin stock, sin precio…).
+       Popover en escritorio, hoja inferior en celular -- mismo patrón que
+       el menú de + Agregar. Lo llena renderStats(). -->
+  <div id="pend-menu-overlay" onclick="if(event.target===this)closePendMenu()">
+    <div id="pend-menu-sheet" role="menu"></div>
+  </div>
+
+  <!-- ADD TO KIT PICKER -->
+  <div id="atk-overlay" onclick="if(event.target===this)_closeAddToKit()">
+    <div id="atk-sheet">
+      <div class="bcp-head">
+        <div>
+          <div class="bcp-title">Agregar a un kit</div>
+          <div class="bcp-sub" id="atk-sub">— productos seleccionados</div>
+        </div>
+        <button class="bcp-close" onclick="_closeAddToKit()">✕</button>
+      </div>
+      <div id="atk-list" style="overflow-y:auto;flex:1;padding:10px 14px 20px"></div>
+    </div>
+  </div>
+
+  <!-- BULK CATEGORY PICKER -->
+  <div id="bulk-cat-overlay" onclick="if(event.target===this)closeBulkCatPicker()">
+    <div id="bulk-cat-sheet">
+      <div class="bcp-head">
+        <div>
+          <div class="bcp-title">Cambiar categoría</div>
+          <div class="bcp-sub" id="bcp-sub"></div>
+        </div>
+        <button class="bcp-close" onclick="closeBulkCatPicker()">✕</button>
+      </div>
+      <div class="bcp-search">
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;line-height:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <input type="text" placeholder="Buscar categoría..." oninput="_bcpFilter(this.value)" id="bcp-search-input" style="padding-left:34px">
+        </div>
+      </div>
+      <div class="bcp-list" id="bcp-list"></div>
+    </div>
+  </div>
+
+  <!-- BULK BADGE PICKER — reemplaza los dos prompt() de "Insignia" masiva -->
+  <div id="bulk-badge-overlay" onclick="if(event.target===this)closeBulkBadgePicker()">
+    <div id="bulk-badge-sheet">
+      <div class="bcp-head">
+        <div>
+          <div class="bcp-title">Asignar etiqueta</div>
+          <div class="bcp-sub" id="bbp-sub"></div>
+        </div>
+        <button class="bcp-close" onclick="closeBulkBadgePicker()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="bcp-list">
+        <label class="bbp-label" for="bbp-text">Texto</label>
+        <input type="text" id="bbp-text" class="bbp-input" placeholder="Ej: Más vendido, Nuevo…" list="badge-options" autocomplete="off" oninput="_bbpUpdate()">
+        <div class="bbp-label">Color</div>
+        <div class="bcp-chips" id="bbp-types" role="radiogroup">
+          <button type="button" class="bcp-chip" data-type="best" role="radio" onclick="_bbpPickType(this)">Dorada · Más vendido</button>
+          <button type="button" class="bcp-chip" data-type="new" role="radio" onclick="_bbpPickType(this)">Negra · Nuevo</button>
+          <button type="button" class="bcp-chip" data-type="promo" role="radio" onclick="_bbpPickType(this)">Roja · Oferta</button>
+          <button type="button" class="bcp-chip" data-type="natura" role="radio" onclick="_bbpPickType(this)">Verde · Natura</button>
+        </div>
+        <div class="bbp-actions">
+          <button type="button" class="btn btn-outline" onclick="bulkApplyBadge(true)">Quitar insignia</button>
+          <button type="button" class="btn btn-gold" id="bbp-apply" onclick="bulkApplyBadge(false)" disabled>Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KIT BUILDER -->
+  <div id="kit-builder-overlay" style="position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.45);justify-content:center" onclick="if(event.target===this)_closeKitBuilderSafe()">
+    <div class="kb-modal" style="background:var(--surface);width:100%;max-height:92dvh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.18)">
+      <div style="padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <span style="font-weight:700;font-size:1rem;font-family:'Playfair Display',serif;color:var(--charcoal)"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Armar Kit</span>
+        <button onclick="_closeKitBuilderSafe()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);touch-action:manipulation;padding:4px 8px">✕</button>
+      </div>
+      <div class="kb-body" style="flex:1;overflow-y:auto;padding:16px 20px;overscroll-behavior:contain">
+        <div class="kb-col-left">
+          <div>
+            <label class="kb-label">Foto del kit <span style="font-size:.7rem;color:var(--muted)">(opcional)</span></label>
+            <div id="kb-img-zone" onclick="document.getElementById('kb-img-input').click()" style="border:2px dashed var(--border);border-radius:12px;cursor:pointer;overflow:hidden;background:var(--surface-soft);display:flex;align-items:center;justify-content:center;min-height:80px;position:relative;transition:border-color .2s">
+              <div id="kb-img-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:.82rem;padding:16px">
+                <span><svg width="26" height="26" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span><span>Toca para agregar foto</span>
+              </div>
+              <img id="kb-img-preview" src="" alt="" style="display:none;width:100%;height:120px;object-fit:cover">
+              <button id="kb-img-remove" type="button" onclick="event.stopPropagation();_kbRemoveImage()" style="display:none;position:absolute;top:8px;right:8px;background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:.85rem;line-height:28px;text-align:center;touch-action:manipulation">✕</button>
+            </div>
+            <input id="kb-img-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="_kbHandleImageFile(this)">
+          </div>
+          <div>
+            <label class="kb-label">Nombre del kit</label>
+            <input id="kb-name" class="kb-input" type="text" placeholder="Ej: Kit Hidratación Natura" oninput="_kbAutoSuggestCat()">
+          </div>
+          <div>
+            <label class="kb-label">Precio $</label>
+            <input id="kb-price" class="kb-input" type="text" inputmode="decimal" placeholder="0.00">
+            <div id="kb-price-hint" style="display:none;margin-top:5px;font-size:.75rem;color:var(--muted)"></div>
+          </div>
+          <div>
+            <label class="kb-label">Categoría</label>
+            <button type="button" id="kb-cat-btn" class="f-cat-btn" onclick="openKitCatPicker()">
+              <span id="kb-cat-dot" class="cat-dot" style="background:#9B8B78;width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
+              <span id="kb-cat-label-display">Seleccionar categoría</span>
+              <span class="f-cat-arrow">▾</span>
+            </button>
+          </div>
+        </div>
+        <div class="kb-col-right">
+          <div>
+            <label class="kb-label">Componentes <span id="kb-comp-count" style="font-weight:400;color:var(--gold);font-size:.72rem"></span></label>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+              <div style="flex:1;position:relative">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;line-height:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                <input id="kb-search" class="kb-input" type="text" placeholder="Buscar producto para agregar..." oninput="_kbSearch(this.value);document.getElementById('kb-search-clear').style.display=this.value?'flex':'none'" style="width:100%;margin-bottom:0;padding-right:32px;padding-left:34px">
+                <button type="button" id="kb-search-clear" onclick="document.getElementById('kb-search').value='';_kbSearch('');this.style.display='none'" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:none;background:var(--border);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;touch-action:manipulation">✕</button>
+              </div>
+              <button type="button" onclick="openKitScanner()" style="flex-shrink:0;width:44px;height:44px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation" title="Escanear código de barras"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+            </div>
+            <div id="kb-search-results" style="display:none;max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);margin-bottom:10px"></div>
+            <div id="kb-components"></div>
+            <div id="kb-stock-preview" style="font-size:.78rem;text-align:center;margin-top:8px;min-height:18px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 20px 32px;flex-shrink:0;border-top:1px solid var(--border)">
+        <button id="kb-save-btn" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:12px;padding:15px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">Guardar Kit →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODO RECEPCIÓN -->
+  <div id="recv-overlay" class="recv-overlay" style="display:none">
+   <div class="recv-panel">
+    <div class="recv-header">
+      <div class="recv-title"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Recibir mercancía <span class="recv-count-badge" id="recv-count-badge"></span></div>
+      <button class="recv-close" onclick="recvDiscardAndClose()" title="Descarta todo lo recibido en esta sesión — para guardarlo usa Finalizar recepción">✕ Descartar</button>
+    </div>
+    <div class="recv-body">
+      <div class="recv-scan-zone">
+        <div class="ria-mode-toggle recv-mode-toggle">
+          <button id="recv-mode-invoice" class="ria-mode-btn active" onclick="recvSetMode('invoice')">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+            Con factura
+          </button>
+          <button id="recv-mode-fast" class="ria-mode-btn" onclick="recvSetMode('fast')">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Rápido
+          </button>
+        </div>
+        <p id="recv-mode-hint" class="recv-mode-hint">Además de stock, cada producto trae campos para <strong>costo, precio y código de proveedor</strong> — úsalo con la factura en la mano.</p>
+        <div class="recv-search-row">
+          <input id="recv-search" class="recv-search" placeholder="Buscar producto por nombre…" oninput="recvSearch(this.value)" onkeydown="recvSearchKey(event)" autocomplete="off">
+          <button class="recv-scan-btn" onclick="openRecvScanner()"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg>Escanear</button>
+        </div>
+        <div id="recv-search-results" class="recv-search-results"></div>
+      </div>
+      <div id="recv-fb" class="recv-fb"></div>
+      <div class="recv-list-wrap">
+        <div class="recv-list-head">
+          <span>Recibidos en esta sesión</span>
+          <span style="display:flex;align-items:center;gap:10px">
+            <button id="recv-undo-all-btn" onclick="recvUndoAll()" style="display:none;align-items:center;gap:4px;background:none;border:1.5px solid var(--red);border-radius:8px;padding:4px 10px;font-size:.7rem;font-weight:600;color:var(--red);cursor:pointer;font-family:inherit;touch-action:manipulation;white-space:nowrap">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Deshacer todo
+            </button>
+            <span id="recv-session-total" style="color:var(--gold);font-weight:600"></span>
+          </span>
+        </div>
+        <div id="recv-list">
+          <div class="recv-empty"><div class="recv-empty-icon"><svg width="34" height="34" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>Escanea o busca un producto para comenzar</div>
+        </div>
+      </div>
+    </div>
+    <div class="recv-footer">
+      <button class="recv-btn-wa" onclick="recvShareWA()" title="Compartir resumen por WhatsApp" aria-label="Compartir resumen por WhatsApp">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0z"/></svg><span class="recv-btn-wa-lbl">Resumen</span>
+      </button>
+      <button class="recv-btn-finish" onclick="closeRecvMode()">✓ Finalizar recepción</button>
+    </div>
+   </div>
+  </div>
+
+  <!-- RECEPCIÓN CON IA -->
+  <div id="recv-ia-overlay" class="recv-overlay" style="display:none">
+   <div class="recv-panel">
+    <div class="recv-header">
+      <div class="recv-title"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Recepción con IA</div>
+      <button class="recv-close" onclick="closeRecvIaMode()">✕ Salir</button>
+    </div>
+    <div class="recv-body">
+      <!-- Paso 1: elegir origen -->
+      <div id="ria-upload-step" class="ria-upload-step">
+        <div id="ria-undo-banner"></div>
+        <div class="ria-mode-toggle">
+          <button id="ria-mode-stock" class="ria-mode-btn active" onclick="riaSetMode('stock')">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+            Mercancía nueva
+          </button>
+          <button id="ria-mode-costonly" class="ria-mode-btn" onclick="riaSetMode('costOnly')">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Actualizar
+          </button>
+        </div>
+        <div class="ria-source-row">
+          <button class="ria-source-btn" onclick="document.getElementById('ria-pdf-input').click()">
+            <svg width="26" height="26" viewBox="0 0 24 24" stroke="var(--gold-dark)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="ria-source-title">Subir PDF</span>
+            <span class="ria-source-sub">Más nítido — texto real</span>
+          </button>
+          <button class="ria-source-btn" onclick="document.getElementById('ria-photo-input').click()">
+            <svg width="26" height="26" viewBox="0 0 24 24" stroke="var(--gold-dark)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <span class="ria-source-title">Fotografiar</span>
+            <span class="ria-source-sub">Cuando solo tengas el papel</span>
+          </button>
+        </div>
+        <input type="file" id="ria-pdf-input" accept="application/pdf" style="display:none" onchange="handleRecvIaPdf(this)">
+        <input type="file" id="ria-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleRecvIaPhoto(this)">
+        <p id="ria-upload-hint" class="ria-upload-hint">¿Prefieres sumar stock a mano? Usa <a href="#" onclick="event.preventDefault();closeRecvIaMode();openRecvMode()">Recibir mercancía</a>.</p>
+      </div>
+      <!-- Fotos en cola antes de extraer -->
+      <div id="ria-photo-stage" class="ria-photo-stage" style="display:none">
+        <div class="ria-photo-stage-head">📷 Fotos del pedido</div>
+        <div id="ria-photo-thumbs" class="ria-photo-thumbs"></div>
+        <button class="ria-photo-add-btn" onclick="document.getElementById('ria-photo-input').click()">+ Agregar otra foto</button>
+        <button class="ria-photo-extract-btn" onclick="recvIaExtractPhotos()">Extraer con IA →</button>
+      </div>
+      <!-- Estado de extracción -->
+      <div id="ria-status" class="ria-status" style="display:none">
+        <span class="ria-status-spin"></span>
+        <span id="ria-status-msg">Leyendo el PDF…</span>
+      </div>
+      <!-- Paso 2: lista editable de renglones extraídos -->
+      <div id="ria-review-step" class="ria-review-step" style="display:none">
+        <div class="ria-review-head">
+          <span id="ria-review-count"></span>
+          <button class="ria-review-restart" onclick="resetRecvIa()">↺ Empezar de nuevo</button>
+        </div>
+        <div id="ria-review-summary" class="ria-review-summary" style="display:none"></div>
+        <div id="ria-items-list" class="ria-items-list"></div>
+        <div id="ria-kits-section" class="ria-kits-section" style="display:none">
+          <button type="button" id="ria-kits-head" class="ria-kits-head" onclick="_riaToggleKitsSection()">
+            <span><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span id="ria-kits-head-label">Kits de promoción</span></span>
+            <span id="ria-kits-toggle-ico">▾</span>
+          </button>
+          <div id="ria-kits-list" style="display:none"></div>
+        </div>
+      </div>
+      <!-- Paso 3: resultado de aplicar (o simular) -->
+      <div id="ria-result-step" class="ria-result-step" style="display:none">
+        <div id="ria-result-content"></div>
+        <div id="ria-result-undo"></div>
+        <button class="ria-result-close-btn" onclick="resetRecvIa()">↺ Empezar de nuevo</button>
+      </div>
+    </div>
+    <div id="ria-review-footer" class="ria-review-footer" style="display:none">
+      <div id="ria-dry-badge" class="ria-dry-badge">🧪 Modo de prueba — no se guarda nada todavía</div>
+      <button id="ria-apply-btn" class="ria-apply-btn" onclick="riaApplyChanges()">Simular aplicar (0)</button>
+    </div>
+   </div>
+  </div>
+
+  <!-- RECEPCIÓN CON IA — vincular producto -->
+  <div id="ria-match-overlay" style="display:none" onclick="if(event.target===this)closeRiaMatchPicker()">
+    <div id="ria-match-sheet">
+      <div class="bcp-head">
+        <div class="bcp-title">Vincular producto</div>
+        <button class="bcp-close" onclick="closeRiaMatchPicker()">✕</button>
+      </div>
+      <div id="ria-match-picker-context" class="ria-mpc"></div>
+      <div class="bcp-search"><input id="ria-match-search-input" placeholder="Buscar en tu catálogo…" oninput="riaSearchMatchPicker(this.value)" autocomplete="off"></div>
+      <button class="ria-match-scan-btn" onclick="openRiaMatchScanner()"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg>Tengo el producto — escanear código de barras</button>
+      <div id="ria-match-picker-results" class="bcp-list"></div>
+      <button id="ria-match-set-new-btn" class="ria-match-new-btn" onclick="riaConfirmSetNew()">+ Es un producto nuevo (no existe en el catálogo)</button>
+    </div>
+  </div>
+
+  <!-- MODO CAPTURA RÁPIDA -->
+  <div id="cap-overlay" class="cap-overlay" style="display:none" onclick="if(event.target===this)closeCaptureMode()">
+    <div class="cap-modal">
+      <div class="cap-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="cap-title"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Captura rápida</span>
+          <span class="cap-counter" id="cap-counter"></span>
+        </div>
+        <button class="cap-close" onclick="closeCaptureMode()">✕</button>
+      </div>
+      <div class="cap-body">
+        <div class="cap-photo-area" id="cap-photo-area" onclick="document.getElementById('cap-file').click()">
+          <div class="cap-photo-ph" id="cap-photo-ph">
+            <span><svg width="30" height="30" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+            <span>Toca para fotografiar</span>
+            <span>Etiqueta de precio visible = precio automático</span>
+          </div>
+          <img id="cap-preview-img" class="cap-preview" style="display:none">
+          <button class="cap-retake" id="cap-retake-btn" style="display:none" onclick="event.stopPropagation();document.getElementById('cap-file').click()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Otra foto</button>
+          <input type="file" id="cap-file" accept="image/*" capture="environment" style="display:none" onchange="handleCapturePhoto(this)">
+        </div>
+        <div class="cap-ai-status" id="cap-ai-status" style="display:none">
+          <span class="cap-ai-spin" id="cap-ai-spin"></span>
+          <span id="cap-ai-icon" style="display:none;font-size:1rem"></span>
+          <span id="cap-ai-msg">Analizando imagen con IA...</span>
+        </div>
+        <div class="cap-fields" id="cap-fields">
+          <div class="cap-field">
+            <label>Nombre del producto *</label>
+            <input type="text" id="cap-name" placeholder="Ej: Bolso David Jones Negro"
+              oninput="updateCapSaveBtn();this.classList.remove('cap-err')"
+              onblur="if(!this.value.trim())this.classList.add('cap-err')">
+          </div>
+          <div class="cap-row">
+            <div class="cap-field">
+              <label>Precio MXN *</label>
+              <input type="number" id="cap-price" placeholder="$0" min="0"
+                oninput="updateCapSaveBtn();if(parseFloat(this.value)>0)this.classList.remove('cap-err')"
+                onblur="if(!(parseFloat(this.value)>0))this.classList.add('cap-err')">
+            </div>
+            <div class="cap-field">
+              <label>¿Cuántas hay?</label>
+              <input type="number" id="cap-stock" placeholder="1" min="1" value="1" inputmode="numeric">
+            </div>
+          </div>
+          <div class="cap-field">
+            <label>Código de barras <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="cap-barcode" placeholder="Escanea o escribe…" style="flex:1" autocomplete="off">
+              <button type="button" class="btn btn-outline btn-sm" onclick="openCapScanner()" title="Escanear"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap-footer">
+        <input type="hidden" id="cap-category" value="por_revisar">
+        <p class="cap-require-hint" id="cap-require-hint"></p>
+        <div class="cap-footer-btns">
+          <button class="cap-btn-skip" onclick="resetCaptureForm()">Siguiente sin guardar</button>
+          <button class="cap-btn-save" id="cap-save-btn" onclick="saveCaptureProduct()" disabled>Guardar y siguiente →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- TOOLBAR -- una sola tarjeta con todo lo que decide qué se ve:
+         pestañas (vistas) · búsqueda · filtros. Antes 12 chips sueltos arriba
+         mezclaban vistas con pendientes por corregir (2026-10-07). -->
+    <div class="toolbar">
+      <!-- Fila 0: vistas + Pendientes -->
+      <div class="inv-tabs-row">
+        <div class="inv-tabs-wrap">
+          <div class="inv-tabs" id="stats" role="tablist" onscroll="_statsScroll()"></div>
+        </div>
+        <div class="pend-wrap" id="pend-wrap" style="display:none">
+          <button type="button" class="pend-btn" id="pend-btn" onclick="openPendMenu(this)" aria-haspopup="menu"></button>
+          <button type="button" class="pend-clear" id="pend-clear" onclick="toggleStatFilter('todos')" title="Quitar filtro" aria-label="Quitar filtro" style="display:none">✕</button>
+        </div>
+      </div>
+      <!-- Fila 1: búsqueda + acciones -->
+      <div class="tb-search-row">
+        <!-- Escritorio: un solo "Agregar" que abre el mismo menú del FAB
+             (Producto · Captura · Kit · Recibir · Recepción con IA) en vez de
+             tres botones sueltos + "Importar" en la barra. -->
+        <button class="btn btn-gold" id="btn-add-main" onclick="openAddMenu(this)" aria-haspopup="menu" style="flex-shrink:0">+ Agregar <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="search-scan-row">
+          <div class="search-wrap">
+            <span class="s-icon"><svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input type="text" id="search-input" placeholder="Buscar productos…" autocorrect="off" autocomplete="off" spellcheck="false" onfocus="if(!this.value)this.placeholder='Nombre, categoría, código… (separa con coma)'" onblur="this.placeholder='Buscar productos…'" oninput="_searchDebounce()">
+            <button class="search-clear-btn" id="search-clear-btn" onclick="clearSearchInput()" title="Borrar" style="display:none">✕</button>
+          </div>
+          <!-- Escanear busca por código -- se usa muchísimo, se queda siempre a
+               un tap junto al buscador (no vive dentro del menú de Agregar,
+               que es para METER stock, no para encontrarlo). Solo mobile/
+               tablet chico, ver CSS. -->
+          <button class="search-scan-btn" id="search-scan-btn" onclick="openSearchScanner()" title="Escanear código de barras" aria-label="Escanear código de barras"><svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+        </div>
+        <div class="tb-actions-wrap" id="tb-actions-wrap">
+        <div class="tb-actions" id="tb-actions" onscroll="_tbActionsScroll()">
+          <button class="btn btn-outline btn-sm btn-ia-accent capture-mode-btn" id="btn-capture-mode-mobile" onclick="openCaptureMode()" title="Captura rápida con IA" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg> <span class="tb-btn-label">Captura</span></button>
+          <button class="btn btn-outline btn-sm" onclick="openSearchScanner()" title="Buscar por código de barras"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg> <span class="tb-btn-label">Escanear</span></button>
+        </div>
+        </div>
+      </div>
+      <!-- Fila 2: filtros + vista -->
+      <div class="tb-filter-row">
+        <select class="filter-select" id="cat-filter" onchange="_adminPage=1;renderTable()">
+          <option value="all">Todas las categorías</option>
+        </select>
+        <button id="cat-filter-btn" onclick="openCatSheet()">
+          <span id="cat-filter-btn-label"><span class="lbl-long">Todas las categorías</span><span class="lbl-short">Categoría</span></span>
+          <span id="cat-filter-btn-arrow">▾</span>
+        </button>
+        <select class="filter-select" id="sort-select" style="display:none" onchange="currentSort=this.value;localStorage.setItem('te_admin_sort',this.value);_adminPage=1;renderTable();TE?.track('filter_sort',{sort:this.value})">
+          <option value="position">Mi orden</option>
+          <option value="recent" selected>Editados hace poco</option>
+          <option value="name-az">A → Z</option>
+          <option value="name-za">Z → A</option>
+          <option value="price-desc">$ Mayor</option>
+          <option value="price-asc">$ Menor</option>
+          <option value="created-new">Agregados hace poco</option>
+          <option value="created-old">Más antiguos</option>
+        </select>
+        <button id="sort-filter-btn" onclick="openSortSheet()" title="Ordenar">
+          <svg class="fb-ico" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
+          <span id="sort-filter-btn-label">Editados hace poco</span>
+          <span id="sort-filter-btn-arrow">▾</span>
+        </button>
+        <span id="creator-filter-wrap" style="display:none;position:relative">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;line-height:0;z-index:1"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <select class="filter-select" id="creator-filter" style="padding-left:36px" onchange="_adminPage=1;renderTable();renderStats()">
+            <option value="all">Creado por: todos</option>
+          </select>
+        </span>
+        <span id="prod-count" class="prod-count" style="display:none"></span>
+        <div class="view-toggle">
+          <button class="view-btn active" id="vbtn-list"  onclick="setAdminView('list')"  title="Ver como lista" aria-label="Ver como lista"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+          <button class="view-btn"        id="vbtn-cards" onclick="setAdminView('cards')" title="Ver como cuadrícula" aria-label="Ver como cuadrícula"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        </div>
+      </div>
+      <!-- Fila 3: filtros activos (dinámica) -->
+      <div class="filter-active-bar" id="filter-active-bar">
+        <span id="fac-chips"></span>
+        <button class="fac-clear" onclick="clearAdminFilters()">✕ Limpiar filtros</button>
+      </div>
+    </div>
+
+    <!-- BULK BAR -->
+    <div class="bulk-bar" id="bulk-bar" style="display:none">
+      <button class="btn btn-sm" onclick="clearBulkSelection()" style="border-color:rgba(255,255,255,.4);opacity:.8" title="Deseleccionar todo">✕</button>
+      <span id="bulk-count">0 seleccionados</span>
+      <button class="btn btn-sm bulk-select-all" id="bulk-select-all" onclick="selectAllVisible()" style="display:none"></button>
+      <div class="bulk-bar-scroll-wrap" id="bulk-bar-scroll-wrap">
+        <div class="bulk-bar-scroll" id="bulk-bar-scroll" onscroll="_bulkBarScroll()">
+          <button class="btn btn-sm" onclick="bulkSetCategory()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>Cambiar categoría</button>
+          <button class="btn btn-sm" onclick="openBulkMoreActions()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Más acciones</button>
+          <button class="btn btn-sm" id="bulk-archive-btn" onclick="bulkArchive()"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archivar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BULK: MÁS ACCIONES -->
+    <div id="bulk-more-overlay" onclick="if(event.target===this)closeBulkMoreActions()">
+      <div id="bulk-more-sheet">
+        <div class="bcp-head">
+          <div class="bcp-title">Más acciones</div>
+          <button class="bcp-close" onclick="closeBulkMoreActions()">✕</button>
+        </div>
+        <div class="bmo-list">
+          <div class="bcp-group-label">Organizar</div>
+          <button class="bmo-item" id="bulk-publish-btn" onclick="closeBulkMoreActions();bulkTogglePublish()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Visibilidad</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();bulkToggleOOS()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Disponibilidad</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();bulkFlag()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Marcar para revisión</button>
+          <div class="bcp-group-label">Vitrina</div>
+          <button class="bmo-item" onclick="closeBulkMoreActions();bulkToggleFeatured()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Destacar</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();bulkMoveToTop()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Mover al inicio</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();_openAddToKit([...selectedIds])"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Agregar a un kit</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();bulkSetBadge()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>Asignar etiqueta</button>
+          <!-- Borrado definitivo: escondido aquí y con doble confirmación. Lo
+               normal es Archivar (botón de la barra), que se puede deshacer. -->
+          <div class="bcp-group-label" id="bulk-delete-group">Eliminar</div>
+          <button class="bmo-item bmo-item-danger" id="bulk-delete-btn" onclick="closeBulkMoreActions();bulkDelete()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>Eliminar definitivamente</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SRP eliminado — escanear barcode abre el QV directamente -->
+
+    <!-- PRODUCTS TABLE / CARD GRID -->
+    <div class="table-wrap" id="products-view-wrap">
+      <table id="products-table-el">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="select-all" onchange="toggleSelectAll()" style="accent-color:var(--gold)"></th>
+            <th class="col-product">Producto</th>
+            <th class="col-price">Precio</th>
+            <th class="col-state">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="products-table"></tbody>
+      </table>
+      <div id="products-card-grid" class="admin-cards-grid" style="display:none"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- FORM MODAL -->
+<div class="overlay" id="form-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="form-title">Agregar producto</h3>
+      <button class="modal-close-btn" onclick="closeForm()">✕</button>
+    </div>
+    <div id="form-kit-banner" style="display:none;background:var(--gold-light);border-bottom:1px solid var(--border);padding:8px 16px;font-size:.78rem;color:var(--gold-dark);display:none;align-items:center;gap:8px;cursor:pointer" onclick="_backToKit()">
+      <span><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span><span id="form-kit-banner-txt">Volver al kit</span>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="f-id">
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Fotos <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:.72rem;color:var(--muted-light)">(1ª = principal · máx 6)</span></p>
+      <div class="field" style="margin-bottom:4px">
+        <!-- Inputs ocultos — galería (selección múltiple) y cámara -->
+        <input type="file" id="f-img-file" accept="image/*" multiple style="display:none" onchange="handleFileSelect(this)">
+        <input type="file" id="f-img-camera" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(this)">
+        <input type="hidden" id="f-image">
+        <!-- Zona de arrastre (drag & drop desktop) + botones de carga -->
+        <div class="img-upload-zone" id="img-upload-zone">
+          <div class="up-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <div class="up-text">Arrastra fotos aquí · o <kbd style="font-size:.75rem;background:var(--surface-soft);border:1px solid var(--border);border-radius:4px;padding:1px 5px">Ctrl+V</kbd> para pegar</div>
+          <div class="img-btns">
+            <button type="button" class="btn btn-outline btn-sm"
+                    onclick="document.getElementById('f-img-file').click()">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>Galería
+            </button>
+            <button type="button" class="btn btn-cam btn-sm"
+                    onclick="document.getElementById('f-img-camera').click()">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Tomar foto
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:.75rem;color:var(--muted)" onclick="document.getElementById('add-img-url-wrap').style.display='flex';this.style.display='none'">+ URL</button>
+          </div>
+          <div id="add-img-url-wrap" style="display:none;gap:7px;align-items:center;margin-top:10px">
+            <input type="url" id="add-img-url-input" class="form-input" placeholder="Pega una URL de imagen…" style="flex:1">
+            <button type="button" class="btn btn-outline btn-sm" onclick="addAdditionalImageUrl()">+ Agregar</button>
+          </div>
+        </div>
+        <div id="additional-images-strip" style="display:flex;gap:8px;flex-wrap:wrap;min-height:32px;margin:10px 0;align-items:flex-start"></div>
+        <!-- Botón IA — aparece tras subir imagen -->
+        <div id="ai-form-wrap" style="display:none">
+          <button type="button" id="ai-form-btn" class="btn-ai-form" onclick="analyzeFormImage()">
+            <span class="ai-form-icon"><svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></span>
+            <span class="ai-form-label">Completar con IA</span>
+          </button>
+          <div id="ai-key-prompt" style="display:none">
+            <p>Para usar IA agrega tu Groq key — gratis en <strong>console.groq.com</strong> → API Keys</p>
+            <div id="ai-key-prompt-wrap">
+              <input type="password" id="ai-key-prompt-input" placeholder="gsk_..." autocomplete="off">
+              <button type="button" onclick="saveInlineAiKey()" class="btn btn-gold btn-sm">Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Información básica</p>
+      <div class="form-row">
+        <div class="field" style="grid-column:1/-1">
+          <div class="field-label-row">
+            <label>Nombre del producto</label>
+            <div style="display:flex;gap:5px">
+              <button type="button" class="dictate-btn" id="dictate-f-name" onclick="dictate('f-name')"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>Dictar</button>
+              <button type="button" class="dictate-btn btn-clear-field" onclick="clearField('f-name')" title="Limpiar campo" aria-label="Limpiar nombre"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></button>
+            </div>
+          </div>
+          <input type="text" id="f-name" placeholder="Ej: Bolso Glamour Camel" onblur="applyTitleCase('f-name');suggestCategoryFromName();checkNameSimilarity()" oninput="suggestCategoryFromName()">
+          <div id="f-name-warn" class="dup-warn" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="grid-column:1/-1">
+          <label>Categoría</label>
+          <select id="f-category" style="display:none"></select>
+          <button type="button" id="f-category-btn" class="f-cat-btn" onclick="openFormCatPicker()">
+            <span id="f-cat-dot" class="cat-dot" style="background:#9B8B78"></span>
+            <span id="f-cat-label-display">Seleccionar categoría</span>
+            <span class="f-cat-arrow">▾</span>
+          </button>
+        </div>
+      </div>
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Precios</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Precio de venta (MXN)</label>
+          <input type="number" id="f-price" min="0" step="1" inputmode="decimal" placeholder="$0" oninput="updateMarginDisplay()">
+          <p id="price-lock-hint" class="hint" style="display:none;color:#b45309"><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Precio bloqueado — cambia la categoría para editarlo</p>
+        </div>
+        <div class="field">
+          <label>Precio de costo (MXN) <span class="tag-internal">Solo interno</span></label>
+          <input type="number" id="f-cost" min="0" step="1" inputmode="decimal" placeholder="¿Cuánto te costó?" oninput="updateMarginDisplay()">
+          <p class="hint" id="f-margin-display">Opcional. Con el costo ves tu margen.</p>
+        </div>
+      </div>
+      <!-- f-out-of-stock: oculto — el estado lo maneja el POS automáticamente -->
+      <input type="checkbox" id="f-out-of-stock" style="display:none">
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Inventario</p>
+      <div class="form-row">
+        <div class="field" id="f-stock-wrap">
+          <label>Stock (unidades)</label>
+          <input type="number" id="f-stock" min="0" step="1" placeholder="0">
+          <p class="hint" id="f-stock-hint" style="display:none"></p>
+        </div>
+        <div class="field">
+          <label>Código de barras <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="f-barcode" placeholder="Escanea o escribe el código..." style="flex:1" onblur="checkBarcodeConflict()">
+            <button type="button" class="btn btn-outline btn-sm" onclick="openFormScanner()" title="Escanear código de barras"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+          </div>
+          <div id="f-barcode-warn" class="dup-warn" style="display:none"></div>
+        </div>
+      </div>
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Visibilidad</p>
+      <div class="form-row">
+        <div class="field">
+          <label class="checkbox-row">
+            <input type="checkbox" id="f-published" checked>
+            Publicar en sitio web
+          </label>
+          <p class="hint">Apagado: solo existe en Inventario y Caja.</p>
+        </div>
+      </div>
+      <!-- MÁS DETALLES: lo que casi nunca se llena, plegado para que dar de
+           alta un producto sea Foto · Nombre · Categoría · Precio · Stock ·
+           Código. Se abre solo si el producto ya tiene alguno de estos datos
+           (_syncFormMore) para que nada quede escondido al editar. -->
+      <details class="form-more" id="f-more" ontoggle="_syncFormMore()">
+        <summary class="form-more-summary"><span>Más detalles</span><span class="form-more-hint" id="f-more-hint">Descripción, oferta, caducidad, kit…</span></summary>
+        <div class="form-more-body">
+      <div class="field">
+        <label>Descripción <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+        <div class="desc-editor-wrap">
+          <div class="desc-toolbar">
+            <!-- Formato: solo desktop -->
+            <button type="button" class="dtb-btn dtb-fmt" onclick="toggleBoldDesc()" title="Negrita"><b>B</b></button>
+            <button type="button" class="dtb-btn dtb-fmt" onclick="toggleItalicDesc()" title="Cursiva"><i>I</i></button>
+            <span class="dtb-sep dtb-fmt"></span>
+            <button type="button" class="dtb-btn dtb-fmt" onclick="addBulletDesc()" title="Lista de viñetas">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <span class="dtb-sep"></span>
+            <!-- Utilidades: mobile + desktop -->
+            <button type="button" class="dtb-btn" id="dictate-f-description" onclick="dictate('f-description')" title="Dictar con micrófono">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              <span class="dtb-label">Dictar</span>
+            </button>
+            <button type="button" class="dtb-btn dtb-clear" onclick="clearField('f-description')" title="Limpiar">⌫</button>
+          </div>
+          <textarea id="f-description" class="desc-editor-ta" placeholder="Describe el producto: materiales, uso, características…" onblur="applyDescriptionFormat('f-description')" onpaste="handleDescPaste(event)" spellcheck="true" lang="es"></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <button type="button" id="toggle-oferta-btn" class="btn-oferta-toggle" onclick="toggleOfertaField()">+ Agregar precio de oferta</button>
+          <div id="oferta-wrap" style="display:none">
+            <label style="margin-top:10px;display:block">Precio anterior <span style="font-weight:400;color:var(--muted-light)">(oferta)</span></label>
+            <input type="number" id="f-original-price" min="0" step="1" placeholder="500">
+            <p class="hint">Se muestra tachado cuando hay descuento</p>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="grid-column:1/-1">
+          <label>Fecha de caducidad <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+          <input type="date" id="f-expiry-date">
+          <p class="hint">Se avisa en Inventario 60 días antes.</p>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" id="field-cat-label" style="grid-column:1/-1">
+          <label>Nombre de la categoría en la tienda <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+          <input type="text" id="f-category-label" placeholder="Ej: Bolsos & Carteras">
+          <p class="hint">Se llena solo con la categoría. Cámbialo solo si quieres que la tienda muestre otro nombre.</p>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field" style="grid-column:1/-1">
+          <label>Código de proveedor <span style="font-weight:400;color:var(--muted-light)">(opcional)</span></label>
+          <input type="text" id="f-supplier-code" placeholder="Ej. 75955" onblur="checkSupplierCodeConflict()">
+          <p class="hint">El de Natura/Avon, no el de barras. Ayuda a Recepción con IA a reconocerlo.</p>
+          <div id="f-supplier-code-warn" class="dup-warn" style="display:none"></div>
+        </div>
+      </div>
+      <p class="form-section" style="justify-content:space-between">
+        <span><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Kit / Bundle</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;color:var(--charcoal)">
+          <input type="checkbox" id="f-is-kit" onchange="toggleKitMode()" style="accent-color:var(--gold)">
+          Este producto es un kit
+        </label>
+      </p>
+      <div id="kit-editor" style="display:none;margin-bottom:4px">
+        <p style="font-size:.72rem;color:var(--muted);margin:0 0 10px">Al vender en Caja, el stock de cada componente se descuenta automáticamente.</p>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <div style="flex:1;position:relative">
+            <input type="text" id="kit-search" class="form-input" placeholder="Buscar componente del kit..." oninput="searchKitProducts(this.value);document.getElementById('kit-search-clear').style.display=this.value?'flex':'none'" autocomplete="off" style="width:100%;padding-right:32px">
+            <button type="button" id="kit-search-clear" onclick="document.getElementById('kit-search').value='';document.getElementById('kit-search-results').style.display='none';this.style.display='none'" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:none;background:var(--border);color:var(--muted);font-size:.72rem;font-weight:700;cursor:pointer;align-items:center;justify-content:center;touch-action:manipulation">✕</button>
+          </div>
+        </div>
+        <div id="kit-search-results" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:170px;overflow-y:auto;margin-bottom:10px;background:var(--surface)"></div>
+        <div id="kit-components-list" style="border:1px solid var(--border);border-radius:8px;padding:4px 6px;min-height:38px;background:var(--surface-soft)"></div>
+        <div id="kit-stock-calc" style="display:none;margin-top:8px;font-size:.8rem;align-items:center;gap:6px">
+          <span style="font-weight:600;color:var(--charcoal)">Stock disponible:</span>
+          <span id="kit-stock-val"></span>
+        </div>
+      </div>
+      <p class="form-section"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>Detalles</p>
+      <div class="form-row">
+        <div class="field">
+          <label>Insignia (opcional)</label>
+          <input type="text" id="f-badge" placeholder="Ej: Más vendido, Nuevo…"
+                 list="badge-options" autocomplete="off">
+          <datalist id="badge-options"></datalist>
+        </div>
+        <div class="field">
+          <label>Tipo de insignia</label>
+          <select id="f-badge-type">
+            <option value="">Sin insignia</option>
+            <option value="best">⭐ Dorada — Más vendido</option>
+            <option value="new">🖤 Negra — Nuevo</option>
+            <option value="promo">🔴 Roja — Oferta / Promo</option>
+            <option value="natura">🟢 Verde — Natura</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label class="checkbox-row">
+            <input type="checkbox" id="f-featured">
+            Mostrar en sección destacada
+          </label>
+        </div>
+      </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeForm()">Cancelar</button>
+      <button id="save-again-btn" class="btn btn-outline" style="display:none;flex:0 0 auto;padding:9px 14px" onclick="saveProduct(true)" title="Guardar y agregar otro producto" aria-label="Guardar y agregar otro producto">+ Otro</button>
+      <button id="save-btn" class="btn btn-gold" onclick="saveProduct()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="overlay" id="del-overlay">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head">
+      <h3>¿Eliminar producto?</h3>
+      <button class="modal-close-btn" onclick="closeDel()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:#6B5C48;font-size:.92rem;line-height:1.6">Esta acción no se puede deshacer. El producto desaparecerá del sitio.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeDel()">Cancelar</button>
+      <button id="del-confirm-btn" class="btn btn-red" onclick="confirmDelete()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- UNDO BAR -->
+<div id="undo-bar" class="undo-bar">
+  <span id="undo-msg" class="undo-msg"></span>
+  <button onclick="doUndo()">Deshacer</button>
+</div>
+<!-- ACTION BAR (para acciones como "Editar duplicado") -->
+<div id="action-bar" class="action-bar">
+  <span id="action-msg"></span>
+  <button id="action-btn" onclick="doAction()"></button>
+</div>
+
+<!-- SCROLL TO TOP -->
+<button id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
+
+<!-- SCANNER MODAL -->
+<div class="overlay" id="dup-review-overlay">
+  <div class="modal" style="max-width:680px;width:100%">
+    <div class="dup-sheet-pill"></div>
+    <div class="modal-head" style="padding:16px 20px 14px">
+      <h3 style="font-size:1.05rem">Posibles duplicados</h3>
+      <button class="modal-close-btn" onclick="closeDupReview()">✕</button>
+    </div>
+    <div class="modal-body" id="dup-review-body" style="padding:0 20px 24px"></div>
+  </div>
+</div>
+
+<div class="overlay" id="scanner-overlay" style="z-index:500">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h3 id="scanner-title">Escanear código</h3>
+      <button class="modal-close-btn" onclick="closeAdminScanner()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:#6B5C48;margin-bottom:12px">Apunta la cámara al código de barras o QR del producto.</p>
+      <div class="scanner-wrap">
+        <div id="scanner-reader"></div>
+      </div>
+      <p id="scanner-status" style="margin-top:10px;font-size:.82rem;color:#9B8B78;text-align:center">Iniciando cámara...</p>
+    </div>
+  </div>
+</div>
+
+<script src="negocio.js"></script>
+<script src="admin.js"></script>
+<script src="admin-render.js"></script>
+<script src="admin-images.js"></script>
+<script src="admin-form.js"></script>
+<script src="admin-bulk.js"></script>
+<script src="admin-scanner.js"></script>
+<script src="admin-utils.js"></script>
+<script src="admin-recv.js"></script>
+<script src="admin-recv-ia.js"></script>
+<script src="admin-capture.js"></script>
+<script src="admin-qv.js"></script>
+<script src="admin-kit-builder.js"></script>
+<!-- COMPARE ZOOM: split fullscreen -->
+<div id="cmp-zoom" onclick="closeCmpZoom()">
+  <button id="cmp-zoom-close" onclick="event.stopPropagation();closeCmpZoom()">✕</button>
+  <div class="cmp-zoom-half" id="cmp-zoom-a"></div>
+  <div class="cmp-zoom-half" id="cmp-zoom-b"></div>
+</div>
+
+<!-- MODAL: comparar producto similar -->
+<div id="sim-overlay" onclick="if(event.target===this)closeSimilarModal()">
+  <div id="sim-modal">
+    <div style="position:relative">
+      <img id="sim-img" class="sim-img" src="" alt="">
+      <button onclick="closeSimilarModal()" style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.92);color:var(--ink);font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.18)">✕</button>
+    </div>
+    <div class="sim-body">
+      <div class="sim-tag" id="sim-cat"></div>
+      <div class="sim-name" id="sim-name"></div>
+      <div class="sim-meta">
+        <span>Precio: <strong id="sim-price"></strong></span>
+        <span>Stock: <strong id="sim-stock"></strong></span>
+      </div>
+    </div>
+    <div class="sim-nav" id="sim-nav"></div>
+    <div class="sim-foot">
+      <button class="sim-btn-ok" onclick="closeSimilarModal()">✓ Son distintos — continuar</button>
+      <button class="sim-btn-edit" id="sim-btn-edit" onclick="simGoEdit()">Ir a editar este producto →</button>
+    </div>
+  </div>
+</div>
+<!-- QUICK VIEW POPUP -->
+<div id="qv-overlay" onclick="if(event.target===this)closeQV()">
+  <button class="qv-outer-nav" id="qv-prev" onclick="qvNavigate(-1)" title="Producto anterior">&#8249;</button>
+  <div class="qv-panel" id="qv-panel">
+    <div class="qv-img-zone">
+      <div id="qv-img-container"></div>
+      <input type="file" id="qv-img-file" accept="image/*" style="display:none" onchange="_qvHandleImgUpload(this)">
+      <button class="qv-close" onclick="closeQV()">✕</button>
+      <div class="qv-badge-zone" id="qv-badge-zone"></div>
+    </div>
+    <div class="qv-right">
+      <div class="qv-info" onscroll="_qvInfoScroll()">
+        <div id="qv-flag-priority"></div>
+        <div style="display:flex;align-items:center;gap:0">
+          <div class="qv-cat-row" id="qv-cat-row" style="flex:1"></div>
+          <span class="qv-counter" id="qv-counter"></span>
+        </div>
+        <div class="qv-name" id="qv-name"></div>
+        <div class="qv-price-row" id="qv-price-row"></div>
+        <div class="qv-chips" id="qv-chips"></div>
+        <div class="qv-desc" id="qv-desc"></div>
+        <button class="qv-desc-toggle" id="qv-desc-toggle" onclick="_qvToggleDesc()">Ver más ↓</button>
+        <div id="qv-kit-components" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)"></div>
+        <div id="qv-apartado-zone"></div>
+        <div id="qv-flag-zone"></div>
+        <div class="qv-id-hint" id="qv-id" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
+      </div>
+      <div class="qv-actions" id="qv-actions"></div>
+    </div>
+  </div>
+  <button class="qv-outer-nav" id="qv-next" onclick="qvNavigate(1)" title="Producto siguiente">&#8250;</button>
+</div>
+
+<!-- CARGA MASIVA OVERLAY -->
+
+<!-- CATEGORY BOTTOM SHEET -->
+<div id="cat-sheet-overlay" onclick="closeCatSheet()"></div>
+<div id="cat-sheet">
+  <div class="cat-sheet-pill"></div>
+  <div class="cat-sheet-header">
+    <span class="cat-sheet-title">Filtrar por categoría</span>
+    <button class="cat-sheet-close" onclick="closeCatSheet()">✕</button>
+  </div>
+  <div style="padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div style="position:relative">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;line-height:0"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input type="text" id="cat-sheet-search" placeholder="Buscar categoría..." oninput="_catSheetFilter(this.value)" autocomplete="off" style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit;color:var(--charcoal);background:var(--surface);outline:none;box-sizing:border-box">
+    </div>
+  </div>
+  <div class="cat-sheet-list" id="cat-sheet-list"></div>
+</div>
+
+<!-- SORT BOTTOM SHEET -->
+<div id="sort-sheet-overlay" onclick="closeSortSheet()"></div>
+<div id="sort-sheet">
+  <div class="cat-sheet-pill"></div>
+  <div class="cat-sheet-header">
+    <span class="cat-sheet-title">Ordenar por</span>
+    <button class="cat-sheet-close" onclick="closeSortSheet()">✕</button>
+  </div>
+  <div class="cat-sheet-list" id="sort-sheet-list"></div>
+</div>
+<script src="shared.js"></script>
+</body>
+</html>

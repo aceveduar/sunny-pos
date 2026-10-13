@@ -1,0 +1,868 @@
+/* ── CHANGE & COBRAR ── */
+// El botón dice cuánto se va a cobrar ("Cobrar $1,040"), como Square/Shopify:
+// la cajera confirma el monto en el mismo toque.
+function _updateCobrarLabel() {
+  const btn = document.getElementById('cobrar-btn');
+  if (!btn || btn.hasAttribute('data-loading')) return;
+  if (document.getElementById('pos-is-apartado')?.checked) { btn.textContent = 'Registrar apartado'; return; }
+  const total = getDiscountedTotal();
+  btn.textContent = cart.length
+    ? `Cobrar $${total.toLocaleString('es-MX', { minimumFractionDigits: total % 1 ? 2 : 0, maximumFractionDigits: 2 })}`
+    : 'Cobrar';
+}
+
+// Efectivo recibido con separador de miles mientras se escribe ("1,500").
+function _posCashValue() {
+  return parseFloat(String(document.getElementById('pos-cash')?.value || '').replace(/,/g, '')) || 0;
+}
+function _onCashInput() {
+  const el = document.getElementById('pos-cash');
+  const formatted = _fmtMoneyInput(el.value);
+  if (el.value !== formatted) el.value = formatted;
+  document.querySelectorAll('.cash-quick button').forEach(b => b.classList.remove('active-cash'));
+  updateChange();
+}
+
+function updateChange() {
+  const isApt = document.getElementById('pos-is-apartado')?.checked;
+  const disc  = getDiscount();
+
+  const fmtMx = n => `$${n.toLocaleString('es-MX', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+  if (!isApt) {
+    const total  = getDiscountedTotal();
+    const cash   = _posCashValue();
+    const change = Math.round((cash - total + Number.EPSILON) * 100) / 100;
+    const cashEl = document.getElementById('pos-cash');
+    if (cashEl) cashEl.placeholder = total > 0 ? `Mín. ${fmtMx(total)}` : '';
+    const changeEl = document.getElementById('pos-change-input');
+    if (changeEl) {
+      const state = cash <= 0 ? 'empty' : change >= 0 ? 'ok' : 'short';
+      changeEl.className = `cash-change is-${state}`;
+      changeEl.textContent = state === 'empty' ? '—' : state === 'ok' ? fmtMx(change) : `Faltan ${fmtMx(-change)}`;
+    }
+  }
+
+  const discEl = document.getElementById('pos-discount-amount');
+  if (discEl) discEl.textContent = disc > 0 ? `−$${disc.toLocaleString('es-MX', {maximumFractionDigits:0})}` : '';
+
+  // Un solo total: con descuento, el original tachado y chico encima del que
+  // se cobra (antes eran dos renglones del mismo tamaño y no quedaba claro
+  // cuál cobrar).
+  const totalEl = document.getElementById('pos-total');
+  if (totalEl) {
+    totalEl.innerHTML = disc > 0
+      ? `<span class="total-was">${fmtMx(getTotal())}</span>${fmtMx(getDiscountedTotal())}`
+      : fmtMx(getTotal());
+  }
+  _updateCobrarLabel();
+  // La barra inferior del celular también muestra el total: sin esto se
+  // quedaba con el monto sin descuento hasta el siguiente cambio del carrito.
+  if (typeof _updateMiniCartBar === 'function') _updateMiniCartBar();
+
+  if (typeof _updateQuickCashButtons === 'function') _updateQuickCashButtons();
+  updateAnticipoInfo();
+}
+
+let _cobrandoAhora = false;
+async function cobrar() {
+  if (!cart.length || _cobrandoAhora) return;
+  if (!navigator.onLine) { toast('Sin conexión — no se puede registrar la venta', 'error'); return; }
+  _cobrandoAhora = true;
+  const isApartado = document.getElementById('pos-is-apartado')?.checked;
+  const customerName = _titleCaseName(document.getElementById(isApartado ? 'pos-apt-customer' : 'pos-customer')?.value || '');
+  const phone        = document.getElementById(isApartado ? 'pos-phone' : 'pos-customer-phone')?.value.trim() || '';
+  const customer     = customerName + (phone ? ` · 📱 ${phone}` : '');
+  const note       = document.getElementById('pos-note')?.value.trim() || '';
+  const disc       = getDiscount();
+  const total      = Math.round(getDiscountedTotal() * 100) / 100;
+  if (total <= 0) {
+    toast('El total debe ser mayor a $0', 'error');
+    _cobrandoAhora = false;
+    return;
+  }
+
+  let paidAmount, change;
+
+  if (isApartado) {
+    if (!customerName) {
+      // El nombre vive en el sheet del apartado: abrirlo, no enfocar un campo oculto.
+      toast('Escribe el nombre de la clienta', 'error');
+      if (typeof openApartadoSheet === 'function') openApartadoSheet();
+      _cobrandoAhora = false; return;
+    }
+    paidAmount = Math.round((parseFloat(document.getElementById('pos-anticipo')?.value) || 0) * 100) / 100;
+    if (paidAmount > total + _APT_MONEY_EPSILON) { toast('El anticipo no puede ser mayor al total del pedido', 'error'); document.getElementById('pos-anticipo').focus(); _cobrandoAhora = false; return; }
+    if (paidAmount >= total - _APT_MONEY_EPSILON) paidAmount = total;
+    change = 0;
+  } else if (payMethod === 'efectivo') {
+    const cash = _posCashValue();
+    if (cash > 0 && cash < total) {
+      toast(`El efectivo ($${cash.toLocaleString('es-MX')}) no cubre el total ($${total.toLocaleString('es-MX')})`, 'error');
+      document.getElementById('pos-cash').focus(); document.getElementById('pos-cash').select();
+      _cobrandoAhora = false; return;
+    }
+    paidAmount = cash || total;
+    change = Math.max(0, paidAmount - total);
+  } else {
+    paidAmount = total; change = 0;
+  }
+  const apartadoPagadoCompleto = !!isApartado && total > 0 && paidAmount >= total - _APT_MONEY_EPSILON;
+  const apartadoActivo = !!isApartado && !apartadoPagadoCompleto;
+
+  const btn = document.getElementById('cobrar-btn');
+  btn.setAttribute('data-loading', '1'); btn.disabled = true;
+
+  // Snapshot de qué se va a cobrar exactamente -- nada bloquea el carrito
+  // durante los `await` de abajo (customerId, el RPC), a propósito, para no
+  // frenar a la cajera si quiere empezar a cobrar al siguiente cliente
+  // mientras la venta anterior sigue en la red. Se usa al final para quitar
+  // solo lo que se cobró, no todo el carrito -- lo que se agregó durante la
+  // espera antes se perdía sin aviso cuando `cart = []` lo borraba también.
+  const chargedSnapshot = cart.map(({ product: p, qty }) => ({ id: p.id, qty }));
+
+  const items = cart.map(({ product: p, qty, customPrice }) => {
+    const pr = Math.round((customPrice ?? p.price) * 100) / 100;
+    const isCustom = customPrice != null && customPrice !== p.price;
+    return {
+      id: p.id,
+      name: p.name,
+      price: pr,
+      qty,
+      subtotal: Math.round(pr * qty * 100) / 100,
+      // El precio de catálogo se recalcula y valida en el servidor
+      // (te_snapshot_sale_items); esto solo alimenta el ticket/modal
+      // inmediatos, que no esperan la respuesta del RPC con el snapshot.
+      ...(isCustom ? { original_price: p.price } : {}),
+      ...(p.kitItems?.length ? { kit_items: p.kitItems.map(c => ({ id:c.id, name:c.name, qty:c.qty || 1 })) } : {})
+    };
+  });
+
+  const dueDateEl = document.getElementById('pos-due-date');
+  const saleData = {
+    total, items,
+    discount:        disc || null,
+    payment_method:  payMethod,
+    note:            note || null,
+    type:            apartadoActivo ? 'apartado' : 'venta',
+    paid_amount:     paidAmount,
+    customer:        customer || null,
+    due_date:        apartadoActivo && dueDateEl?.value ? dueDateEl.value : null,
+    abonos:          isApartado && paidAmount > 0
+                       ? [{ amount: paidAmount, method: payMethod, date: new Date().toISOString() }]
+                       : null
+  };
+
+  // Vincular/crear el cliente por teléfono antes de cobrar — nunca bloquea:
+  // si falla, la venta sigue igual que hoy, solo sin customer_id.
+  const customerId = customerName ? await _getOrCreateCustomerId(customerName, phone) : null;
+
+  // Una sola llamada idempotente y atómica: valida demanda agregada, guarda
+  // snapshot de kits, registra el pago y descuenta stock en una transacción.
+  const saleFingerprint = JSON.stringify({ items, total, disc, payMethod, note, isApartado, paidAmount, customer, dueDate: saleData.due_date });
+  const rpcResult = await posRpc('record_sale_atomic_v2', {
+    operation: 'record_sale',
+    context: 'checkout',
+    fingerprint: saleFingerprint,
+    body: {
+      p_items:           saleData.items,
+      p_total:           saleData.total,
+      p_discount:        saleData.discount || 0,
+      p_payment_method:  saleData.payment_method,
+      p_note:            saleData.note || null,
+      p_is_apartado:     !!isApartado,
+      p_paid_amount:     saleData.paid_amount ?? null,
+      p_customer:        saleData.customer || null,
+      p_due_date:        saleData.due_date || null,
+      p_override_tickets: _collectOverrideTickets(['canOverridePrice', 'canApplyDiscount']),
+      p_customer_id:     customerId,
+      p_collected_by_email: _collectedByEmailFromCheck(isApartado ? 'apt-collected-ofelia' : 'pos-collected-ofelia')
+    }
+  });
+  if (!rpcResult.ok) {
+    btn.removeAttribute('data-loading'); btn.disabled = false; _cobrandoAhora = false;
+    const msg = _posRpcError(rpcResult, 'Error al registrar la venta — intenta de nuevo');
+    toast(msg, 'error');
+    if (rpcResult.resolvedPrior) await _refreshPosFinancialState();
+    return;
+  }
+
+  // El RPC devuelve estados absolutos. Aplicarlos evita una doble resta si el
+  // evento Realtime llegó antes que la respuesta HTTP.
+  (Array.isArray(rpcResult.data?.products) ? rpcResult.data.products : []).forEach(state => {
+    const product = products.find(item => item.id === state.id);
+    if (!product) return;
+    product.stock = parseInt(state.stock, 10) || 0;
+    product.outOfStock = !!state.out_of_stock;
+  });
+
+  btn.removeAttribute('data-loading');
+
+  // Guardar para el ticket y la confirmación por WhatsApp.
+  const dueDateVal = apartadoActivo ? document.getElementById('pos-due-date')?.value : null;
+
+  // La actividad y el libro de pagos quedaron registrados dentro del mismo RPC.
+  // id: sin esto, comprobante_enviado/comprobante_omitido de este flujo (justo
+  // debajo) se registraban sin meta.id -- no se podían asociar a la venta ni
+  // desde el historial por transacción ni desde _filterOutTestSales(), que
+  // depende de meta.id para saber si esconder el evento de una venta de prueba.
+  _lastSale = { id: rpcResult.data?.sale?.id ?? null, total, paidAmount, change, disc, note, items, payMethod,
+    isApartado: apartadoActivo, apartadoLiquidado: apartadoPagadoCompleto,
+    fiado: apartadoActivo && !apartadoPagadoCompleto && _formEsFiado(),
+    customer, dueDate: dueDateVal };
+
+  // Reset UI
+  _clearOverrideTicket('canOverridePrice');
+  _clearOverrideTicket('canApplyDiscount');
+  chargedSnapshot.forEach(({ id, qty }) => {
+    const idx = cart.findIndex(x => x.product.id === id);
+    if (idx === -1) return;
+    if (cart[idx].qty <= qty) cart.splice(idx, 1);
+    else cart[idx].qty -= qty;
+  });
+  ['pos-cash','pos-discount','pos-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  // "Se lo lleva hoy" (fiado): se marca aparte, después de crear el apartado.
+  const seLoLleva = document.getElementById('apt-se-lo-lleva');
+  if (apartadoActivo && !apartadoPagadoCompleto && seLoLleva?.classList.contains('active') && rpcResult.data?.sale?.id) {
+    _marcarSeLoLlevo(rpcResult.data.sale.id, true).then(ok => { if (ok) loadApartados(); });
+  }
+  seLoLleva?.classList.remove('active');
+  seLoLleva?.setAttribute('aria-pressed', 'false');
+  ['pos-collected-ofelia','apt-collected-ofelia'].forEach(id => { document.getElementById(id)?.classList.remove('active'); });
+  document.getElementById('pos-is-apartado').checked = false;
+  toggleApartadoMode(); // limpia phone/anticipo/pendiente/fecha/cliente-apartado y cierra el sheet
+  clearNoteField();
+  clearCustomerField();
+  clearDiscountField();
+  const moreOptionsWrap = document.getElementById('more-options-wrap');
+  if (moreOptionsWrap) moreOptionsWrap.style.display = 'none';
+  _updateMoreOptionsLabel();
+  renderCart(); updateChange();
+  document.getElementById('pos-search').value = '';
+  showAllProducts();
+  loadTodayStats(); loadHistory(); loadApartados();
+
+  _cobrandoAhora = false;
+  showSaleDone();
+}
+
+let _saleTicketSent = false;
+
+function showSaleDone() {
+  _saleTicketSent = false;
+  // Bloquear Escape mientras el modal esté abierto
+  const _escGuard = e => { if (e.key === 'Escape') e.stopImmediatePropagation(); };
+  document.addEventListener('keydown', _escGuard, true);
+  document.getElementById('sale-done-overlay')._escGuard = _escGuard;
+  const s = _lastSale;
+  const fmt = n => `$${parseFloat(n||0).toLocaleString('es-MX')} MXN`;
+  const isApt = s.isApartado;
+  const isAptFlow = isApt || s.apartadoLiquidado;
+
+  document.getElementById('sd-icon').innerHTML = isAptFlow
+    ? '<svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'
+    : '<svg style="width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  document.getElementById('sd-title').textContent        = isApt ? 'Apartado registrado' : s.apartadoLiquidado ? 'Apartado liquidado' : 'Venta completada';
+  const sdSub = document.getElementById('sd-sub');
+  if (sdSub) {
+    sdSub.textContent = isApt ? (s.fiado ? 'Se lo lleva hoy y paga después' : 'El producto queda guardado en la tienda') : '';
+    sdSub.hidden = !isApt;
+  }
+  // Sin anticipo no se cobró nada: el método de pago no dice nada.
+  const methodRow = document.getElementById('sd-method')?.closest('.sd-row');
+  if (methodRow) methodRow.style.display = isApt && !(s.paidAmount > 0) ? 'none' : '';
+  document.getElementById('sd-total-label').textContent  = isAptFlow ? 'Total del pedido' : 'Total cobrado';
+  document.getElementById('sd-cash-label').textContent   = isApt ? 'Anticipo recibido' : s.apartadoLiquidado ? 'Pago completo recibido' : 'Recibido';
+  document.getElementById('sd-total').textContent        = fmt(s.total);
+  document.getElementById('sd-cash').textContent         = s.paidAmount > 0 ? fmt(s.paidAmount) : '—';
+  document.getElementById('sd-change').textContent       = s.change > 0 ? fmt(s.change) : s.payMethod === 'transferencia' ? '—' : '$0';
+  document.getElementById('sd-method').innerHTML = s.payMethod === 'transferencia'
+    ? '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia'
+    : '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo';
+
+  const pendiente = Math.max(0, (s.total || 0) - (s.paidAmount || 0));
+  document.getElementById('sd-pending-row').style.display  = isApt ? '' : 'none';
+  document.getElementById('sd-pending').textContent         = fmt(pendiente);
+  document.getElementById('sd-change-row').style.display   = isApt ? 'none' : '';
+
+  const dueRow = document.getElementById('sd-due-row');
+  if (dueRow) {
+    dueRow.style.display = (isApt && s.dueDate) ? '' : 'none';
+    if (isApt && s.dueDate) {
+      const due = new Date(s.dueDate + 'T00:00:00');
+      document.getElementById('sd-due').textContent = due.toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
+    }
+  }
+  document.getElementById('sd-customer-row').style.display = s.customer ? '' : 'none';
+  document.getElementById('sd-customer').textContent       = (s.customer||'').split(' · 📱 ')[0];
+
+  const transAlert = document.getElementById('sd-transfer-alert');
+  if (transAlert) transAlert.style.display = (!isApt && s.payMethod === 'transferencia') ? '' : 'none';
+  // El descuento por artículo (precio editado en el carrito) no pasa por el
+  // campo "Agregar descuento" — sin sumarlo aquí, un precio negociado por
+  // producto parecía no dejar rastro de descuento en la confirmación.
+  const totalDiscount = Math.round(((s.disc || 0) + _itemsDiscountTotal(s.items)) * 100) / 100;
+  document.getElementById('sd-discount-row').style.display = totalDiscount > 0 ? '' : 'none';
+  document.getElementById('sd-discount').textContent       = `−${fmt(totalDiscount)}`;
+  document.getElementById('sd-note-row').style.display     = s.note ? '' : 'none';
+  document.getElementById('sd-note').textContent           = s.note || '';
+  // Texto del botón WA y "Nueva venta" según contexto
+  const waBtn = document.querySelector('.btn-wa-ticket');
+  if (waBtn) waBtn.childNodes[waBtn.childNodes.length - 1].textContent = isAptFlow ? ' Enviar confirmación por WhatsApp' : ' Enviar ticket por WhatsApp';
+  const newSaleBtn = document.querySelector('#sale-done-overlay .btn-green');
+  if (newSaleBtn) newSaleBtn.textContent = isApt ? '+ Nueva venta' : '+ Nueva venta';
+  const eraAptBtn = document.getElementById('sd-era-apartado-btn');
+  if (eraAptBtn) eraAptBtn.style.display = (!isAptFlow && s.id) ? '' : 'none';
+  document.getElementById('sale-done-overlay').classList.add('open');
+}
+
+function sendWhatsAppTicket() {
+  const s = _lastSale;
+  if (!s?.items?.length) return;
+  _saleTicketSent = true;
+  const lines    = s.items.map(i => {
+    const prod = products.find(p => p.id === i.id);
+    const imgUrl = prod?.image && !prod.image.startsWith('data:') ? `\n  🖼 ${prod.image}` : '';
+    // WhatsApp renderiza ~texto~ como tachado — mismo lenguaje visual que
+    // ya usa el carrito para un precio editado manualmente.
+    const origPrice = i.original_price != null
+      ? ` ~$${(i.original_price * i.qty).toLocaleString('es-MX')}~`
+      : '';
+    return `• ${i.name} x${i.qty} —${origPrice} $${(i.subtotal||0).toLocaleString('es-MX')}${imgUrl}`;
+  }).join('\n');
+  const totalDisc = Math.round(((s.disc || 0) + _itemsDiscountTotal(s.items)) * 100) / 100;
+  const disc     = totalDisc > 0 ? `\n🏷 Descuento: −$${totalDisc.toLocaleString('es-MX')}` : '';
+  const note     = s.note ? `\n📝 ${s.note}` : '';
+  const metodo   = s.payMethod === 'transferencia' ? '📱 Transferencia bancaria' : '💵 Efectivo';
+  let msg;
+  if (s.isApartado || s.apartadoLiquidado) {
+    const custParts = (s.customer||'').split(' · 📱 ');
+    const nombre    = custParts[0] || 'Cliente';
+    const telNum    = custParts[1] || '';
+    const pendiente = Math.max(0, (s.total||0) - (s.paidAmount||0));
+    const anticipoLine = s.apartadoLiquidado
+      ? `✅ *Pago completo recibido: $${(s.total||0).toLocaleString('es-MX')} MXN* (${metodo})`
+      : (s.paidAmount||0) > 0
+      ? `✅ Anticipo recibido: $${(s.paidAmount||0).toLocaleString('es-MX')} (${metodo})\n⏳ *Pendiente: $${pendiente.toLocaleString('es-MX')} MXN*`
+      : s.fiado
+      ? `⏳ *Pendiente: $${pendiente.toLocaleString('es-MX')} MXN* (te lo llevas hoy y pagas después)`
+      : `⏳ *Total a pagar al entregar: $${pendiente.toLocaleString('es-MX')} MXN*`;
+    let dueLine = '';
+    if (s.dueDate) {
+      const due = new Date(s.dueDate + 'T00:00:00');
+      dueLine = `\n📅 Fecha límite: *${due.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'})}*`;
+    }
+    const title = s.apartadoLiquidado ? 'Apartado liquidado' : 'Apartado';
+    const closing = s.apartadoLiquidado ? 'Tu apartado quedó pagado por completo. ¡Gracias! 💛'
+      : s.fiado ? '¡Gracias por tu confianza! 💛'
+      : 'Tu producto queda guardado aquí hasta tu fecha límite. ¡Gracias! 💛';
+    msg = `📌 *${title} — Tres Encantos*\n━━━━━━━━━━━━━━\n👤 ${nombre}\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total pedido: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${anticipoLine}${dueLine}${note}\n\n${closing}`;
+    const telLimpio = telNum.replace(/\D/g,'');
+    window.open(telLimpio ? `https://wa.me/52${telLimpio}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    logActivity('comprobante_enviado',
+      `Envió confirmación de apartado a ${nombre} — $${(s.total||0).toLocaleString('es-MX')}`,
+      { id: s.id, total: s.total, isApartado: s.isApartado, apartadoLiquidado: s.apartadoLiquidado });
+    setTimeout(() => closeSaleDone(), 400);
+    return;
+  } else {
+    const nombre   = (s.customer||'').split(' · 📱 ')[0] || '';
+    const chng     = s.change > 0 ? `\n💵 Cambio: $${s.change.toLocaleString('es-MX')}` : '';
+    const transAviso = s.payMethod === 'transferencia' ? `\n\n⚠️ _Pendiente confirmar recibo de transferencia_` : '';
+    const saludo   = nombre ? `¡Gracias por tu compra, ${nombre}! 💛` : '¡Gracias por tu compra! 💛';
+    msg = `🛍 *Tres Encantos*\n━━━━━━━━━━━━━━\n${lines}${disc}\n━━━━━━━━━━━━━━\n*Total: $${(s.total||0).toLocaleString('es-MX')} MXN*\n${metodo}${chng}${note}${transAviso}\n\n${saludo}`;
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  setTimeout(() => closeSaleDone(), 400);
+}
+
+// "Era apartado" (2026-10-02): Renata cobró 4 veces como venta algo que era
+// apartado y lo corrigió a mano (cancelar en Historial + rehacer); una vez
+// tardó casi 3 horas y el corte esperó $188 que nunca entraron. Desde el
+// mismo modal post-venta: cancela la venta (mismo RPC, motivo fijo, mismo
+// permiso/PIN) y regresa los productos al carrito con "Es apartado" activo.
+let _convertingToApartado = false;
+async function convertLastSaleToApartado() {
+  const s = _lastSale;
+  if (!s?.id || s.isApartado || s.apartadoLiquidado || _convertingToApartado) return;
+  if (!canCancelSale()) {
+    const granted = await requestOverride('canCancelSale', 'Cambiar venta a apartado');
+    if (!granted) return;
+  }
+  const totalTxt = `$${(s.total || 0).toLocaleString('es-MX')}`;
+  const cashNote = s.payMethod === 'efectivo'
+    ? `\n\nLos ${totalTxt} salen de tu corte. Si la clienta deja anticipo, captúralo en el apartado; si no, devuélvele su dinero.`
+    : '';
+  if (!(await teConfirm({ title: '¿Era apartado?', message: `Se cancela esta venta de ${totalTxt} y los productos vuelven al carrito como apartado.${cashNote}`, confirmText: 'Pasar a apartado' }))) return;
+
+  _convertingToApartado = true;
+  const btn = document.getElementById('sd-era-apartado-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Cambiando…'; }
+  const restoreBtn = () => {
+    _convertingToApartado = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Era apartado'; }
+  };
+
+  // La venta recién creada: hace falta su version para el bloqueo optimista.
+  const fresh = await api(`sales?id=eq.${s.id}&select=id,version,total,paid_amount,status`);
+  const sale = fresh.ok ? fresh.data?.[0] : null;
+  if (!sale || sale.status === 'cancelado') {
+    toast(sale ? 'Esta venta ya estaba cancelada' : 'No se pudo leer la venta — revisa tu conexión', 'error');
+    restoreBtn();
+    return;
+  }
+  const result = await _posCancelSaleAtomic(s.id, sale, 'Era apartado');
+  if (!result.ok) {
+    toast(_posRpcError(result, 'No se pudo cancelar la venta'), 'error');
+    restoreBtn();
+    return;
+  }
+  delete salesCache[s.id];
+  await _refreshPosFinancialState();
+
+  // Mismos productos y precios de vuelta al carrito (el stock ya se restauró).
+  (s.items || []).forEach(i => {
+    const p = products.find(x => x.id === i.id);
+    if (!p) return;
+    const existing = cart.find(x => x.product.id === p.id);
+    const customPrice = i.original_price != null ? i.price : undefined;
+    if (existing) existing.qty += i.qty || 1;
+    else cart.push({ product: p, qty: i.qty || 1, ...(customPrice != null ? { customPrice } : {}) });
+  });
+  renderCart(); updateChange();
+
+  _lastSale = null;
+  restoreBtn();
+  // Cerrar el modal antes de activar apartado: closeSaleDone enfoca el
+  // buscador y le quitaría el foco al nombre en el panel del apartado.
+  closeSaleDone();
+  const [custName, custPhone] = (s.customer || '').split(' · 📱 ');
+  const aptCustEl = document.getElementById('pos-apt-customer');
+  const aptCheck = document.getElementById('pos-is-apartado');
+  if (aptCheck) { aptCheck.checked = true; toggleApartadoMode(); }
+  if (aptCustEl && custName && !aptCustEl.value) aptCustEl.value = custName;
+  const phoneEl = document.getElementById('pos-phone');
+  if (phoneEl && custPhone && !phoneEl.value) phoneEl.value = custPhone.replace(/\D/g, '');
+  toast(`Venta cancelada — los productos están en el carrito como apartado${s.disc ? '. Vuelve a aplicar el descuento' : ''}`, 'success');
+}
+
+async function closeSaleDone() {
+  const s = _lastSale;
+  // Mismo riesgo que abonar/liquidar (74b6394): un apartado nuevo deja saldo
+  // pendiente -- si nadie le manda confirmación a la clienta, no hay rastro
+  // de qué se acordó. Una venta completa no aplica: ya se cobró todo en
+  // persona, no hay saldo que alguien pueda disputar después.
+  if (s && (s.isApartado || s.apartadoLiquidado) && !_saleTicketSent) {
+    if (!(await teConfirm({ title: '¿Cerrar sin enviar la confirmación?', message: 'La clienta no recibirá por WhatsApp lo que se acordó del apartado.', confirmText: 'Cerrar sin enviar', cancelText: 'Volver' }))) return;
+    logActivity('comprobante_omitido',
+      `Cerró sin enviar confirmación de apartado a ${(s.customer||'').split(' · 📱 ')[0] || 'cliente'} — $${(s.total||0).toLocaleString('es-MX')}`,
+      { id: s.id, total: s.total, isApartado: s.isApartado, apartadoLiquidado: s.apartadoLiquidado });
+  }
+  const overlay = document.getElementById('sale-done-overlay');
+  if (overlay._escGuard) {
+    document.removeEventListener('keydown', overlay._escGuard, true);
+    delete overlay._escGuard;
+  }
+  overlay.classList.remove('open');
+  document.getElementById('pos-search').focus();
+}
+
+/* ── SCANNER ── */
+let _posScanner = null;
+let _posScanCooldown = false;
+// Contexto de a dónde va el código detectado -- 'cart' (default, catálogo
+// normal de Caja) o 'editApt' (buscador de "Editar apartado"). Mismo patrón
+// que _scanCtx en Inventario (admin-scanner.js), pero solo 2 destinos porque
+// este escáner solo se invoca desde 2 lugares.
+let _posScanCtx = 'cart';
+
+function _loadHtml5QrcodePos() {
+  return new Promise((resolve, reject) => {
+    if (typeof Html5Qrcode !== 'undefined') { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ¿Escanear este producto ahora mismo se resuelve agregándolo sin más
+// (incrementa el carrito y ya), o dispara algo que necesita otro overlay
+// (reabastecer) o un toast de error ("sin existencias")? Un toast
+// (z-index:500) o el sheet de reabastecer (z-index:520) quedarían ocultos
+// detrás de la cámara (z-index:1600) si se dejara abierta en esos casos --
+// mismo tipo de problema de capas ya resuelto antes para otros overlays de
+// Caja. Solo el camino limpio se queda con la cámara abierta.
+function _posCanScanAddCleanly(p) {
+  const effStock = getKitStock(p);
+  const isKitP = Array.isArray(p.kitItems);
+  if (effStock === 0 || (!isKitP && p.outOfStock)) return false;
+  const existing = cart.find(x => x.product.id === p.id);
+  return !(existing && existing.qty >= effStock);
+}
+
+function _posHandleCode(code) {
+  if (_posScanCooldown) return;
+  const p = products.find(x => x.barcode === code);
+  if (!p) { _posBarcodeNotFound(code); return; }
+
+  // Igual que un código no encontrado, un acierto limpio ya NO cierra la
+  // cámara -- mismo patrón que Square POS/Clip: para agregar varios
+  // artículos distintos en una venta antes solo se podía escanear uno y
+  // había que volver a tocar "Escanear" por cada uno. "✕" en el
+  // encabezado sigue siendo la forma de cerrar cuando ya se terminó.
+  const willSucceedCleanly = _posScanCtx === 'editApt' ? _editAptCanAdd(p.id) : _posCanScanAddCleanly(p);
+  if (!willSucceedCleanly) closePosScanner();
+
+  if (_posScanCtx === 'editApt') {
+    _editAptAddProduct(p.id);
+  } else {
+    addToCart(p.id);
+    document.getElementById('pos-search').value = '';
+    searchProducts('');
+  }
+
+  if (willSucceedCleanly) _posScanSuccessFeedback(p.name);
+}
+
+function _posScanSuccessFeedback(name) {
+  _posScanCooldown = true;
+  const statusEl = document.getElementById('pos-scan-status');
+  statusEl.textContent = `✓ ${name} agregado`;
+  statusEl.style.color = 'var(--green)';
+  if (navigator.vibrate) navigator.vibrate(40);
+  setTimeout(() => {
+    _posScanCooldown = false;
+    if (!document.getElementById('pos-scanner-overlay').classList.contains('open')) return;
+    statusEl.textContent = 'Apunta al código de barras del producto';
+    statusEl.style.color = '';
+  }, 900);
+}
+
+async function openPosScanner(ctx = 'cart') {
+  _posScanCtx = ctx;
+  const statusEl = document.getElementById('pos-scan-status');
+  statusEl.textContent = 'Iniciando cámara...';
+  statusEl.style.color = '';
+  _posScanCooldown = false;
+  document.getElementById('pos-scanner-overlay').classList.add('open');
+
+  if (_posScanner) { _posScanner.clear().catch(() => {}); _posScanner = null; }
+  try { await _loadHtml5QrcodePos(); } catch(e) {
+    statusEl.textContent = 'No se pudo cargar el escáner.'; return;
+  }
+  const barcodeFormats = [
+    Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,   Html5QrcodeSupportedFormats.QR_CODE,
+  ];
+  _posScanner = new Html5Qrcode('pos-reader', { formatsToSupport: barcodeFormats, verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+  _posScanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 260, height: 100 } },
+    (code) => _posHandleCode(code),
+    () => {}
+  ).then(() => {
+    statusEl.textContent = 'Apunta al código de barras del producto';
+  }).catch(() => {
+    statusEl.textContent = 'No se pudo acceder a la cámara. Verifica los permisos.';
+  });
+}
+
+function closePosScanner() {
+  if (_posScanner) { _posScanner.stop().catch(() => {}); _posScanner = null; }
+  document.getElementById('pos-scanner-overlay').classList.remove('open');
+}
+
+// Código no reconocido: deja la cámara activa para reintentar de inmediato
+function _posBarcodeNotFound(code) {
+  _posScanCooldown = true;
+  const statusEl = document.getElementById('pos-scan-status');
+  statusEl.textContent = `Código "${code}" no encontrado`;
+  statusEl.style.color = 'var(--red)';
+  toast(`Código "${code}" — no está registrado en el catálogo`, 'error');
+  setTimeout(() => {
+    _posScanCooldown = false;
+    if (!document.getElementById('pos-scanner-overlay').classList.contains('open')) return;
+    statusEl.textContent = 'Apunta al código de barras del producto';
+    statusEl.style.color = '';
+  }, 1500);
+}
+
+/* ── TOAST ── */
+// action = {label, onClick} — botón opcional dentro del toast (p.ej. "Avisar"
+// para notificar a la clienta justo después de registrar un abono, sin
+// forzar el envío automático). Sin action, se comporta exactamente igual
+// que antes: todos los demás llamadores de toast() en el proyecto no cambian.
+function toast(msg, type = '', action = null) {
+  const el = document.getElementById('toast');
+  clearTimeout(el._t);
+  if (action && action.label && typeof action.onClick === 'function') {
+    el.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = msg;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action-btn';
+    btn.textContent = action.label;
+    btn.onclick = () => { el.classList.remove('show'); action.onClick(); };
+    el.append(span, btn);
+    el.className = 'toast show has-action' + (type ? ' ' + type : '');
+    el._t = setTimeout(() => el.classList.remove('show'), 6000);
+  } else {
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    el._t = setTimeout(() => el.classList.remove('show'), type === 'error' ? 4000 : 2500);
+  }
+}
+
+/* ── TODAY'S STATS ── */
+let _todayStatsLoadGeneration = 0;
+
+async function loadTodayStats() {
+  const loadGeneration = ++_todayStatsLoadGeneration;
+  const TZ = 'America/Mexico_City';
+  const mxDateKey = iso => new Intl.DateTimeFormat('en-CA', { timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(iso));
+  const hoyMX  = mxDateKey(new Date().toISOString());
+  // Ciudad de México permanece en UTC−06:00; consultar el libro por fecha del
+  // movimiento incluye abonos de apartados antiguos y devoluciones de hoy.
+  const start = new Date(`${hoyMX}T00:00:00-06:00`);
+  const end   = new Date(start.getTime() + 86400000);
+  const result = await _posFetchAll(`sale_payments?paid_at=gte.${encodeURIComponent(start.toISOString())}&paid_at=lt.${encodeURIComponent(end.toISOString())}&select=amount,method&order=paid_at.asc,id.asc`);
+  if (loadGeneration !== _todayStatsLoadGeneration) return false;
+  const mob    = document.getElementById('daily-summary-mobile');
+  if (!result.ok) {
+    if (mob) {
+      mob.innerHTML = '<span style="color:var(--red);font-weight:600">No se pudo cargar el resumen de hoy</span>';
+      mob.style.display = 'flex';
+    }
+    return false;
+  }
+  if (!result.data?.length) {
+    if (mob) { mob.style.display = 'none'; mob.innerHTML = ''; }
+    return true;
+  }
+
+  let efectivo = 0, transferencia = 0, otros = 0;
+  result.data.forEach(payment => {
+    const amount = parseFloat(payment.amount) || 0;
+    if (payment.method === 'transferencia') transferencia += amount;
+    else if (payment.method === 'efectivo') efectivo += amount;
+    else otros += amount;
+  });
+
+  const total = efectivo + transferencia + otros;
+  const fmt = n => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('es-MX')}`;
+  // Total primero; desglose con nombre y solo de los métodos con movimiento
+  // (antes "$1,410 · $0 · $1,410" con íconos, sin decir qué era cada cifra).
+  const parts = [['Efectivo', efectivo], ['Transferencia', transferencia], ['Otros', otros]]
+    .filter(([, v]) => Math.abs(v) >= .005);
+  const breakdown = parts.length > 1
+    ? parts.map(([l, v]) => `<span class="dsm-part">${l} ${fmt(v)}</span>`).join('<span class="dsm-sep">·</span>')
+    : parts.length === 1 ? `<span class="dsm-part">todo en ${parts[0][0].toLowerCase()}</span>` : '';
+  mob.innerHTML = `<span class="dsm-total">Hoy ${fmt(total)}</span>${breakdown ? `<span class="dsm-sep">·</span>${breakdown}` : ''}`;
+  mob.style.display = 'flex';
+}
+
+/* ── DIVISOR ARRASTRABLE ── */
+function initDivider() {
+  const divider = document.getElementById('pos-divider');
+  const body    = document.querySelector('.pos-body');
+  if (!divider || !body) return;
+
+  const saved = localStorage.getItem('te_pos_split');
+  if (saved) body.style.gridTemplateColumns = saved;
+
+  let dragging = false;
+
+  function startDrag(e) {
+    dragging = true;
+    divider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  }
+  function moveDrag(clientX) {
+    if (!dragging) return;
+    const rect  = body.getBoundingClientRect();
+    const leftW = Math.max(200, Math.min(clientX - rect.left, rect.width - 200));
+    const pct   = (leftW / rect.width * 100).toFixed(1);
+    body.style.gridTemplateColumns = `${pct}% 5px 1fr`;
+  }
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem('te_pos_split', body.style.gridTemplateColumns);
+  }
+
+  divider.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', e => moveDrag(e.clientX));
+  document.addEventListener('mouseup', endDrag);
+
+  divider.addEventListener('touchstart', e => { startDrag(e); }, { passive: false });
+  document.addEventListener('touchmove', e => { if (dragging) { e.preventDefault(); moveDrag(e.touches[0].clientX); } }, { passive: false });
+  document.addEventListener('touchend', endDrag);
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  _initCollectedByChecks();
+  // Ocultar íconos de nav según permisos: ahora vive en shared.js
+  // (_applyNavPermissions), compartido por los 5 módulos -- antes solo
+  // corría aquí, dejando el ícono visible sin funcionar en Inventario/
+  // Reportes/Actividad/Configuración.
+  _loadMyPerms().then(up => {
+    if (!up) return;
+    if (typeof filterApartados === 'function' && _apartadosAll?.length) {
+      filterApartados(document.getElementById('apt-search')?.value || '', 'offcanvas');
+      filterApartados(document.getElementById('apt-page-search')?.value || '', 'page');
+    }
+  });
+  // Turno de caja: bloquea el resto de Caja hasta declarar la apertura real
+  // (fondo inicial) en el servidor -- ver _posShiftGateInit() en pos-core.js.
+  await _posShiftGateInit();
+  // Recordatorio de fin de turno -- _posShiftGateAttempt() ya revisa al
+  // resolver la apertura; este intervalo lo vuelve a revisar cada 15 min
+  // mientras la pestaña siga abierta, para no depender de que alguien recargue.
+  setInterval(_posCheckShiftReminder, 15 * 60 * 1000);
+  // Nombre del usuario en topbar
+  try {
+    const _s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    const _meta = _s?.user?.user_metadata || {};
+    const _name = _meta.full_name || _meta.name || _s?.user?.email?.split('@')[0] || '';
+    const _initial = _name ? _name[0].toUpperCase() : '?';
+    const _av = document.getElementById('user-avatar');
+    if (_av) _av.textContent = _initial;
+  } catch {}
+  initDivider();
+  await Promise.all([loadProducts(), loadPosCategories(), loadTopProductsFromSales(), loadPosNameMap(), loadPosConfig(), loadPosRecentlyEdited(), loadLibretaConfig()]);
+  renderCategoryChips();
+  setPosView(posView);
+  _restoreCart();
+  renderCart();
+  loadTodayStats();
+  loadHistory();
+  loadApartados();
+  showAllProducts();
+  initRealtime();
+  setInterval(() => { if (document.visibilityState === 'visible') _silentStatsRefresh(); }, 90000);
+
+  // Swipe para cerrar offcanvas (derecha)
+  initSwipeToClose('corte-offcanvas',   'corte-backdrop',   closeCorte,      0.35);
+  initSwipeToClose('history-offcanvas', 'history-backdrop', closeHistory,    0.35);
+  initSwipeToClose('apt-offcanvas',     'apt-backdrop',     closeApartados,  0.35, '.apt-due-filters');
+
+  // Swipe down para cerrar modales / bottom sheets
+  const saleDoneOv = document.getElementById('sale-done-overlay');
+  initSwipeDown(document.querySelector('.sale-done-modal'), closeSaleDone, saleDoneOv);
+  initSwipeDown(document.querySelector('#abonar-overlay .abonar-modal'), closeAbonarModal,
+    document.getElementById('abonar-overlay'));
+  initSwipeDown(document.querySelector('#liquidar-overlay .abonar-modal'), closeLiqModal,
+    document.getElementById('liquidar-overlay'));
+  // Detalle de apartado como hoja en celular: deslizar hacia abajo la cierra.
+  if (isTabMode()) initSwipeDown(document.querySelector('#apt-detail-modal .adm-box'), closeAptDetail,
+    document.getElementById('apt-detail-modal'));
+
+  // Inicializar pestañas en teléfonos
+  if (isTabMode()) switchPosTab('catalog');
+
+  // Reajustar pestañas al rotar el dispositivo
+  window.addEventListener('resize', () => {
+    if (isTabMode()) switchPosTab(_currentTab);
+    else {
+      // Volver a layout desktop: quitar clases de pestaña
+      document.getElementById('pos-left')?.classList.remove('tab-active','tab-hidden');
+      document.getElementById('pos-right')?.classList.remove('tab-active','tab-hidden');
+    }
+  });
+
+  // Enter en búsqueda → agrega el primer resultado disponible
+  document.getElementById('pos-search').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const raw   = e.target.value.trim();
+    const terms = _norm(raw).split(/\s+/).filter(Boolean);
+    if (!terms.length) return;
+    // getKitStock() devuelve p.stock tal cual para no-kits -- antes un kit
+    // nunca hacía match aquí (Enter en el buscador, o el lector de código de
+    // barras USB que dispara este mismo listener) porque p.stock de un kit
+    // siempre es 0 en BD, sin importar cuánto stock real tuvieran sus
+    // componentes.
+    const match = products.find(p =>
+      !p.outOfStock && getKitStock(p) > 0 && (
+        terms.every(t => _norm(p.name).includes(t)) ||
+        (p.barcode && p.barcode === raw)
+      )
+    );
+    if (match) {
+      addToCart(match.id);
+      e.target.value = '';
+      _togglePosSearchClear();
+      showAllProducts();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closePosScanner();
+      closeSaleDone();
+      const detailModal = document.getElementById('apt-detail-modal');
+      if (detailModal && detailModal.style.display !== 'none') { closeAptDetail(); return; }
+      const aptPage = document.getElementById('apt-page');
+      if (aptPage && aptPage.style.display !== 'none') { closeAptPage(); return; }
+    }
+    if ((e.key === 'F2' || (e.key === ' ' && document.activeElement.tagName !== 'INPUT')) &&
+        !document.getElementById('pos-scanner-overlay').classList.contains('open')) {
+      e.preventDefault();
+      document.getElementById('pos-search').focus();
+    }
+  });
+
+  // --- Escáner USB: input trampa + interceptor ---
+  function _focusScanTrap() {
+    const trap = document.getElementById('scan-trap');
+    if (trap) { trap.value = ''; trap.focus({ preventScroll: true }); }
+  }
+
+  // Enfocar trampa al cargar (captura escáner sin tocar pantalla en Android)
+  setTimeout(_focusScanTrap, 400);
+
+  ;(function(){
+    let buf = '', t = null;
+    document.addEventListener('keydown', e => {
+      if (!e.isTrusted) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const active = document.activeElement;
+      const tag = active?.tagName?.toUpperCase();
+      // Si pos-search tiene foco, el input nativo ya maneja el escáner
+      if (active?.id === 'pos-search') return;
+      // Saltar otros inputs reales (formularios, apartado, etc.) pero no el scan-trap
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && active?.id !== 'scan-trap') return;
+      // No interceptar si hay un modal abierto
+      if (document.getElementById('pos-scanner-overlay')?.classList.contains('open')) return;
+      if (document.getElementById('sale-done-overlay')?.classList.contains('open')) return;
+
+      if (e.key === 'Enter') {
+        if (buf.length >= 4) {
+          e.preventDefault();
+          const si = document.getElementById('pos-search');
+          if (si) {
+            si.value = buf;
+            si.dispatchEvent(new Event('input', { bubbles: true }));
+            si.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+          }
+          setTimeout(_focusScanTrap, 150); // devolver foco a trampa tras agregar al carrito
+        }
+        buf = '';
+        clearTimeout(t);
+        return;
+      }
+
+      if (e.key.length === 1) {
+        buf += e.key;
+        clearTimeout(t);
+        t = setTimeout(() => { buf = ''; }, 50);
+      }
+    });
+  })();
+});

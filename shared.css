@@ -1,0 +1,308 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   shared.css — Tres Encantos
+   Estilos compartidos por todos los módulos admin.
+   Incluir en: admin.html, pos.html, stats.html, activity.html, settings.html
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Variables ─────────────────────────────────────────────────────── */
+:root{
+  --cream:#FAF5EE;--gold:#C9A462;--gold-dark:#A67C3A;--gold-light:#FFF8EE;
+  --charcoal:#1C1817;--charcoal-soft:#2E2825;
+  --red:#E85D5D;--green:#2D6A4F;
+  --border:#EAE0D4;--muted:#8A7564;--muted-light:#B5A696;
+  --r:10px;
+  --shadow-sm:0 1px 4px rgba(28,24,23,.07);
+  --shadow-lg:0 8px 40px rgba(28,24,23,.18);
+  /* Tokens de tema, compartidos por los 5 módulos admin — ver admin.css para
+     el bloque [data-theme="dark"] vigente hoy solo en Inventario. --ink/
+     --ink-soft son fijos a propósito (topbar, badges: chrome ya oscuro que
+     no debe invertirse). Un módulo que sume su propio modo oscuro solo
+     necesita definir su [data-theme="dark"] — estos defaults ya lo cubren. */
+  --ink:#1C1817;--ink-soft:#2E2825;
+  --surface:#fff;--surface-soft:#F8F4EF;
+}
+
+/* ── Reset mínimo ──────────────────────────────────────────────────── */
+html{-webkit-text-size-adjust:100%}
+button,input,select,textarea{font-family:inherit}
+a{text-decoration:none}
+*,*::before,*::after{box-sizing:border-box}
+
+/* ── Dropdown de usuario ───────────────────────────────────────────── */
+#ud-pop{
+  position:fixed;z-index:99999;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px;min-width:210px;
+  box-shadow:0 8px 32px rgba(28,24,23,.18);
+  animation:ud-in .15s ease;
+}
+@keyframes ud-in{from{opacity:0;transform:scale(.92) translateY(-6px)}to{opacity:1;transform:scale(1)}}
+.ud-info{margin-bottom:10px}
+.ud-name{font-weight:700;font-size:.88rem;color:var(--charcoal);margin-bottom:2px}
+.ud-email{font-size:.72rem;color:var(--muted);margin-bottom:6px;word-break:break-all}
+.ud-role{display:inline-block;font-size:.62rem;font-weight:700;background:rgba(201,164,98,.15);color:var(--gold-dark);border-radius:50px;padding:2px 8px;text-transform:uppercase;letter-spacing:.05em}
+.ud-divider{height:1px;background:var(--border);margin:0 -14px 10px}
+.ud-link{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;color:var(--charcoal);font-size:.82rem;font-weight:600;text-decoration:none;transition:.15s;margin-bottom:2px}
+.ud-link:hover{background:var(--cream)}
+.ud-link svg{flex-shrink:0;color:var(--muted)}
+
+/* ── Toggles del dropdown de cuenta (modo oscuro, avisos de venta por
+   dispositivo) — clase genérica, ya no exclusiva de "theme" desde que se le
+   sumó un segundo toggle (2026-09-06). ── */
+.ud-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;border-radius:8px;color:var(--charcoal);font-size:.82rem;font-weight:600;margin-bottom:2px;cursor:pointer}
+.ud-toggle-row:hover{background:var(--cream)}
+.ud-toggle-row-label{display:flex;align-items:center;gap:8px}
+.ud-toggle-row-label svg{flex-shrink:0;color:var(--muted)}
+.ud-toggle-switch{position:relative;display:inline-block;width:36px;height:21px;flex-shrink:0}
+.ud-toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.ud-toggle-switch-slider{position:absolute;inset:0;background:var(--border);border-radius:50px;transition:.2s;pointer-events:none}
+.ud-toggle-switch-slider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:var(--surface);border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.ud-toggle-switch input:checked + .ud-toggle-switch-slider{background:var(--gold-dark)}
+.ud-toggle-switch input:checked + .ud-toggle-switch-slider::before{transform:translateX(15px)}
+.ud-toggle-hint{padding:0 10px 6px;font-size:.7rem;line-height:1.35;color:var(--muted);margin-top:-2px}
+.ud-toggle-hint:empty{display:none}
+.ud-logout{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;border-radius:8px;background:transparent;color:var(--red);font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.ud-logout:hover{background:#FFF5F5}
+/* Sin bloque [data-theme="dark"] propio (shared.css es genérico a los 5
+   módulos) -- reutiliza --tint-red-bg, hoy solo definido en el bloque
+   oscuro de admin.css/pos.css. Donde ese token no existe (módulos sin modo
+   oscuro todavía) esta regla nunca se activa porque tampoco existe
+   [data-theme="dark"] ahí. */
+:root[data-theme="dark"] .ud-logout:hover{background:var(--tint-red-bg)}
+.ud-logout svg{flex-shrink:0}
+
+/* ── Avatar de usuario ─────────────────────────────────────────────── */
+.user-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(201,164,98,.25);color:var(--gold);
+  font-size:.75rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border:1.5px solid rgba(201,164,98,.45);
+  letter-spacing:0;user-select:none;
+}
+@media(max-width:640px){.user-avatar{width:26px;height:26px;font-size:.7rem}}
+@media(max-width:380px){.user-avatar{width:24px;height:24px;font-size:.68rem}}
+@media(max-width:640px){#notif-bell{width:26px;height:26px;margin-right:6px}}
+@media(max-width:380px){#notif-bell{width:24px;height:24px;margin-right:4px}}
+
+/* ── Título de módulo — oculto cuando los íconos ya tienen label ───── */
+.topbar-title{display:none}
+
+/* ══ TOPBAR NAVEGACIÓN ═══════════════════════════════════════════════
+   Íconos de módulo compartidos por todos los módulos admin.
+   Cambiar aquí aplica a Caja, Inventario, Reportes, Actividad, Config.
+   ══════════════════════════════════════════════════════════════════ */
+/* ── Layout topbar base ────────────────────────────────────────────── */
+.topbar{
+  position:relative;display:flex;align-items:center;justify-content:space-between;
+  height:56px;padding:0 16px;
+  background:var(--ink);color:#fff;
+  flex-shrink:0;z-index:50;
+}
+/* Safe area para dispositivos con notch */
+@supports(padding-top:env(safe-area-inset-top)){
+  .topbar{
+    padding-top:env(safe-area-inset-top);
+    height:calc(56px + env(safe-area-inset-top));
+  }
+}
+
+/* ── Layout topbar: nav centrado, avatar a la derecha ──────────────── */
+/* El topbar usa position:relative para centrar el nav con absolute */
+/* topbar-left: spacer flex:1 | nav: centrado absoluto | topbar-right: avatar */
+.topbar-left{flex:1}
+.topbar-right{flex:1;display:flex;align-items:center;justify-content:flex-end}
+.topbar-nav-mobile{
+  display:flex;align-items:center;gap:1px;
+  position:absolute;left:50%;transform:translateX(-50%);
+}
+
+.tbn-icon{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:5px 14px;border-radius:9px;min-width:48px;
+  text-decoration:none;background:transparent;color:rgba(255,255,255,.75);
+  transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  border:none;cursor:pointer;font-family:inherit;
+}
+.tbn-icon svg{
+  width:20px;height:20px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  display:block;flex-shrink:0;
+}
+.tbn-label{
+  display:none;font-size:.69rem;font-weight:600;
+  letter-spacing:.01em;line-height:1;white-space:nowrap;
+}
+.tbn-sep{display:none}
+
+.tbn-icon.tbn-active{color:#D9B676;background:rgba(201,164,98,.2);border-radius:10px}
+.tbn-icon.tbn-active svg{stroke-width:2.5}
+.tbn-icon:not(.tbn-active):hover{color:#fff;background:rgba(255,255,255,.09)}
+.tbn-icon:focus-visible{outline:2px solid #C9A462;outline-offset:2px}
+.tbn-icon:active{opacity:.6;transform:scale(.88)}
+
+/* Mobile ≤640px — touch targets + labels */
+@media(max-width:640px){
+  .tbn-icon{padding:6px 6px;min-width:48px;gap:3px}
+  .tbn-icon svg{width:20px;height:20px}
+  .tbn-label{display:block}
+  /* Con texto legible la nav centrada en absoluto chocaba con la campana a
+     360px: en celular se centra en el espacio libre antes de campana/avatar. */
+  .topbar .topbar-left{flex:0 0 auto}
+  .topbar .topbar-right{flex:1;min-width:0}
+  .topbar .topbar-nav-mobile{position:static;transform:none;margin:0 auto;gap:0}
+}
+/* Teléfonos muy chicos ≤380px: se aprieta el espacio, nunca la letra */
+@media(max-width:380px){
+  .tbn-icon{min-width:44px;padding:6px 4px}
+}
+/* Tableta y desktop ≥641px — separador visible */
+@media(min-width:641px){
+  .tbn-sep{display:block;width:1px;height:20px;background:rgba(255,255,255,.2);align-self:center;flex-shrink:0;margin:0 4px}
+  .tbn-label{display:block}
+  .tbn-icon{padding:5px 12px;gap:2px}
+  .tbn-icon svg{width:18px;height:18px}
+}
+@media(min-width:1025px){
+  .tbn-icon{padding:6px 14px}
+  .tbn-icon svg{width:20px;height:20px}
+  .topbar-nav-mobile{gap:2px}
+}
+
+/* ── Offline banner ── */
+#offline-banner {
+  position: fixed;
+  left: 0; right: 0;
+  z-index: 9999;
+  padding: 10px 16px;
+  font-size: .875rem;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity .25s;
+  display: none;
+}
+#offline-banner.ob-offline {
+  display: block;
+  background: #E85D5D;
+  color: #fff;
+}
+#offline-banner.ob-online {
+  display: block;
+  background: #2D6A4F;
+  color: #fff;
+}
+
+/* ── Campana de notificaciones — junto al avatar en la topbar ── */
+#notif-bell{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:28px;height:28px;margin-right:8px;border-radius:50%;
+  background:transparent;border:none;color:rgba(255,255,255,.7);
+  cursor:pointer;transition:.15s;flex-shrink:0;
+}
+#notif-bell:hover{color:#fff;background:rgba(255,255,255,.1)}
+.notif-badge{
+  position:absolute;top:-2px;right:-2px;min-width:15px;height:15px;padding:0 3px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--red);color:#fff;font-size:.6rem;font-weight:700;
+  border-radius:50px;border:1.5px solid var(--ink);line-height:1;
+}
+#notif-pop{
+  position:fixed;z-index:99999;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:10px;width:300px;max-width:calc(100vw - 16px);max-height:70vh;overflow-y:auto;
+  box-shadow:0 8px 32px rgba(28,24,23,.18);
+  animation:ud-in .15s ease;
+}
+.notif-pop-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px}
+.notif-pop-title{font-weight:700;font-size:.82rem;color:var(--charcoal)}
+#notif-dismiss-all{background:none;border:none;font-family:inherit;font-size:.72rem;font-weight:600;color:var(--gold-dark);cursor:pointer;padding:2px 4px;flex-shrink:0;border-radius:6px}
+#notif-dismiss-all:hover{background:var(--cream)}
+.notif-item{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:.8rem;line-height:1.45;color:var(--charcoal);
+  padding:9px 8px;border-radius:8px;border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--cream)}
+.notif-item-icon{
+  flex-shrink:0;width:26px;height:26px;margin-top:1px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--border);color:var(--muted);transition:background .2s,color .2s;
+}
+.notif-item.unread .notif-item-icon{background:var(--gold);color:#fff}
+.notif-item.unread .notif-item-text{font-weight:600}
+.notif-item-text{padding-top:3px;flex:1;min-width:0}
+.notif-item-dismiss{
+  flex-shrink:0;width:22px;height:22px;margin-top:1px;border-radius:50%;
+  border:none;background:none;color:var(--muted-light);font-size:.7rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.notif-item-dismiss:hover{background:var(--border);color:var(--red)}
+.notif-empty{font-size:.8rem;color:var(--muted);padding:14px 8px;text-align:center}
+
+/* Aviso largo: título siempre visible, cuerpo se desglosa al tocar (acordeón
+   -- abrir uno cierra los demás, ver el listener delegado en shared.js) */
+.notif-item-expandable{cursor:pointer}
+.notif-item-toggle-zone{cursor:pointer}
+.notif-item-title{display:flex;align-items:center;gap:6px;font-weight:700}
+.notif-item.unread .notif-item-title{color:var(--charcoal)}
+.notif-item-chevron{flex-shrink:0;color:var(--muted);transition:transform .2s}
+.notif-item-expandable.open .notif-item-chevron{transform:rotate(180deg)}
+.notif-item-body{display:block;max-height:0;overflow:hidden;opacity:0;font-weight:400!important;color:var(--muted);transition:max-height .25s ease,opacity .2s,margin-top .25s ease}
+.notif-item-expandable.open .notif-item-body{max-height:800px;opacity:1;margin-top:5px}
+/* Diálogo propio (teDialog en shared.js) en lugar de alert()/confirm() */
+.te-dialog-backdrop{position:fixed;inset:0;z-index:10500;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);animation:teDialogFade .15s ease-out}
+.te-dialog{width:100%;max-width:360px;background:var(--surface);color:var(--charcoal);border-radius:18px;padding:22px 20px 18px;box-shadow:0 12px 48px rgba(0,0,0,.3);animation:teDialogIn .18s ease-out}
+.te-dialog-title{font-size:1.02rem;font-weight:700;line-height:1.35;color:var(--charcoal)}
+.te-dialog-msg{margin-top:8px;font-size:.9rem;line-height:1.5;color:var(--muted);white-space:pre-line}
+.te-dialog-actions{display:flex;gap:8px;margin-top:20px}
+.te-dialog-btn{flex:1;min-height:48px;padding:10px 12px;border-radius:12px;font-family:inherit;font-size:.92rem;font-weight:700;cursor:pointer;touch-action:manipulation;line-height:1.25}
+.te-dialog-cancel{border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal)}
+.te-dialog-ok{border:none;background:var(--ink);color:#fff}
+.te-dialog-ok.is-danger{background:var(--red);color:#fff}
+.te-dialog-btn:focus-visible{outline:3px solid rgba(201,164,98,.55);outline-offset:2px}
+:root[data-theme="dark"] .te-dialog-ok:not(.is-danger){background:var(--charcoal);color:var(--ink)}
+@keyframes teDialogFade{from{opacity:0}to{opacity:1}}
+@keyframes teDialogIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.te-dialog-backdrop,.te-dialog{animation:none}}
+
+/* Números alineados (lining) en todo el sitio (módulos admin): con Playfair, los
+   números de "estilo antiguo" por defecto hacían que $0 se leyera "$o" y
+   $108 "$1o8". Se hereda a todo; tabular-nums de cada elemento se suma. */
+body{font-feature-settings:"lnum" 1}
+
+/* ── AYUDA (shared.js openHelp) ── */
+#help-overlay{position:fixed;inset:0;z-index:100000;background:rgba(20,15,12,.5);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
+#help-pop{background:var(--surface);color:var(--charcoal);width:100%;height:92dvh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,.18)}
+@media(min-width:641px){#help-overlay{align-items:center;padding:24px}#help-pop{max-width:620px;height:min(80vh,760px);border-radius:20px}}
+.help-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 8px}
+.help-head h2{font-family:'Playfair Display',serif;font-size:1.25rem;margin:0}
+.help-close{min-width:44px;min-height:44px;border:none;background:none;color:var(--muted);font-size:1.1rem;border-radius:10px;cursor:pointer;margin-right:-10px}
+.help-close:hover{background:var(--surface-soft)}
+.help-search-wrap{position:relative;margin:0 20px 10px}
+.help-search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:1.75;stroke-linecap:round;pointer-events:none}
+#help-search{width:100%;box-sizing:border-box;min-height:48px;padding:10px 14px 10px 42px;border:1.5px solid var(--border);border-radius:12px;font-family:inherit;font-size:16px;background:var(--surface);color:var(--charcoal);outline:none}
+#help-search:focus{border-color:var(--gold)}
+.help-body{position:relative;flex:1;min-height:0}
+#help-list,#help-view{position:absolute;inset:0;overflow-y:auto;padding:4px 20px 24px;overscroll-behavior:contain}
+#help-view{display:none;background:var(--surface)}
+#help-pop.show-view #help-view{display:block}
+#help-pop.show-view #help-list{visibility:hidden}
+.help-group{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 2px 6px}
+.help-item{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-family:inherit;color:var(--charcoal);cursor:pointer}
+.help-item:hover{border-color:var(--gold)}
+.help-item-title{display:block;font-size:.95rem;font-weight:700}
+.help-item-mod{display:inline-block;margin-top:3px;font-size:.72rem;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:50px;padding:1px 8px}
+.help-item-snip{display:block;margin-top:4px;font-size:.84rem;color:var(--muted);line-height:1.45}
+.help-empty{padding:28px 6px;text-align:center;color:var(--muted);font-size:.9rem;line-height:1.5}
+.help-back{min-height:44px;padding:0 4px;border:none;background:none;font-family:inherit;font-size:.9rem;font-weight:700;color:var(--gold-dark);cursor:pointer}
+.help-view-mod{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.help-view-title{font-family:'Playfair Display',serif;font-size:1.3rem;margin:4px 0 12px}
+.help-view-body{font-size:1rem;line-height:1.6}
+.help-view-body p{margin:0 0 12px}
+.help-view-body ol,.help-view-body ul{margin:0 0 12px;padding-left:22px}
+.help-view-body li{margin-bottom:6px}
+.help-view-body code{font-size:.9em;background:var(--surface-soft);padding:1px 5px;border-radius:5px}

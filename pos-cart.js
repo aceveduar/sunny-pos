@@ -1,0 +1,1031 @@
+/* ── CART ── */
+/* ── FRECUENTES ── */
+let _topFromSales = [];
+
+async function loadTopProductsFromSales() {
+  const desde = new Date(Date.now() - 30 * 86400000).toISOString();
+  const [directResult, apartadoResult] = await Promise.all([
+    _posFetchAll(`sales?origin_type=eq.venta&status=eq.liquidado&created_at=gte.${encodeURIComponent(desde)}&select=id,items&order=created_at.asc,id.asc`),
+    _posFetchAll(`sales?origin_type=eq.apartado&status=eq.liquidado&liquidated_at=gte.${encodeURIComponent(desde)}&select=id,items&order=liquidated_at.asc,id.asc`)
+  ]);
+  if (!directResult.ok || !apartadoResult.ok) return;
+  const rows = [...(directResult.data || []), ...(apartadoResult.data || [])];
+  const counts = {};
+  for (const sale of rows) {
+    const seen = new Set();
+    for (const item of (Array.isArray(sale.items) ? sale.items : [])) {
+      if (item.id && !seen.has(item.id)) { seen.add(item.id); counts[item.id] = (counts[item.id] || 0) + 1; }
+    }
+  }
+  _topFromSales = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id]) => parseInt(id));
+}
+
+function renderFrecuentes(hide) {
+  const el = document.getElementById('pos-frecuentes');
+  if (!el) return;
+  if (hide) { el.classList.remove('visible'); return; }
+  const top = _topFromSales
+    .map(id => products.find(p => p.id === id))
+    // getKitStock() ya devuelve p.stock tal cual para no-kits -- un kit
+    // frecuente con stock real en sus componentes nunca aparecía aquí
+    // porque p.stock de un kit siempre es 0 en BD por diseño.
+    .filter(p => p && !p.outOfStock && getKitStock(p) > 0);
+  if (top.length < 3) { el.classList.remove('visible'); return; }
+  el.innerHTML = `<span class="pos-freq-label">Freq.</span>` +
+    top.map(p => `
+<div class="pos-freq-card" onclick="addToCart(${p.id})" title="${_esc(p.name)}">
+  <div class="pos-freq-img-wrap">
+    <img class="pos-freq-img" src="${_driveSz(p.image,80)}" alt="${_esc(p.name)}" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
+    <div class="pos-freq-add"><span class="pos-freq-add-icon">+</span></div>
+  </div>
+  <span class="pos-freq-name">${_esc(p.name)}</span>
+  <span class="pos-freq-price">$${p.price.toLocaleString('es-MX')}</span>
+</div>`).join('');
+  el.classList.add('visible');
+}
+
+function addToCart(id, btn, e) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const effStock = getKitStock(p);
+  const isKitP = Array.isArray(p.kitItems);
+  if (effStock === 0 || (!isKitP && p.outOfStock)) return;
+  TE?.track('pos_add_cart', { id: p.id, name: p.name });
+
+  const existing = cart.find(x => x.product.id === id);
+  if (existing) {
+    if (existing.qty >= effStock) {
+      _cartStockFeedback(btn, e);
+      setTimeout(() => _showRestockPrompt(id), 350);
+      return;
+    }
+    existing.qty++;
+  } else {
+    cart.push({ product: p, qty: 1 });
+  }
+  renderCart();
+  _cartAddFeedback(btn, e);
+}
+
+function _cartAddFeedback(btn, e) {
+  // 1. Botón → ✓ por 600ms
+  if (btn) {
+    btn.textContent = '✓';
+    btn.classList.add('btn-added');
+    clearTimeout(btn._rt);
+    btn._rt = setTimeout(() => { btn.textContent = '+'; btn.classList.remove('btn-added'); }, 600);
+  }
+  // 2. Badge del tab carrito → pop
+  const badge = document.getElementById('tab-cart-badge');
+  if (badge) {
+    badge.classList.remove('badge-pop');
+    requestAnimationFrame(() => { badge.offsetWidth; badge.classList.add('badge-pop'); });
+  }
+  // 3. Pill flotante que sube y desaparece
+  const x = btn ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
+                : (e?.clientX ?? window.innerWidth / 2);
+  const y = btn ? btn.getBoundingClientRect().top
+                : (e?.clientY ?? window.innerHeight / 2);
+  const pill = document.createElement('div');
+  pill.className = 'cart-pill';
+  pill.textContent = '+ al carrito';
+  pill.style.left = (x - 52) + 'px';
+  pill.style.top  = (y - 8)  + 'px';
+  document.body.appendChild(pill);
+  setTimeout(() => pill.remove(), 700);
+}
+
+function _cartStockFeedback(btn, e) {
+  const el = btn || (() => {
+    if (!e) return null;
+    const el2 = document.elementFromPoint(e.clientX, e.clientY);
+    return el2?.closest('.pos-prod-add, .pos-card-add-icon')
+        || el2?.closest('.pos-prod, .pos-card')?.querySelector('.pos-prod-add, .pos-card-add-icon');
+  })();
+  if (el) {
+    el.classList.remove('btn-added', 'btn-stock');
+    el.offsetWidth;
+    el.classList.add('btn-stock');
+    clearTimeout(el._rt);
+    el._rt = setTimeout(() => el.classList.remove('btn-stock'), 500);
+  }
+}
+
+/* ── RESTOCK PROMPT ── */
+let _restockProductId = null;
+let _restockQty = 1;
+let _showRestock = true;
+
+function _showRestockPrompt(id) {
+  if (!_showRestock) return;
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  // Un kit no tiene un número de stock propio que "reabastecer" -- su
+  // disponibilidad depende de sus componentes (getKitStock). Antes este
+  // prompt se abría igual para un kit agotado: el PATCH escribía un valor
+  // sin efecto en products.stock (getKitStock lo ignora por completo para
+  // kits), addToCart() seguía viendo 0 de stock real y no hacía nada, pero
+  // el toast decía "agregado al carrito" de todos modos.
+  if (Array.isArray(p.kitItems)) {
+    toast('Este kit está agotado porque a algún componente se le acabó el stock — reabastece el componente desde Inventario', 'error');
+    return;
+  }
+  _restockProductId = id;
+  _restockQty = 1;
+  document.getElementById('restock-prod-name').textContent = p.name;
+  document.getElementById('restock-qty-val').textContent = 1;
+  const btn = document.getElementById('restock-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Reabastecer y agregar al carrito →';
+  document.getElementById('restock-prompt').style.display = 'flex';
+}
+
+function _restockChangeQty(delta) {
+  _restockQty = Math.max(1, Math.min(99, _restockQty + delta));
+  document.getElementById('restock-qty-val').textContent = _restockQty;
+}
+
+function _closeRestockPrompt() {
+  document.getElementById('restock-prompt').style.display = 'none';
+}
+
+async function _confirmRestock() {
+  const id = _restockProductId;
+  if (!id) return;
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const btn = document.getElementById('restock-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  const newStock = (p.stock || 0) + _restockQty;
+  const res = await api(`products?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ stock: newStock, out_of_stock: false })
+  });
+  if (res.ok) {
+    const prevStock = p.stock;
+    p.stock = newStock;
+    p.outOfStock = false;
+    _closeRestockPrompt();
+    searchProducts(document.getElementById('pos-search')?.value || '');
+    addToCart(id);
+    logActivity('producto_editado', `Reabasteció "${p.name}" desde Caja: ${prevStock} → ${newStock}`, { id, name: p.name, prevStock, newStock, source: 'caja_restock' });
+    toast(`📦 +${_restockQty} en stock — agregado al carrito`, '');
+  } else {
+    toast('Error al reabastecer', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Reabastecer y agregar al carrito →';
+  }
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(x => x.product.id !== id);
+  renderCart();
+}
+
+async function editPriceInline(pid) {
+  if (!canOverridePrice()) {
+    const granted = await requestOverride('canOverridePrice', 'Modificar precio al cobrar');
+    if (!granted) return;
+  }
+  const item = cart.find(x => x.product.id === pid);
+  if (!item) return;
+  // Con 1 pieza no se muestra "c/u" (repetía el mismo número): se edita
+  // tocando el precio de la derecha.
+  const priceEl = document.querySelector(`.cart-item[data-pid="${pid}"] .ci-price`)
+    || document.querySelector(`.cart-item[data-pid="${pid}"] .ci-subtotal`);
+  if (!priceEl) return;
+
+  const current = item.customPrice ?? item.product.price;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.inputMode = 'decimal';
+  input.value = current;
+  input.className = 'ci-price-input';
+  priceEl.replaceWith(input);
+  input.select();
+  input.focus();
+
+  let saved = false;
+  const save = () => {
+    if (saved) return;
+    saved = true;
+    const val = parseFloat(input.value);
+    if (!isNaN(val) && val >= 0) {
+      item.customPrice = (val === item.product.price) ? undefined : val;
+    }
+    renderCart();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { saved = true; renderCart(); }
+  });
+  input.addEventListener('blur', save);
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(x => x.product.id === id);
+  if (!item) return;
+  const maxStock = getKitStock(item.product);
+  item.qty = Math.max(1, Math.min(item.qty + delta, maxStock));
+  renderCart();
+}
+
+async function clearCart() {
+  if (!cart.length) return;
+  const n = cart.reduce((sum, i) => sum + (i.qty || 1), 0);
+  if (!(await teConfirm({ title: '¿Vaciar el carrito?', message: `Se quitan ${n} producto${n !== 1 ? 's' : ''}.`, confirmText: 'Vaciar', danger: true }))) return;
+  cart = [];
+  renderCart();
+}
+
+function getTotal() {
+  return cart.reduce((s, x) => s + (x.customPrice ?? x.product.price) * x.qty, 0);
+}
+
+/* ── TAB NAVIGATION (mobile) ── */
+let _currentTab = 'catalog';
+const isTabMode = () => window.innerWidth <= 640;
+
+function switchPosTab(tab) {
+  _currentTab = tab;
+  if (!isTabMode()) return;
+  const left  = document.getElementById('pos-left');
+  const right = document.getElementById('pos-right');
+  if (!left || !right) return;
+
+  const isCatalog = tab === 'catalog';
+  const isCart    = tab === 'cart';
+
+  left.classList.toggle('tab-active',  isCatalog);
+  left.classList.toggle('tab-hidden',  !isCatalog);
+  right.classList.toggle('tab-active', isCart);
+  right.classList.toggle('tab-hidden', !isCart);
+  document.getElementById('tab-catalog')?.classList.toggle('active', isCatalog);
+  document.getElementById('tab-cart')?.classList.toggle('active',    isCart);
+  if (!isCatalog) updateChange();
+  if (isCatalog && typeof _silentStatsRefresh === 'function') _silentStatsRefresh();
+  _updateMiniCartBar();
+}
+
+/* ── BARRA MINI DE TOTAL (catálogo, mobile/tablet) ── */
+function _updateMiniCartBar() {
+  const bar = document.getElementById('pos-mini-cart-bar');
+  if (!bar) return;
+  const totalItems = cart.reduce((s, x) => s + x.qty, 0);
+  const show = isTabMode() && _currentTab === 'catalog' && totalItems > 0;
+  bar.classList.toggle('visible', show);
+  if (show) {
+    document.getElementById('pmc-count').textContent = totalItems;
+    document.getElementById('pmc-total').textContent = `$${getDiscountedTotal().toLocaleString('es-MX')}`;
+  }
+}
+
+function syncCartTopbar() {
+  const totalItems = cart.reduce((s, x) => s + x.qty, 0);
+  // Badge pestaña (mobile)
+  const tabBadge = document.getElementById('tab-cart-badge');
+  if (tabBadge) { tabBadge.textContent = totalItems > 0 ? totalItems : ''; tabBadge.style.display = totalItems > 0 ? 'flex' : 'none'; }
+}
+
+function renderCart() {
+  const el = document.getElementById('cart-items');
+  const countEl = document.getElementById('cart-count');
+  const cobrarBtn = document.getElementById('cobrar-btn');
+  const total = getTotal();
+  const totalItems = cart.reduce((s, x) => s + x.qty, 0);
+
+  countEl.textContent = totalItems > 0 ? `(${totalItems})` : '';
+  cobrarBtn.disabled = cart.length === 0;
+  // Descuento/pago/efectivo/nota/apartado/cliente no sirven de nada sin
+  // productos en el carrito -- se ocultan en vez de mostrar un formulario
+  // de cobro que no se puede usar todavía.
+  const fieldsWrap = document.getElementById('checkout-fields-wrap');
+  if (fieldsWrap) fieldsWrap.style.display = cart.length ? '' : 'none';
+  syncCartTopbar();
+  _updateMiniCartBar();
+  updateChange();
+  if (document.getElementById('pos-is-apartado')?.checked) updateAnticipoInfo();
+
+  if (!cart.length) {
+    el.innerHTML = '<div class="cart-empty"><div class="em"><svg style="width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>El carrito está vacío</div>';
+    _saveCart();
+    return;
+  }
+
+  el.innerHTML = cart.map(({ product: p, qty, customPrice }) => {
+    const effPrice = customPrice ?? p.price;
+    const isCustom = customPrice != null && customPrice !== p.price;
+    const priceLabel = isCustom
+      ? `<span style="text-decoration:line-through;opacity:.45;font-size:.65rem;margin-right:3px">$${p.price.toLocaleString('es-MX')}</span>$${effPrice.toLocaleString('es-MX')}`
+      : `$${effPrice.toLocaleString('es-MX')}`;
+    const kitSub = Array.isArray(p.kitItems) && p.kitItems.length
+      ? `<div style="font-size:.7rem;color:var(--muted);margin-top:1px">${_giftIconSvg(13)} ${_esc(p.kitItems.map(c=>`${c.qty>1?c.qty+'× ':''}${c.name}`).join(', '))}</div>`
+      : '';
+    return `
+<div class="cart-item" data-pid="${p.id}">
+  <img class="ci-img" src="${_driveSz(p.image,80)}" alt="${_esc(p.name)}" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'" onclick="event.stopPropagation();openLightbox(this)" data-name="${_esc(p.name)}" data-price="${effPrice}" data-qty="${qty}" style="cursor:zoom-in">
+  <div class="ci-info">
+    <div class="ci-name">${_esc(p.name)}</div>
+    ${kitSub}
+    ${qty > 1 || isCustom ? `<span class="ci-price${isCustom?' ci-price-custom':''}" onclick="editPriceInline(${p.id})" ontouchstart="event.stopPropagation()" title="Toca para cambiar precio">${priceLabel}${qty > 1 ? ' c/u' : ''}</span>` : ''}
+    <div class="ci-row2">
+      <div class="ci-qty">
+        <button class="${qty === 1 ? 'ci-qty-del' : ''}" onclick="${qty === 1 ? `removeFromCart(${p.id})` : `changeQty(${p.id}, -1)`}" title="${qty === 1 ? 'Quitar' : 'Reducir'}">
+          ${qty === 1 ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>` : '−'}
+        </button>
+        <span class="qty-num">${qty}</span>
+        <button onclick="changeQty(${p.id}, +1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="ci-right">
+    <div class="ci-subtotal" onclick="editPriceInline(${p.id})" ontouchstart="event.stopPropagation()" title="Toca para cambiar precio">$${(effPrice * qty).toLocaleString('es-MX')}</div>
+  </div>
+</div>`;
+  }).join('');
+  applySwipeRemove();
+  _saveCart();
+}
+
+// Escalera de montos "redondos": denominaciones reales de billete en México
+// (20/50/100/200/500/1000) y, arriba de $1,000, múltiplos de $500 -- no
+// existe un billete único más grande, pero un cliente sí paga con varios
+// de $500/$1,000. Sin esto, redondear con un solo paso fijo (ej. $100) da
+// saltos absurdos para un total chico ($40/$60 en vez de $20/$50) o para
+// uno grande (saltar de $3,304 directo a $5,000 sin pasar por $3,500/$4,000).
+const _CASH_LADDER = (() => {
+  const arr = [20, 50, 100, 200, 500, 1000];
+  for (let n = 1500; n <= 100000; n += 500) arr.push(n);
+  return arr;
+})();
+
+// Montos "rápidos" de efectivo: "el siguiente billete" (como Square). Se
+// redondea el total hacia arriba con cada billete que la clienta
+// probablemente use y se muestran los 3 más cercanos. Antes eran los 3
+// peldaños de _CASH_LADDER ≥ total, y arriba de $1,000 la escalera solo
+// sube de $500 en $500: con $1,040 ofrecía $1,500/$2,000/$2,500 y nunca
+// $1,100 (mil + cien), que es lo que de verdad entregan.
+//   < $20        → a $20, $50, $100        ($10   → 20 · 50 · 100)
+//   $20–$99      → a $50, $100             ($45   → 50 · 100 · 200)
+//   $100–$999    → a $50, $100, $500, $1k  ($143  → 150 · 200 · 500)
+//   ≥ $1,000     → a $100, $500, $1k       ($1,040 → 1,100 · 1,500 · 2,000)
+// Un redondeo igual al total no se ofrece: eso es "Exacto" (su propio
+// botón). Si quedan menos de 3 montos, se completa con los billetes /
+// escalones de _CASH_LADDER mayores al total ($200 → 500 · 1,000 · 1,500;
+// $754 → 800 · 1,000 · 1,500).
+function _posQuickCashAmounts(total) {
+  const t = Math.max(total, 0);
+  if (t <= 0) return [];
+  const steps = t < 20 ? [20, 50, 100] : t < 100 ? [50, 100] : t < 1000 ? [50, 100, 500, 1000] : [100, 500, 1000];
+  const amounts = new Set(steps.map(d => Math.ceil(t / d) * d).filter(v => v > t));
+  for (const v of _CASH_LADDER) {
+    if (amounts.size >= 3) break;
+    if (v > t) amounts.add(v);
+  }
+  // Más allá de la escalera ($100,000): seguir de $500 en $500.
+  for (let v = Math.ceil(t / 500) * 500 + 500; amounts.size < 3; v += 500) amounts.add(v);
+  return [...amounts].sort((a, b) => a - b).slice(0, 3);
+}
+
+function _updateQuickCashButtons() {
+  const total = typeof getDiscountedTotal === 'function' ? getDiscountedTotal() : getTotal();
+  const amounts = _posQuickCashAmounts(total);
+  ['quick-cash-1', 'quick-cash-2', 'quick-cash-3'].forEach((id, i) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const amount = amounts[i];
+    if (amount == null) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
+    btn.textContent = `$${amount.toLocaleString('es-MX')}`;
+    btn.onclick = () => setCash(amount);
+  });
+}
+
+function setCash(amount) {
+  const total = getTotal();
+  const val = amount === total ? total : amount;
+  document.getElementById('pos-cash').value = _fmtMoneyInput(String(val));
+  updateChange();
+  // Highlight el botón seleccionado
+  document.querySelectorAll('.cash-quick button').forEach(b => b.classList.remove('active-cash'));
+  event?.currentTarget?.classList.add('active-cash');
+}
+
+/* ── CORTE DE CAJA ── */
+let _corteData = null;
+let _corteLoadError = false;
+
+let _corteMode = 'mio'; // 'mio' | 'general'
+
+function setCorteMode(mode) {
+  // "General — hoy" muestra cuánto cobró CADA cajera hoy ("Por cajero") --
+  // ver eso sin permiso de Reportes es un camino lateral para lo mismo que
+  // canViewReports ya restringe en el módulo Reportes. Reutiliza ese mismo
+  // permiso en vez de crear uno nuevo.
+  if (mode === 'general' && !canViewReports()) return;
+  if (_corteMode === mode) return;
+  _corteMode = mode;
+  document.getElementById('corte-mode-mio')?.classList.toggle('active', mode === 'mio');
+  document.getElementById('corte-mode-general')?.classList.toggle('active', mode === 'general');
+  _corteSyncVisibility();
+  loadCorte();
+}
+
+async function openCorte() {
+  // Si el turno se cerró en otro dispositivo, no mostrar el corte de un turno
+  // que ya no existe: _posRecheckShift() pide "Abrir caja".
+  await _posRecheckShift();
+  if (!_currentShift) return;
+  document.getElementById('corte-offcanvas').classList.add('open');
+  document.getElementById('corte-backdrop').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  // Siempre abre en "Mi turno" — el toggle "General" es una consulta aparte,
+  // no debe quedar pegado de una vez anterior de este mismo dispositivo.
+  _corteMode = 'mio';
+  document.getElementById('corte-mode-mio')?.classList.add('active');
+  document.getElementById('corte-mode-general')?.classList.remove('active');
+  // Sin permiso de Reportes solo existe "Mi turno": un selector de una sola
+  // opción es ruido, se oculta completo.
+  const toggle = document.getElementById('corte-mode-toggle');
+  if (toggle) toggle.style.display = canViewReports() ? '' : 'none';
+  _conteoRevealed = false;
+  _corteSyncVisibility();
+  await loadCorte();
+  await _loadGastos();
+  renderGastos();
+  _initCierreInputs();
+}
+
+function closeCorte() {
+  document.getElementById('corte-offcanvas').classList.remove('open');
+  document.getElementById('corte-backdrop').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function loadCorte() {
+  const content = document.getElementById('corte-content');
+  const periodoEl = document.getElementById('corte-periodo');
+  const shareButton = document.getElementById('corte-wa-btn');
+  _corteData = null;
+  if (shareButton) shareButton.disabled = true;
+  _corteLoadError = false;
+  content.innerHTML = '<div class="corte-loading">Calculando…</div>';
+
+  const TZ = 'America/Mexico_City';
+  const now = new Date();
+  const ahoraMX = new Intl.DateTimeFormat('es-MX', { timeZone:TZ, dateStyle:'full', timeStyle:'short' }).format(now);
+  const actorEmail = _posCurrentUserEmail();
+  if (!actorEmail || !_currentShift) {
+    _corteLoadError = true;
+    content.innerHTML = '<div class="corte-error">No se pudo identificar tu turno. Cierra y vuelve a abrir Caja.</div>';
+    _corteSyncVisibility();
+    return;
+  }
+  const isGeneral = _corteMode === 'general';
+  const hoyMX = _posMexicoDayKey(now);
+  const hoyInicio = new Date(`${hoyMX}T00:00:00-06:00`);
+  // El turno real (te_open_cash_shift) sí puede empezar antes de medianoche
+  // si alguien trabaja hasta pasada la hora -- a diferencia del "turno"
+  // anterior (solo localStorage), aquí no hace falta acotarlo a "hoy".
+  const shiftStart = new Date(_currentShift.opened_at);
+  // General suma la tienda completa desde medianoche — otras cajeras pueden
+  // haber empezado su turno antes que el actual, no tendría sentido acotar
+  // al horario de quien está viendo la pantalla.
+  const rangeStart = isGeneral ? hoyInicio : shiftStart;
+  const from = encodeURIComponent(rangeStart.toISOString());
+  const to   = encodeURIComponent(now.toISOString());
+  const inicioMX = new Intl.DateTimeFormat('es-MX', { timeZone:TZ, hour:'2-digit', minute:'2-digit' }).format(rangeStart);
+  const actorLabel = _sellerLabel(actorEmail) || actorEmail.split('@')[0];
+  periodoEl.textContent = isGeneral
+    ? 'Todo el día de hoy · todas las cajeras'
+    : `${actorLabel} · turno desde las ${inicioMX}`;
+
+  const [paymentsResult, createdResult] = await Promise.all([
+    _posFetchAll(`sale_payments?paid_at=gte.${from}&paid_at=lte.${to}&select=sale_id,amount,kind,method,paid_at,source,collected_by_email,sale:sales(origin_type,status,customer,items)&order=paid_at.asc,id.asc`),
+    _posFetchAll(`sales?created_at=gte.${from}&created_at=lte.${to}&items->0->>libreta=is.null&select=id,origin_type,status,seller_email&order=created_at.asc,id.asc`)
+  ]);
+  if (!paymentsResult.ok || !createdResult.ok) {
+    _corteLoadError = true;
+    content.innerHTML = '<div class="corte-error">No se pudo calcular el corte. Revisa tu conexión y vuelve a abrirlo.</div>';
+    _corteSyncVisibility();
+    return;
+  }
+  _corteLoadError = false;
+
+  const allPayments = paymentsResult.data || [];
+  const money = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  const payments = isGeneral ? allPayments : allPayments.filter(payment =>
+    String(payment.collected_by_email || '').toLowerCase() === actorEmail
+  );
+  const otherCashiers = allPayments.filter(payment =>
+    payment.collected_by_email && String(payment.collected_by_email).toLowerCase() !== actorEmail
+  );
+  const created = isGeneral ? (createdResult.data || []) : (createdResult.data || []).filter(sale =>
+    String(sale.seller_email || '').toLowerCase() === actorEmail
+  );
+  let efectivo = 0, transferencia = 0, otros = 0, devoluciones = 0, anticipos = 0;
+
+  payments.forEach(payment => {
+    const amount = parseFloat(payment.amount) || 0;
+    if (payment.method === 'transferencia') transferencia += amount;
+    else if (payment.method === 'efectivo') efectivo += amount;
+    else otros += amount;
+    if (payment.kind === 'refund') devoluciones += Math.abs(amount);
+
+    const sale = Array.isArray(payment.sale) ? payment.sale[0] : payment.sale;
+    if (amount > 0 && sale?.origin_type === 'apartado' && sale?.status === 'activo') anticipos += amount;
+  });
+  efectivo = money(efectivo);
+  transferencia = money(transferencia);
+  otros = money(otros);
+  devoluciones = money(devoluciones);
+  anticipos = money(anticipos);
+
+  const numVentas = created.filter(s => s.origin_type === 'venta' && s.status !== 'cancelado').length;
+  const numApartados = created.filter(s => s.origin_type === 'apartado' && s.status !== 'cancelado').length;
+  const numLiquidados = new Set(payments
+    .filter(payment => {
+      const sale = Array.isArray(payment.sale) ? payment.sale[0] : payment.sale;
+      return _isApartadoLiquidationPayment(payment, sale);
+    })
+    .map(payment => payment.sale_id)).size;
+  const otherCashiersNet = money(otherCashiers.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0));
+  const total = money(efectivo + transferencia + otros);
+  const fmt = n => `$${n.toLocaleString('es-MX')}`;
+  const breakdown = isGeneral ? _corteBreakdownRows(allPayments) : [];
+  _corteData = { efectivo, transferencia, otros, devoluciones, total, numVentas, numApartados,
+    numLiquidados, anticipos, ahoraMX, inicioMX, actorLabel, otherCashiersNet, isGeneral, breakdown };
+  if (shareButton) shareButton.disabled = false;
+
+  // Solo lo que sirve para cuadrar: cuánto entró por método y el total.
+  // Lo que se cuenta en piezas (ventas/apartados) va en una línea de
+  // contexto, no como renglón de monto. Los avisos que antes vivían aquí
+  // (otras cuentas, anticipos, "generado…") se quitaron: la pregunta del
+  // cajón ya cubre lo de otras cuentas y el mensaje de WhatsApp lleva el resto.
+  const row = (label, value) => `
+    <div class="corte-row"><span class="corte-row-lbl">${label}</span><span class="corte-row-val">${value}</span></div>`;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const meta = [
+    numVentas     ? plural(numVentas, 'venta', 'ventas') : '',
+    numApartados  ? plural(numApartados, 'apartado nuevo', 'apartados nuevos') : '',
+    numLiquidados ? plural(numLiquidados, 'liquidado', 'liquidados') : ''
+  ].filter(Boolean).join(' · ') || 'Sin cobros todavía';
+
+  content.innerHTML = `
+    <section class="corte-card">
+      <div class="corte-card-title">${isGeneral ? 'Cobros de hoy' : 'Tus cobros del turno'}</div>
+      ${row('Efectivo', fmt(efectivo))}
+      ${row('Transferencia', fmt(transferencia))}
+      ${Math.abs(otros) >= .005 ? row('Ajustes sin método', fmt(otros)) : ''}
+      ${devoluciones > 0 ? row('Devoluciones (ya restadas)', `−${fmt(devoluciones)}`) : ''}
+      <div class="corte-total">
+        <span class="corte-total-lbl">Total cobrado<span class="corte-row-sub">${meta}</span></span>
+        <span class="corte-total-val">${fmt(total)}</span>
+      </div>
+    </section>`;
+
+  const breakdownEl = document.getElementById('corte-breakdown');
+  if (breakdownEl) breakdownEl.innerHTML = isGeneral ? _renderCorteBreakdown(breakdown, fmt) : '';
+
+  const detalleEl = document.getElementById('corte-detalle-section');
+  if (detalleEl) detalleEl.innerHTML = isGeneral ? '' : _renderCorteDetalle(payments);
+  _renderCierre();
+}
+
+// Desglose renglón por renglón de "Mi turno" — colapsado por default, para
+// no repetir a mano lo que ya hicimos en Actividad la vez que un turno no
+// cuadró (revisar acción por acción y sumar). Mismo lenguaje de colores/tags
+// que "Movimientos de hoy" en Reportes (Venta/Liquidado verde, Abono morado,
+// Apartado nuevo dorado, Devolución rojo) para no inventar un patrón nuevo.
+function _corteToggleDetalle() {
+  const list = document.getElementById('corte-detalle-list');
+  const btn  = document.getElementById('corte-detalle-toggle');
+  if (!list || !btn) return;
+  const expanded = list.style.display !== 'none';
+  list.style.display = expanded ? 'none' : '';
+  btn.textContent = btn.textContent.replace(expanded ? '▴' : '▾', expanded ? '▾' : '▴');
+}
+function _renderCorteDetalle(payments) {
+  if (!payments || !payments.length) return '';
+  const rows = [...payments].sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at)).map(payment => {
+    const sale = Array.isArray(payment.sale) ? payment.sale[0] : payment.sale;
+    const items = Array.isArray(sale?.items) ? sale.items : [];
+    const isRefund = payment.kind === 'refund';
+    // Tipo en texto plano (sin chips de color): mismo minimalismo que el
+    // resto del corte; el signo del monto ya distingue una devolución.
+    const tipo = isRefund ? 'Devolución'
+      : payment.source === 'rpc_apartado_initial' ? 'Apartado nuevo'
+      : payment.source === 'rpc_apartado_liquidation' ? 'Liquidación'
+      : payment.source === 'rpc_apartado_payment' ? 'Abono'
+      : payment.source === 'rpc_direct_sale' ? 'Venta'
+      : payment.source === 'rpc_apartado_reactivation' ? 'Reactivación'
+      : 'Movimiento';
+    const origin = sale?.origin_type;
+    const nombre = origin === 'apartado'
+      ? _esc((sale?.customer || '').split(' · 📱 ')[0] || `Apartado #${payment.sale_id}`)
+      : _esc(items.length <= 2 ? items.map(i => i.name).join(', ') : `${items[0]?.name || ''} +${items.length - 1} más`) || `Venta #${payment.sale_id}`;
+    const time = new Intl.DateTimeFormat('es-MX', { timeZone:'America/Mexico_City', hour:'2-digit', minute:'2-digit' }).format(new Date(payment.paid_at));
+    const amount = parseFloat(payment.amount) || 0;
+    const amountText = `${isRefund ? '−' : ''}$${Math.abs(amount).toLocaleString('es-MX')}`;
+    const metodo = payment.method === 'transferencia' ? 'Transferencia' : payment.method === 'efectivo' ? 'Efectivo' : 'Sin método';
+    return `
+      <div class="corte-cobro">
+        <div class="corte-cobro-main">
+          <span class="corte-cobro-name">${nombre}</span>
+          <span class="corte-cobro-meta">${time} · ${tipo} · ${metodo}</span>
+        </div>
+        <span class="corte-cobro-amt">${amountText}</span>
+      </div>`;
+  }).join('');
+  return `
+    <button type="button" id="corte-detalle-toggle" class="corte-link-btn corte-detalle-toggle" onclick="_corteToggleDetalle()">▾ Ver cada cobro (${payments.length})</button>
+    <div id="corte-detalle-list" class="corte-card" style="display:none">${rows}</div>`;
+}
+
+// Quién cobró qué, sumado en efectivo+transferencia (mismo criterio que el
+// neto de arriba) — así "General" no solo da un total, deja ver la parte de
+// cada cajera para que Ofelia pueda repartir/verificar sin abrir Reportes.
+function _corteBreakdownRows(payments) {
+  const byPerson = new Map();
+  (payments || []).forEach(payment => {
+    const key = payment.collected_by_email ? String(payment.collected_by_email).toLowerCase() : '';
+    const amount = parseFloat(payment.amount) || 0;
+    byPerson.set(key, (byPerson.get(key) || 0) + amount);
+  });
+  return [...byPerson.entries()]
+    .map(([email, net]) => ({ email, net: Math.round((net + Number.EPSILON) * 100) / 100 }))
+    .filter(r => Math.abs(r.net) >= .005)
+    .sort((a, b) => b.net - a.net);
+}
+
+function _renderCorteBreakdown(rows, fmt) {
+  if (!rows.length) return '';
+  return `
+    <section class="corte-card">
+      <div class="corte-card-title">Por cajera</div>
+      ${rows.map(r => `
+        <div class="corte-row">
+          <span class="corte-row-lbl">${r.email ? _esc(_sellerLabel(r.email)) : 'Sin cajera registrada'}</span>
+          <span class="corte-row-val">${fmt(r.net)}</span>
+        </div>`).join('')}
+    </section>`;
+}
+
+/* ── GASTOS DEL TURNO ────────────────────────────────────────────── */
+// Persisten en el servidor (cash_shift_expenses), ligados al turno real
+// (_currentShift.id) -- ya no viven solo en localStorage. Antes, cerrar
+// turno solo mandaba el TOTAL agregado y el servidor confiaba en ese
+// número; alguien con un faltante real podía inventar un gasto para
+// cuadrar el conteo sin dejar ningún rastro verificable. Ahora cada gasto
+// es su propia fila con hora y autor reales del servidor, y
+// te_close_cash_shift() calcula el total sumando esa tabla, no lo que
+// mande el cliente. "Quitar" un gasto nunca lo borra de verdad (mismo
+// principio de ledger append-only que sales/sale_payments) -- lo cancela,
+// conservando el rastro; ver te_cancel_shift_expense.
+// Un "ingreso" (ej. recargas telefónicas cobradas en efectivo, que no
+// pasan por el catálogo ni tienen margen que valga la pena calcular) es un
+// gasto con signo contrario -- no se modela como venta ni como producto,
+// solo explica un movimiento de efectivo que de otro modo no cuadraría en
+// el cierre. _netGastos() centraliza esa conversión de signo para que
+// render/cierre/WhatsApp usen siempre el mismo número.
+let _gastosCache = [];
+let _gastoKind = 'gasto';
+function _getGastos() { return _gastosCache; }
+// Retiro (2026-10-02): dinero de la tienda que sale del cajón (la dueña se
+// lleva la venta, un depósito). Resta del esperado, pero no es gasto: queda
+// fuera de _netGastos() para no bajar la utilidad. Ver _netRetiros().
+function _netGastos(gastos) { return gastos.reduce((s, g) => s + (g.kind === 'ingreso' ? -g.amount : g.kind === 'retiro' ? 0 : g.amount), 0); }
+function _netRetiros(gastos) { return gastos.reduce((s, g) => s + (g.kind === 'retiro' ? g.amount : 0), 0); }
+
+function _setGastoKind(kind) {
+  _gastoKind = kind;
+  ['gasto', 'ingreso', 'retiro'].forEach(k => {
+    const btn = document.getElementById(`gasto-kind-${k}`);
+    btn?.style.setProperty('background', kind === k ? 'var(--surface)' : 'none');
+    btn?.style.setProperty('box-shadow', kind === k ? '0 1px 3px rgba(0,0,0,.12)' : 'none');
+  });
+  const hint = document.getElementById('gasto-kind-hint');
+  if (hint) hint.style.display = kind === 'retiro' ? '' : 'none';
+  document.getElementById('gasto-desc')?.setAttribute('placeholder',
+    kind === 'retiro' ? '¿Quién se lo lleva o para qué? (ej: Ofelia, depósito)' : 'Descripción (ej: Refresco, Taxi, Recarga…)');
+  document.getElementById('gasto-monto')?.setAttribute('placeholder',
+    kind === 'ingreso' ? 'Monto que entró $' : kind === 'retiro' ? 'Monto que sale $' : 'Monto $');
+}
+
+async function _loadGastos() {
+  if (!_currentShift) { _gastosCache = []; return; }
+  const r = await api(`cash_shift_expenses?shift_id=eq.${_currentShift.id}&cancelled_at=is.null&order=created_at.asc`);
+  _gastosCache = (r.ok && Array.isArray(r.data)) ? r.data.map(e => ({
+    id: e.id,
+    desc: e.description,
+    amount: e.amount,
+    kind: e.kind || 'gasto',
+    time: new Date(e.created_at).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })
+  })) : [];
+}
+
+function showGastoForm() {
+  const f = document.getElementById('gastos-form');
+  f.style.display = 'flex'; document.getElementById('gasto-desc').focus();
+}
+function hideGastoForm() {
+  document.getElementById('gastos-form').style.display = 'none';
+  document.getElementById('gasto-desc').value = '';
+  document.getElementById('gasto-monto').value = '';
+  _setGastoKind('gasto');
+}
+
+async function agregarGasto() {
+  const desc  = document.getElementById('gasto-desc').value.trim();
+  const monto = parseFloat(document.getElementById('gasto-monto').value) || 0;
+  if (!desc || monto <= 0) return;
+  const kind = _gastoKind;
+  hideGastoForm();
+  // Un movimiento nuevo cambia el esperado: la comparación ya no vale.
+  _conteoRevealed = false;
+  const r = await api('rpc/te_add_shift_expense', {
+    method: 'POST',
+    body: JSON.stringify({ p_description: desc, p_amount: monto, p_kind: kind })
+  });
+  if (!r.ok || !r.data) { toast(r.data?.message || 'No se pudo agregar', 'error'); return; }
+  _gastosCache.push({
+    id: r.data.id,
+    desc: r.data.description,
+    amount: r.data.amount,
+    kind: r.data.kind || 'gasto',
+    time: new Date(r.data.created_at).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })
+  });
+  renderGastos();
+}
+
+async function eliminarGasto(id) {
+  const g = _gastosCache.find(x => x.id === id);
+  if (!(await teConfirm({ title: `¿Quitar "${g?.desc || 'este movimiento'}"?`, message: 'Queda registrado en Actividad.', confirmText: 'Quitar', danger: true }))) return;
+  const r = await api('rpc/te_cancel_shift_expense', {
+    method: 'POST',
+    body: JSON.stringify({ p_expense_id: id })
+  });
+  if (!r.ok) { toast(r.data?.message || 'No se pudo quitar', 'error'); return; }
+  _gastosCache = _gastosCache.filter(x => x.id !== id);
+  _conteoRevealed = false;
+  renderGastos();
+}
+
+// Sin tarjeta propia ni renglón de "Utilidad": vive dentro de la tarjeta
+// de conteo (es parte de lo que debe haber en el cajón) y su efecto se ve
+// en "Debía haber" al comparar. La "utilidad" anterior era cobros − gastos
+// (no restaba costo de mercancía): se quitó por engañosa; la rentabilidad
+// real está en Reportes.
+function renderGastos() {
+  const gastos = _getGastos();
+  const list = document.getElementById('gastos-list');
+  const fmt = n => `$${n.toLocaleString('es-MX')}`;
+  list.innerHTML = gastos.map(g => `
+    <div class="corte-mov-row">
+      <span class="corte-mov-desc">${g.kind === 'retiro' ? '<span class="corte-mov-kind">Retiro</span>' : ''}${_esc(g.desc)}<span class="corte-mov-time">${g.time}</span></span>
+      <span class="corte-mov-amt">${g.kind === 'ingreso' ? '+' : '−'}${fmt(g.amount)}</span>
+      <button type="button" class="corte-mov-del" onclick="eliminarGasto(${g.id})" aria-label="Quitar movimiento">✕</button>
+    </div>`).join('');
+  _renderCierre();
+}
+
+/* ── CIERRE DE CAJA (FONDO INICIAL + CONTEO FÍSICO) ────────────────
+ * El fondo ya no es un campo libre: es el que se declaró al abrir el turno
+ * (te_open_cash_shift), de solo lectura aquí.
+ *
+ * Conteo a ciegas (2026-09-04): "Efectivo esperado" y "Diferencia" ya no se
+ * calculan en cuanto se abre el panel -- si la cajera ve el esperado antes
+ * de contar, el conteo deja de ser un conteo real y se vuelve "escribir el
+ * número que ya vi". _conteoRevealed solo se vuelve true al tocar
+ * "Comparar conteo", después de haber capturado un valor; "Corregir conteo"
+ * regresa al estado oculto para volver a contar sin perder lo ya escrito. */
+function _conteoKey() { return _posShiftScopedKey('conteo'); }
+let _conteoRevealed = false;
+
+/* El cajón es de quien tiene el turno: lo que cobra otra cuenta (Ofelia en
+ * campo, con su propio dinero) no se espera aquí. Hasta 2026-10-05 se
+ * preguntaba por cada cuenta "¿ese efectivo está en tu cajón?" -- se quitó:
+ * en la tienda hay una persona a la vez, y el caso raro (Ofelia cobra en
+ * tienda y deja el efectivo) se registra como "+ Ingreso". Para atribuirle
+ * a Ofelia una venta que ella cobró está "Ya lo cobró Ofelia" en el cobro.
+ * Misma fórmula que te_close_cash_shift (el servidor la recalcula). */
+function _esperadoCierre() {
+  const fondo = _currentShift?.fondo_inicial ?? 0;
+  const gastos = _getGastos();
+  return Math.round((fondo + (_corteData?.efectivo ?? 0) - _netGastos(gastos) - _netRetiros(gastos) + Number.EPSILON) * 100) / 100;
+}
+
+// El campo es de texto (no number) para poder mostrar "4,300" mientras se
+// escribe -- con montos grandes los dígitos sueltos se leen mal. El valor
+// numérico vive en localStorage; _conteoValue() lo lee de ahí.
+function _fmtMoneyInput(raw) {
+  const clean = String(raw).replace(/[^\d.]/g, '');
+  const [ent, ...dec] = clean.split('.');
+  const entFmt = ent ? Number(ent).toLocaleString('es-MX') : (dec.length ? '0' : '');
+  return dec.length ? `${entFmt}.${dec.join('').slice(0, 2)}` : entFmt;
+}
+function _conteoValue() {
+  const v = localStorage.getItem(_conteoKey());
+  return v == null ? null : (parseFloat(v) || 0);
+}
+
+function _initCierreInputs() {
+  const fondoEl = document.getElementById('corte-fondo');
+  if (fondoEl) fondoEl.textContent = '$' + (_currentShift?.fondo_inicial ?? 0).toLocaleString('es-MX');
+  const conteo = _conteoValue();
+  document.getElementById('corte-conteo').value = conteo != null ? _fmtMoneyInput(String(conteo)) : '';
+  _conteoRevealed = false;
+  _renderCierre();
+}
+
+function _onConteoInput() {
+  const input = document.getElementById('corte-conteo');
+  const formatted = _fmtMoneyInput(input.value);
+  if (input.value !== formatted) input.value = formatted;
+  const num = formatted.replace(/,/g, '');
+  if (num === '') localStorage.removeItem(_conteoKey());
+  else localStorage.setItem(_conteoKey(), parseFloat(num) || 0);
+  // Cambiar el conteo después de haber comparado invalida la comparación --
+  // vuelve a ocultarse hasta tocar "Comparar conteo" otra vez.
+  if (_conteoRevealed) { _conteoRevealed = false; _renderCierre(); }
+}
+
+function compararConteo() {
+  if (!_corteData) {
+    toast('Aún se está calculando tu corte, intenta en un momento', 'error');
+    return;
+  }
+  if (_conteoValue() == null) {
+    toast('Escribe cuánto efectivo contaste', 'error');
+    document.getElementById('corte-conteo')?.focus();
+    return;
+  }
+  _conteoRevealed = true;
+  _renderCierre();
+  document.getElementById('corte-result')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+function corregirConteo() {
+  _conteoRevealed = false;
+  _renderCierre();
+  document.getElementById('corte-conteo')?.focus();
+}
+
+// Qué se ve en cada momento. "Mi turno" tiene dos pasos: contar (ningún
+// monto cobrado a la vista) y, al comparar, resultado + resumen + cerrar.
+// Compartir también espera a la comparación: el mensaje lleva el esperado,
+// y mandárselo a una misma sería otra forma de verlo antes de contar.
+function _corteSyncVisibility() {
+  const general  = _corteMode === 'general';
+  const revealed = !general && _conteoRevealed && !!_corteData;
+  const show = (id, on, display = '') => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? display : 'none';
+  };
+  show('corte-personal-sections', !general);
+  show('corte-comparar-btn', !general && !revealed);
+  show('corte-result', revealed);
+  show('corte-summary', general || revealed || _corteLoadError);
+  show('corte-cerrar-btn', revealed, 'flex');
+  show('corte-wa-btn', general || revealed, 'flex');
+}
+
+function _renderCierre() {
+  if (_corteData && _conteoRevealed && _corteMode !== 'general') {
+    // Con centavos, siempre dos decimales ($24.50, no $24.5).
+    const fmt = n => { const v = Math.abs(n); return '$' + v.toLocaleString('es-MX', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
+    const esperado = _esperadoCierre();
+    const conteo = _conteoValue() || 0;
+    document.getElementById('corte-contado').textContent = fmt(conteo);
+    document.getElementById('corte-esperado').textContent = (esperado < 0 ? '−' : '') + fmt(esperado);
+    document.getElementById('corte-esperado-formula').textContent =
+      'fondo + tu efectivo' + (_getGastos().length ? ' ± gastos' : '');
+
+    const diff = Math.round((conteo - esperado + Number.EPSILON) * 100) / 100;
+    const valEl = document.getElementById('corte-diff-val');
+    const tagEl = document.getElementById('corte-diff-tag');
+    const state = Math.abs(diff) < .005 ? 'ok' : diff > 0 ? 'over' : 'short';
+    valEl.className = `corte-result-val is-${state}`;
+    valEl.textContent = state === 'ok' ? 'Cuadra' : `${diff > 0 ? '+' : '−'}${fmt(diff)}`;
+    tagEl.textContent = state === 'ok' ? 'El cajón coincide con lo registrado'
+      : state === 'over' ? 'Sobra dinero en el cajón' : 'Falta dinero en el cajón';
+  }
+  _corteSyncVisibility();
+}
+
+function compartirCorteWA() {
+  if (!_corteData) return;
+  const { efectivo, transferencia, otros, devoluciones, total, numVentas, numApartados,
+    numLiquidados, anticipos, ahoraMX, inicioMX, actorLabel, otherCashiersNet,
+    isGeneral, breakdown } = _corteData;
+  const fmt = n => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('es-MX')}`;
+  const gastos = _getGastos();
+  const totalGastos = _netGastos(gastos);
+  let msg = isGeneral
+    ? `🧾 *Corte general — Tres Encantos*\nHoy desde las ${inicioMX} · todas las cajeras\n${ahoraMX}\n\n`
+    : `🧾 *Corte de caja — Tres Encantos*\n${actorLabel} · desde ${inicioMX}\n${ahoraMX}\n\n`;
+  if (numVentas > 0)      msg += `🛍 Ventas directas: ${numVentas}\n`;
+  if (numLiquidados)      msg += `✅ Apartados liquidados: ${numLiquidados}\n`;
+  if (numApartados)       msg += `📌 Apartados nuevos: ${numApartados}${anticipos > 0 ? ` (anticipos activos ${fmt(anticipos)})` : ''}\n`;
+  msg += `\n💵 Efectivo: ${fmt(efectivo)}\n📱 Transferencia: ${fmt(transferencia)}\n*Total cobrado: ${fmt(total)}*`;
+  if (Math.abs(otros || 0) >= .005) msg += `\n🧾 Ajustes sin método: ${fmt(otros)}`;
+  if (devoluciones > 0) msg += `\n↩️ Devoluciones registradas: −${fmt(devoluciones)}`;
+  if (anticipos > 0) msg += `\n📌 Incluye ${fmt(anticipos)} cobrados en apartados aún activos`;
+  if (isGeneral) {
+    if (breakdown?.length) {
+      msg += `\n\n👥 *Por cajera:*\n` + breakdown.map(r =>
+        `• ${r.email ? _sellerLabel(r.email) : 'Sin cajera registrada'}: ${fmt(r.net)}`
+      ).join('\n');
+    }
+  } else {
+    if (Math.abs(otherCashiersNet || 0) >= .005) msg += `\n👥 ${fmt(otherCashiersNet)} cobrados por otra cuenta — no incluidos`;
+  }
+  if (gastos.length && !isGeneral) {
+    msg += `\n\n💸 *Movimientos del turno:*\n` + gastos.map(g => `• ${g.kind === 'retiro' ? 'Retiro — ' : ''}${g.desc}: ${g.kind === 'ingreso' ? '+' : '−'}${fmt(g.amount)}`).join('\n');
+    msg += `\nNeto en caja: ${fmt(totalGastos + _netRetiros(gastos))}`;
+  }
+
+  // Cierre de caja (fondo + conteo) — es del cajón de quien tiene la sesión
+  // abierta en este dispositivo, no tiene sentido combinado en "General".
+  if (!isGeneral) {
+    const fondo = _currentShift?.fondo_inicial ?? 0;
+    const esperado = _esperadoCierre();
+    const conteoVal = _conteoValue();
+    if (fondo > 0 || conteoVal != null) {
+      msg += `\n\n💵 *Cierre de caja:*`;
+      msg += `\nFondo inicial: ${fmt(fondo)}`;
+      msg += `\nEfectivo esperado: ${fmt(esperado)}`;
+      if (conteoVal != null) {
+        const conteo = conteoVal;
+        const diff = conteo - esperado;
+        msg += `\nConteo físico: ${fmt(conteo)}`;
+        msg += diff === 0 ? `\n✓ Cuadra` : diff > 0 ? `\n+${fmt(diff)} sobrante` : `\n-${fmt(Math.abs(diff))} faltante`;
+      }
+    }
+  }
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Cierra el turno real en el servidor (te_close_cash_shift) -- exige el
+// conteo físico, calcula la diferencia del lado del servidor y vuelve a
+// bloquear Caja hasta que se abra un turno nuevo. A diferencia de "Corte"
+// (consulta en vivo, se puede abrir mil veces sin dejar rastro), esto sí
+// queda guardado con hora real y visible para Ofelia en Actividad/Reportes.
+async function confirmCloseTurno() {
+  if (!_currentShift) return;
+  const conteoVal = _conteoValue();
+  if (conteoVal == null || !_conteoRevealed) {
+    toast('Primero compara tu conteo', 'error');
+    document.getElementById('corte-conteo')?.focus();
+    return;
+  }
+  if (!(await teConfirm({ title: '¿Cerrar tu turno?', message: 'No podrás seguir vendiendo hasta que abras uno nuevo.', confirmText: 'Cerrar turno' }))) return;
+
+  const conteo = conteoVal;
+  const totalGastos = _netGastos(_getGastos());
+
+  // Diferencia grande (mismo umbral que el servidor, $100) -- cerrar sin
+  // supervisión ya no basta, igual que precio/descuento/cancelar/editar
+  // apartado; el servidor vuelve a validarlo, esto solo evita un viaje
+  // redondo con error si ya sabemos que hace falta autorización.
+  const esperadoPreview = _esperadoCierre();
+  const diffPreview = Math.round((conteo - esperadoPreview + Number.EPSILON) * 100) / 100;
+  if (Math.abs(diffPreview) >= 100 && !canCloseShiftUnsupervised()) {
+    const granted = await requestOverride('canCloseShiftUnsupervised', 'Cerrar turno con diferencia grande');
+    if (!granted) return;
+  }
+
+  const btn = document.getElementById('corte-cerrar-btn');
+  const label = document.getElementById('corte-cerrar-label');
+  const prevLabel = label?.textContent;
+  if (btn) btn.disabled = true;
+  if (label) label.textContent = 'Cerrando…';
+
+  const geo = await _getGeoLocation();
+  const r = await api('rpc/te_close_cash_shift', {
+    method: 'POST',
+    body: JSON.stringify({
+      p_conteo_final: conteo, p_gastos_total: totalGastos, p_lat: geo?.lat ?? null, p_lng: geo?.lng ?? null,
+      p_override_tickets: _collectOverrideTickets(['canCloseShiftUnsupervised']),
+      p_include_cash_from: null
+    })
+  });
+
+  if (!r.ok || !r.data) {
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = prevLabel;
+    await teAlert(r.data?.message || 'Revisa tu conexión e intenta de nuevo.', 'No se pudo cerrar tu turno');
+    return;
+  }
+
+  _currentShift = null;
+  _conteoRevealed = false;
+  document.getElementById('shift-reminder-banner')?.classList.remove('show');
+  closeCorte();
+  _posShiftGateInit();
+}

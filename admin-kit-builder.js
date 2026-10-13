@@ -1,0 +1,401 @@
+/* ══ KIT BUILDER ════════════════════════════════════════════════════════ */
+let _kbComponents = [];
+let _kbImageDataUrl = null;
+let _kbSelectedCatCode = '';
+
+/* Sin fondo pintado en el SVG a propósito (igual que DEFAULT_IMG en admin.js) --
+   transparente para heredar el fondo ya themado del contenedor. */
+const KIT_DEFAULT_IMG = `data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20transform%3D%22translate(28%2C28)%20scale(1.85)%22%20stroke%3D%22%23D4BC94%22%20stroke-width%3D%222.2%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%228%22%20width%3D%2218%22%20height%3D%224%22%20rx%3D%221%22%2F%3E%3Cpath%20d%3D%22M12%208v13%22%2F%3E%3Cpath%20d%3D%22M19%2012v7a2%202%200%200%201-2%202H7a2%202%200%200%201-2-2v-7%22%2F%3E%3Cpath%20d%3D%22M7.5%208a2.5%202.5%200%200%201%200-5C11%203%2012%208%2012%208s1-5%204.5-5a2.5%202.5%200%200%201%200%205%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E`;
+
+// Google Drive a veces rechaza/tarda en servir varias miniaturas pedidas casi
+// al mismo tiempo (ej. al agregar varios componentes seguidos a un kit) --
+// un solo error no significa que la imagen no exista. Reintenta una vez
+// después de una pequeña pausa antes de rendirse y mostrar el placeholder.
+function _kbImgRetry(img, url) {
+  if (!url || img.dataset.kbRetried) { img.src = DEFAULT_IMG; return; }
+  img.dataset.kbRetried = '1';
+  setTimeout(() => { img.src = url + (url.includes('?') ? '&' : '?') + '_r=' + Date.now(); }, 600);
+}
+
+function _kbAutoSuggestCat() {
+  if (_kbSelectedCatCode) return;
+  const raw = (document.getElementById('kb-name')?.value || '').toLowerCase();
+  const name = raw.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (!name || name.length < 3) return;
+
+  const words = name.split(/\s+/).filter(w => w.length > 2);
+  // subcategorías primero (más específicas)
+  const ordered = [...categories].sort((a, b) => (a.parent ? -1 : 1));
+  let match = null;
+  for (const cat of ordered) {
+    const label = cat.label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const code  = cat.code.toLowerCase();
+    if (words.some(w => label.includes(w) || code.includes(w))) { match = cat; break; }
+  }
+  // fallback: natura
+  if (!match) match = categories.find(c => c.code === 'natura') || categories.find(c => c.code.startsWith('natura'));
+  if (match) {
+    _kbSelectedCatCode = match.code;
+    _updateKitCatBtn(match.code);
+  }
+}
+
+function openKitBuilder() {
+  try {
+    if (!can.addProduct) { toast('Sin permiso para agregar productos', 'error'); return; }
+    _kbComponents = [];
+    _kbImageDataUrl = null;
+    // Recuerda la última categoría usada al crear (compartida con el
+    // formulario normal, `_lastNewProductCategory` en admin-form.js) --
+    // armar varios kits seguidos de la misma remesa ya no obliga a
+    // re-elegir categoría cada vez. Sigue siendo editable con el picker.
+    _kbSelectedCatCode = _lastNewProductCategory || '';
+    const byId = id => document.getElementById(id);
+    byId('kb-name').value = '';
+    byId('kb-price').value = '';
+    byId('kb-search').value = '';
+    byId('kb-search-results').style.display = 'none';
+    byId('kb-search-results').innerHTML = '';
+    byId('kb-stock-preview').textContent = '';
+    byId('kb-save-btn').disabled = false;
+    byId('kb-save-btn').textContent = 'Guardar Kit →';
+    byId('kb-save-btn').onclick = _saveKit;
+    byId('kb-img-preview').style.display = 'none';
+    byId('kb-img-placeholder').style.display = 'flex';
+    byId('kb-img-remove').style.display = 'none';
+    byId('kb-img-input').value = '';
+    byId('kb-price-hint').style.display = 'none';
+    _updateKitCatBtn(_kbSelectedCatCode);
+    _kbRenderComponents();
+    _kbUpdateStock();
+    const kbo = byId('kit-builder-overlay');
+    kbo.style.display = 'flex';
+    kbo.classList.add('kb-open');
+    document.body.style.overflow = 'hidden';
+    byId('kb-name').focus();
+  } catch(e) { toast('Error al abrir Kit Builder: ' + e.message, 'error'); }
+}
+
+function closeKitBuilder() {
+  const el = document.getElementById('kit-builder-overlay');
+  el.classList.remove('kb-open');
+  el.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function _closeKitBuilderSafe() {
+  const name  = document.getElementById('kb-name')?.value.trim();
+  const price = document.getElementById('kb-price')?.value.trim();
+  const hasData = name || price || _kbComponents.length > 0 || _kbImageDataUrl;
+  if (hasData && !(await teConfirm({ title: 'Descartar kit', message: '¿Descartar el kit? Perderás lo que llevas ingresado.', confirmText: 'Descartar', cancelText: 'Seguir aquí', danger: true }))) return;
+  closeKitBuilder();
+}
+
+function _kbToggleBelow(show) {
+  const comps = document.getElementById('kb-components');
+  const stock = document.getElementById('kb-stock-preview');
+  const count = document.getElementById('kb-comp-count');
+  const btn   = document.getElementById('kb-save-btn');
+  if (comps) comps.style.display = show ? '' : 'none';
+  if (stock) stock.style.display = show ? '' : 'none';
+  if (count) count.textContent = !show && _kbComponents.length ? `· ${_kbComponents.length} agregados` : '';
+  if (btn) {
+    if (!show && _kbComponents.length) {
+      btn.textContent = `✓ Ver ${_kbComponents.length} componente${_kbComponents.length > 1 ? 's' : ''}`;
+      btn.onclick = _kbCloseSearch;
+    } else {
+      btn.textContent = 'Guardar Kit →';
+      btn.onclick = _saveKit;
+    }
+  }
+}
+
+function _kbCloseSearch() {
+  const search = document.getElementById('kb-search');
+  const clear = document.getElementById('kb-search-clear');
+  if (search) search.value = '';
+  if (clear) clear.style.display = 'none';
+  document.getElementById('kb-search-results').style.display = 'none';
+  _kbToggleBelow(true);
+}
+
+function _kbSearch(q) {
+  const res = document.getElementById('kb-search-results');
+  const term = (q || '').toLowerCase().trim();
+  if (!term) { res.style.display = 'none'; _kbToggleBelow(true); return; }
+  const taken = new Set(_kbComponents.map(c => c.id));
+  const matches = products.filter(p =>
+    !Array.isArray(p.kitItems) && !taken.has(p.id) &&
+    p.name.toLowerCase().includes(term)
+  ).sort((a, b) => {
+    const aOos = a.outOfStock || a.stock === 0;
+    const bOos = b.outOfStock || b.stock === 0;
+    return aOos - bOos; // con stock primero
+  }).slice(0, 8);
+  const termEncoded = encodeURIComponent(term);
+  const createBtn = `
+    <div class="kb-result-item" onclick="_kbCreateDraft(decodeURIComponent('${termEncoded}'))">
+      <div style="width:36px;height:36px;border-radius:7px;background:var(--gold-light);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--gold-dark)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.84rem;font-weight:600;color:var(--gold-dark)">Crear "${term}" como borrador</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:1px">Stock 0 · Sin publicar · editar después</div>
+      </div>
+    </div>`;
+
+  if (!matches.length) {
+    res.innerHTML = createBtn;
+    res.style.display = 'block'; return;
+  }
+  res.innerHTML = matches.map(p => {
+    const isOos = p.outOfStock || p.stock === 0;
+    const stockTxt = isOos
+      ? `<span style="color:var(--red)"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Agotado — se puede agregar igual</span>`
+      : `${p.stock} en stock`;
+    return `
+    <div class="kb-result-item" onclick="_kbAddComponent(${p.id})" style="${isOos ? 'opacity:.75' : ''}">
+      <img data-src="${_driveSz(p.image, 80)}" style="width:36px;height:36px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(p.image, 80) || ''}')">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.84rem;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(p.name)}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${stockTxt}</div>
+      </div>
+      <span style="font-size:.75rem;color:var(--gold);font-weight:700;flex-shrink:0">+ agregar</span>
+    </div>`;
+  }).join('') + createBtn;
+  res.style.display = 'block';
+  _staggerImgLoad(res);
+  _kbToggleBelow(false);
+  document.getElementById('kb-search')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+async function _kbCreateDraft(name) {
+  const draft = {
+    name, category: 'por_revisar', category_label: 'Por revisar',
+    price: 0, description: '', stock: 0, out_of_stock: true, is_published: false,
+    featured: false, image: DEFAULT_IMG, position: products.length
+  };
+  // El id lo asigna la BD (products_id_seq).
+  const result = await supabaseApi('products', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=representation' },
+    body: JSON.stringify(draft)
+  });
+  const newId = result.ok ? result.data?.[0]?.id : null;
+  if (!newId) { toast('Error al crear borrador', 'error'); return; }
+  // Agregar al array local con el shape normalizado
+  products.push({
+    id: newId, name, category: 'por_revisar', categoryLabel: 'Por revisar',
+    price: 0, stock: 0, outOfStock: true, isPublished: false,
+    image: DEFAULT_IMG, position: products.length - 1
+  });
+  logActivity('producto_creado', `Borrador de kit: "${name}" — $0`, { id: newId, name, price: 0 });
+  document.getElementById('kb-search').value = '';
+  document.getElementById('kb-search-results').style.display = 'none';
+  _kbAddComponent(newId);
+  toast(`✓ "${name}" creado como borrador`);
+}
+
+async function _kbHandleImageFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  await _kbSetImageFromFile(file);
+}
+
+async function _kbSetImageFromFile(file) {
+  const dataUrl = await _fileToBase64Resized(file);
+  _kbImageDataUrl = dataUrl;
+  const preview = document.getElementById('kb-img-preview');
+  preview.src = dataUrl; preview.style.display = 'block';
+  document.getElementById('kb-img-placeholder').style.display = 'none';
+  document.getElementById('kb-img-remove').style.display = 'block';
+}
+
+/* ── PEGAR IMAGEN DESDE PORTAPAPELES (Ctrl+V / Cmd+V) ── */
+document.addEventListener('paste', async e => {
+  const file = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'))?.getAsFile();
+  if (!file) return;
+
+  const formOpen = document.getElementById('form-overlay')?.classList.contains('open');
+  const kbOpen   = document.getElementById('kit-builder-overlay')?.classList.contains('open');
+
+  if (formOpen) {
+    // No pegar si el foco está en un input de texto
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault();
+    addImagesToForm([file]);
+    toast('Imagen pegada desde portapapeles');
+  } else if (kbOpen) {
+    e.preventDefault();
+    await _kbSetImageFromFile(file);
+    toast('Imagen pegada desde portapapeles');
+  }
+});
+
+function _kbRemoveImage() {
+  _kbImageDataUrl = null;
+  document.getElementById('kb-img-preview').style.display = 'none';
+  document.getElementById('kb-img-placeholder').style.display = 'flex';
+  document.getElementById('kb-img-remove').style.display = 'none';
+  document.getElementById('kb-img-input').value = '';
+}
+
+function _kbSuggestPrice() {
+  const hint = document.getElementById('kb-price-hint');
+  if (!_kbComponents.length) { hint.style.display = 'none'; return; }
+  const sum = _kbComponents.reduce((t, c) => {
+    const p = products.find(x => x.id === c.id);
+    return t + (p?.price || 0) * c.qty;
+  }, 0);
+  if (!sum) { hint.style.display = 'none'; return; }
+  hint.style.display = 'block';
+  hint.innerHTML = `Suma de componentes: <strong>$${sum.toLocaleString('es-MX')}</strong> · <a href="#" onclick="event.preventDefault();document.getElementById('kb-price').value=${sum};this.parentElement.style.display='none'" style="color:var(--gold);text-decoration:none;font-weight:600">Usar este precio</a>`;
+  const priceEl = document.getElementById('kb-price');
+  if (!priceEl.value) priceEl.value = sum;
+}
+
+// Stock en vivo del componente -- _kbComponents guarda un snapshot de
+// stock/oos tomado al momento de agregar, que nunca se releía después. Si
+// el kit se sigue armando mientras otro dispositivo recibe mercancía de
+// ese mismo componente (Modo Recepción corre en paralelo en esta misma
+// app), la vista previa "📦 N kits disponibles" y el aviso "Agotado" por
+// componente se quedaban congelados con el número viejo.
+function _kbLiveStock(id) {
+  const p = products.find(x => x.id === id);
+  return p ? p.stock : 0;
+}
+
+function _kbAddComponent(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || _kbComponents.find(c => c.id === id)) return;
+  _kbComponents.push({ id: p.id, name: p.name, qty: 1, stock: p.stock, image: p.image, oos: p.outOfStock || p.stock === 0 });
+  const searchEl = document.getElementById('kb-search');
+  const q = searchEl.value.trim();
+  if (q) _kbSearch(q); else { searchEl.value = ''; document.getElementById('kb-search-results').style.display = 'none'; }
+  _kbRenderComponents();
+  _kbUpdateStock();
+  _kbSuggestPrice();
+}
+
+function _kbRemoveComponent(id) {
+  _kbComponents = _kbComponents.filter(c => c.id !== id);
+  _kbRenderComponents();
+  _kbUpdateStock();
+  _kbSuggestPrice();
+}
+
+function _kbChangeQty(id, delta) {
+  const c = _kbComponents.find(x => x.id === id);
+  if (!c) return;
+  c.qty = Math.max(1, c.qty + delta);
+  _kbRenderComponents();
+  _kbUpdateStock();
+  _kbSuggestPrice();
+}
+
+function _kbRenderComponents() {
+  const el = document.getElementById('kb-components');
+  if (!_kbComponents.length) {
+    el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:.8rem;border:1.5px dashed var(--border);border-radius:10px">Busca productos arriba para agregarlos al kit</div>';
+    return;
+  }
+  el.innerHTML = _kbComponents.map(c => { const oos = _kbLiveStock(c.id) === 0; return `
+    <div class="kb-comp">
+      <img data-src="${_driveSz(c.image, 80) || DEFAULT_IMG}" style="width:44px;height:44px;object-fit:cover;border-radius:9px;flex-shrink:0;cursor:zoom-in;background:var(--surface-soft)" onerror="_kbImgRetry(this,'${_driveSz(c.image, 80) || ''}')" onclick="_kitCompPopover(${c.id},event)" title="Ver producto">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="_kitCompPopover(${c.id},event)" title="Ver producto">
+        <div style="font-size:.84rem;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${_esc(c.name)}</div>
+        ${oos ? `<div style="font-size:.7rem;color:var(--red);margin-top:2px"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Agotado — disponibilidad calculada cuando haya stock</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button class="kb-qty-btn" onclick="_kbChangeQty(${c.id},-1)">−</button>
+        <span style="font-size:.9rem;font-weight:700;min-width:22px;text-align:center">${c.qty}</span>
+        <button class="kb-qty-btn" onclick="_kbChangeQty(${c.id},1)">+</button>
+        <button class="kb-qty-btn" onclick="_kbRemoveComponent(${c.id})" aria-label="Quitar componente" style="margin-left:8px;border-color:var(--tint-red-border);background:var(--tint-red-bg);color:var(--red)">✕</button>
+      </div>
+    </div>`; }).join('');
+  _staggerImgLoad(el);
+}
+
+// Dispara los <img data-src> uno por uno con un pequeño espacio entre cada
+// uno, en vez de todos a la vez -- pedir muchas miniaturas de Drive en el
+// mismo instante hace que Drive rechace/tarde en servir varias de ellas
+// (confirmado: 8 componentes a la vez fallaban varios, 7 cargaban todos).
+function _staggerImgLoad(container) {
+  container.querySelectorAll('img[data-src]').forEach((img, i) => {
+    setTimeout(() => { img.src = img.dataset.src; img.removeAttribute('data-src'); }, i * 150);
+  });
+}
+
+function _kbUpdateStock() {
+  const el = document.getElementById('kb-stock-preview');
+  if (!_kbComponents.length) { el.textContent = ''; return; }
+  const avail = Math.min(..._kbComponents.map(c => Math.floor(_kbLiveStock(c.id) / c.qty)));
+  el.innerHTML = avail > 0
+    ? `${avail} kit${avail !== 1 ? 's' : ''} disponible${avail !== 1 ? 's' : ''} con el stock actual`
+    : '<svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Sin stock suficiente con el inventario actual';
+  el.style.color = avail > 0 ? 'var(--green)' : 'var(--red)';
+}
+
+async function _saveKit() {
+  const name  = document.getElementById('kb-name').value.trim();
+  const price = parseFloat(document.getElementById('kb-price').value);
+  if (!name)                      { toast('Escribe el nombre del kit', 'error'); document.getElementById('kb-name').focus(); return; }
+  if (isNaN(price) || price < 0) { toast('Escribe un precio válido', 'error'); document.getElementById('kb-price').focus(); return; }
+
+  const catCode = _kbSelectedCatCode || '';
+  if (!catCode) { toast('Selecciona una categoría', 'error'); return; }
+  const catObj   = categories.find(c => c.code === catCode);
+  const catLabel = catObj?.label || catCode;
+  const position = products.length;
+  const isPublished = can.publishProduct ? true : false;
+  const kitItems = _kbComponents.map(c => ({ id: c.id, name: c.name, qty: c.qty, image: c.image || null }));
+
+  const btn = document.getElementById('kb-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  let kitImage = KIT_DEFAULT_IMG;
+  if (_kbImageDataUrl) {
+    const uploaded = await uploadToDrive(_kbImageDataUrl);
+    kitImage = uploaded || _kbImageDataUrl;
+  }
+
+  const result = await supabaseApi('products', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=representation' },
+    body: JSON.stringify({
+      name, category: catCode, category_label: catLabel,
+      price, description: '', image: kitImage,
+      badge: '🎁 Kit', badge_type: 'new', featured: false,
+      out_of_stock: false, original_price: null,
+      barcode: null, stock: 0, cost: null,
+      is_published: isPublished, kit_items: kitItems, images: null, position
+    })
+  });
+
+  // El id lo asigna la BD (products_id_seq).
+  const newId = result.ok ? result.data?.[0]?.id : null;
+  if (!newId) {
+    const errMsg = result.data?.message || result.data?.hint || result.data?.details || `HTTP ${result.status}`;
+    toast(`Error al guardar kit: ${errMsg}`, 'error');
+    btn.disabled = false; btn.textContent = 'Guardar Kit →';
+    return;
+  }
+
+  products.push({
+    id: newId, name, category: catCode, categoryLabel: catLabel,
+    price, originalPrice: null, description: null, image: kitImage,
+    badge: '🎁 Kit', badgeType: 'new', featured: false, outOfStock: false,
+    barcode: null, stock: 0, cost: null, isPublished, kitItems, images: null, position
+  });
+  _lastNewProductCategory = catCode;
+  _trackEdit(newId);
+  logActivity('producto_creado', `Creó kit "${name}" — $${price.toLocaleString('es-MX')}`, { id: newId, name, price });
+  closeKitBuilder();
+  // Resetear filtros para que el kit siempre sea visible al crearlo
+  const cf = document.getElementById('cat-filter');
+  if (cf) cf.value = 'all';
+  _statFilter = null;
+  renderTable();
+  renderStats();
+  toast(`🎁 Kit "${name}" creado`, '');
+}
+

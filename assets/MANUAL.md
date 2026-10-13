@@ -1,0 +1,175 @@
+# Manual de Usuario — Tres Encantos
+
+Guía para el equipo de la tienda: Caja, Inventario, Reportes, Actividad y Configuración.
+Última revisión: 2 de octubre de 2026.
+
+---
+
+## Antes de empezar
+
+- Entra con tu correo y contraseña. Los íconos de arriba llevan a **Caja**, **Inventario**, **Reportes** y **Tienda**. Lo demás (Actividad, Configuración, Mi PIN, Modo oscuro, Cerrar sesión) está en el menú de tu foto o iniciales.
+- **Permisos:** cada persona tiene los suyos (los define la dueña en Configuración → Usuarios y Permisos). Si algo te pide autorización, una persona que sí tenga ese permiso escribe **su PIN** en tu dispositivo y la acción sigue. Esa autorización sirve para una sola acción y dura 5 minutos.
+- **Mi PIN:** si autorizas acciones de otras personas, configura tu PIN de 4 a 6 dígitos en el menú de tu foto → Mi PIN.
+
+---
+
+## Caja
+
+### Abrir turno
+Caja no deja vender sin turno abierto. Al entrar, escribe el **fondo inicial**: el efectivo que hay en el cajón antes de vender. El sistema sugiere el monto con el que cerraste la última vez.
+
+### Registrar una venta
+1. Busca el producto por nombre o escanea su código de barras.
+2. Tócalo para agregarlo al carrito. Ajusta cantidades con + / −.
+3. Elige el método: **Efectivo** o **Transferencia**.
+4. En efectivo, toca el monto que te dieron (o escríbelo) y el sistema calcula el cambio.
+5. Pulsa **Cobrar**.
+
+En **Más opciones** están el descuento, la nota, el cliente y "Ya lo cobró Ofelia" (cuando el dinero lo recibió ella y no entra a tu cajón).
+
+**Transferencia:** confirma en la app del banco que llegó el dinero antes de entregar el producto.
+
+### ¿Te equivocaste y era apartado?
+Justo después de cobrar, en la ventana de confirmación, toca **Era apartado**. La venta se cancela y los productos regresan al carrito como apartado, con el nombre de la clienta. Captura el anticipo si dejó dinero; si no, devuélvele lo que pagó.
+
+### Registrar un apartado
+1. Agrega los productos al carrito.
+2. Activa **Es apartado**.
+3. Escribe el **nombre** de la clienta (obligatorio) y su teléfono.
+4. Escribe el **anticipo** (puede ser $0) y revisa la fecha límite (30 días por defecto).
+5. Pulsa **Registrar apartado** y envía la confirmación por WhatsApp.
+
+### Abonos, liquidar, editar y cancelar apartados
+En **Apartados** busca a la clienta y abre su ficha para abonar, liquidar, editar productos/datos o cancelar. Después de cada pago el sistema ofrece enviarle el comprobante por WhatsApp; mándalo siempre, es su respaldo y el tuyo.
+
+### Pasar apartados de la libreta
+Para apartados que se anotaron en papel y no están en el sistema. En **Apartados** toca **Libreta** (en computadora: **Pasar de la libreta**).
+1. Escribe el **nombre** como viene en la libreta y, si lo tienes, su teléfono. Si ya hay un apartado con ese nombre, te avisa para que no la pases dos veces.
+2. **La cuenta:** si la libreta trae el total, escríbelo y toca **+ Anotar abono** por cada resta (Enter pasa al siguiente). Junto a cada abono ves cuánto quedaba, para compararlo con lo que dice la libreta. Si solo sabes cuánto debe, toca **Solo sé cuánto debe**.
+3. Lo demás es opcional: qué apartó, la fecha del apartado, la fecha límite y una foto de la página.
+4. Toca **Guardar**. La ventana se queda abierta para la siguiente clienta; ciérrala cuando termines.
+
+Lo que la clienta pagó en la libreta cuenta para su saldo, pero **no** aparece en Reportes ni en el corte de caja (ese dinero entró antes). Lo que te pague desde hoy se registra como cualquier abono. Si te equivocaste en un monto, abre su ficha y toca el lápiz para **corregir lo que debe**.
+
+### Ver apartados sin abrir caja
+En la pantalla **Abrir caja**, toca **Solo ver apartados, sin abrir caja**. Puedes buscar, revisar cuánto deben, mandar recordatorios y pasar apartados de la libreta. Para cobrar un abono, liquidar o hacer un apartado nuevo, el sistema te pedirá abrir caja.
+
+### Fiado: cuando la persona se lleva el producto
+Si una persona de confianza se lleva el producto y paga después, al hacer el apartado toca **Se lo lleva hoy (fiado)**. Necesita el permiso **Dar fiado** (Ofelia lo tiene); si no lo tienes, el sistema pide el PIN de Ofelia. Si Ofelia lo indica por teléfono, registra un apartado normal y ella lo marca como fiado desde su celular (Apartados → abrir el apartado → lápiz → **Se lo llevó**; puede hacerlo con **Solo ver apartados**, sin abrir caja). Si ya existe el apartado, ábrelo, toca el lápiz y marca **Se lo llevó**. Un fiado nunca se libera: solo se le sigue cobrando, y sus recordatorios hablan de saldo pendiente, no de "pasar a recoger".
+
+### Apartado en tienda o fiado: cómo distinguirlos
+En la lista de Apartados, los que tienen el producto **guardado en la tienda** llevan la etiqueta **En tienda**. Los que no la llevan son fiado: la persona ya se llevó su producto. Al liquidar un apartado En tienda, el sistema te recuerda **entregarle su producto**.
+
+### Liberar un apartado vencido
+Cuando un apartado (no fiado) lleva **30 días o más vencido**, aparece **Liberar producto** en su ficha y en "Recordar a vencidas". Úsalo solo si el producto sigue en la tienda: vuelve a la venta y lo que pagó la clienta **queda a su favor** (o elige "Se lo devuelvo ahora" si está presente). Nada se libera solo: siempre lo decide una persona.
+
+### Saldo a favor
+Los saldos a favor se ven en **Apartados → Cancelados** ("A favor $300"). Cuando la clienta regrese, abre su apartado y toca **Devolver saldo a favor** (necesita caja abierta). Si lo quiere usar para comprar algo, devuélveselo ahí y cobra la compra normal con ese dinero.
+
+### Recordar a las clientas con apartado vencido
+En **Apartados**, toca **Recordar a vencidas**. Sale la lista de apartados vencidos con cuánto deben y cuándo se les recordó por última vez (por cualquier persona). Toca **Enviar** en cada una: se abre WhatsApp con el mensaje listo; solo envíalo y regresa a la lista para la siguiente. Primero aparecen las que no tienen recordatorio hoy.
+
+**Cancelar** (una venta o un apartado) pide un motivo. En un apartado con dinero pregunta qué pasa con lo que pagó: **queda a su favor** (no sale dinero hoy; ver "Saldo a favor") o **se lo devuelvo ahora** (sale del cajón y confirmas la devolución).
+
+### Si un producto aparece agotado
+Si lo tienes físicamente, tócalo: Caja ofrece **Reabastecer** (sumar stock) y lo agrega al carrito.
+
+### Cerrar turno (corte)
+Hazlo **al terminar tu jornada, todos los días**, aunque te vayas temprano.
+
+1. Abre **Corte**.
+2. **Cuenta el efectivo del cajón** y escríbelo en "Conteo físico". El sistema no te muestra cuánto debería haber hasta que comparas; así el conteo es real.
+3. Si alguien más cobró en efectivo mientras tu turno estaba abierto (por ejemplo, Ofelia desde su celular), Caja te pregunta si **ese dinero está en tu cajón**. Contesta Sí o No por cada persona.
+4. Toca **Comparar conteo**. Si escribiste mal, toca "Corregir conteo".
+5. Toca **Cerrar turno**. Una diferencia de $100 o más necesita autorización.
+
+En **Ver detalle de mis cobros** está cada movimiento de tu turno, para encontrar dónde está una diferencia.
+
+Si se te olvidó cerrar, al día siguiente verás un aviso: cuenta el cajón y cierra el turno anterior antes de vender.
+
+### Gastos, ingresos y retiros del turno
+En Corte → **Gastos y otros movimientos**, toca **+ Agregar** y elige:
+- **Gasto:** salida de efectivo para un pago (garrafones, taxi).
+- **Ingreso:** entrada que no es venta (recargas).
+- **Retiro:** dinero que alguien se lleva del cajón sin ser gasto, por ejemplo cuando Ofelia se lleva la venta del día o se hace un depósito. Escribe quién se lo lleva.
+
+**Cada vez que salga dinero del cajón, regístralo en ese momento.** Si no, al cerrar el turno va a faltar exactamente esa cantidad. Los retiros quedan en Actividad y no cuentan como gasto en la utilidad.
+
+### Historial
+Muestra los cobros recientes agrupados por fecha. Desde cada tarjeta puedes ver el historial de la operación, reenviar el comprobante o cancelar.
+
+---
+
+## Inventario
+
+### Buscar
+Un solo buscador encuentra por nombre, categoría, código de barras, precio o código de proveedor. Los chips de arriba filtran lo que necesita atención: Sin stock, Última pieza, Sin publicar, Por revisar, Sin código, Sin precio, Por caducar, etc.
+
+### Ver y editar
+- Toca un producto para abrir su vista rápida (desliza para ver el siguiente; hacia arriba para editarlo).
+- El stock y el precio se editan tocándolos directamente en la lista.
+- **Web / Oculto** indica si el producto se ve en la Tienda. Solo quien tiene permiso de publicar puede cambiarlo; si alguien sin ese permiso crea un producto, este queda oculto hasta que lo revisen.
+
+### Agregar un producto
+Pulsa **+ Agregar**, llena nombre, categoría, precio y fotos (cámara, galería o pegar). **Completar con IA** sugiere nombre, descripción y categoría a partir de la foto. **+ Otro** guarda y deja el formulario listo para el siguiente.
+
+### Recibir mercancía
+Botón **Recibir**. Modo **Con factura** (también corrige costo, precio y código de proveedor) o **Rápido** (solo suma stock). Escanea o busca cada producto; si no existe, primero búscalo por nombre antes de crearlo. Al terminar pulsa **Finalizar recepción**.
+
+### Recepción con IA
+Sube el PDF o las fotos de la factura. La IA extrae los renglones, tú revisas y vinculas cada uno con su producto (el sistema aprende el código del proveedor para la próxima vez) y aplicas. Revisa siempre las alertas de precio menor al costo antes de confirmar.
+
+### Archivar en vez de borrar
+Para sacar un producto de circulación usa **Archivar** (desde la vista rápida). Se puede restaurar desde el chip "Archivados". Un producto que está en un apartado activo no se puede eliminar.
+
+### Kits
+El botón de regalo arma un kit con 2 o más productos. Su disponibilidad depende del stock de sus componentes.
+
+---
+
+## Reportes
+
+Por **Día, Semana o Mes**, con flechas para ir a periodos anteriores. Todo en horario de Ciudad de México.
+
+- **Dinero:** ingresos reales del periodo, separados en Ventas, Abonos y Apertura de apartados. Las devoluciones restan.
+- **Turnos de caja:** cada cierre con su esperado, contado y diferencia.
+- También: movimientos del día, gráficas por hora y categoría, productos más vendidos, apartados pendientes, productos por caducar, clientes frecuentes, estado del inventario, rentabilidad y ventas por vendedora.
+
+Si una cifra dice "No disponible", falló la conexión; recarga la página (no significa $0).
+
+---
+
+## Actividad
+
+Registro de todo lo que pasa en el sistema: ventas, cancelaciones, cambios de precio y stock, turnos, autorizaciones con PIN. Se filtra por periodo, persona y tipo, y permite buscar (incluso productos dentro de las ventas). Es la herramienta para investigar un corte que no cuadró.
+
+---
+
+## Tienda (sitio web)
+
+Las clientas ven el catálogo, arman su pedido en **Mi pedido** y lo envían por WhatsApp (no hay pago en línea). Un producto aparece en la Tienda si está **publicado**, no está en "Por revisar" y tiene stock (o está apartado).
+
+---
+
+## Preguntas frecuentes
+
+**¿Por qué no aparece un producto en la Tienda?**
+Revisa en Inventario que esté en **Web**, que no esté agotado y que su categoría no sea "Por revisar".
+
+**El corte no cuadra, ¿qué reviso?**
+1. Que no haya ventas cobradas por error (por ejemplo, algo que era apartado) sin cancelar.
+2. Si alguien más cobró en efectivo y metió el dinero al mismo cajón.
+3. Dinero que alguien sacó del cajón (retiros) o gastos/ingresos que no se registraron en "Gastos y otros movimientos".
+4. "Ver detalle de mis cobros" en Corte, y Actividad para el detalle completo.
+
+**¿Cómo sé si una transferencia llegó?**
+El sistema no lo confirma: revisa la app del banco antes de entregar el producto.
+
+**Se cerró la sesión, ¿qué hago?**
+Recarga la página y vuelve a entrar. Si Caja se ve rara después de una actualización, recarga dos veces.
+
+---
+
+## Contacto técnico
+
+Eduardo — eacevedo@sunname.com.mx

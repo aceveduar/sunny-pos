@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" data-theme-ready="1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="img/icono-192.png">
+<title>Actividad — Tres Encantos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="activity.css">
+<script>
+/* Aplica el modo oscuro guardado ANTES del primer paint, para que no haya
+   flash claro→oscuro. Mismo script que Inventario/Caja/Reportes, ver
+   shared.js _initThemeToggle(). */
+(function(){try{if(localStorage.getItem('te_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left"></div>
+  <div class="topbar-right">
+    <nav class="topbar-nav-mobile" aria-label="Módulos">
+      <a href="pos.html" class="tbn-icon" title="Caja">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="tbn-label">Caja</span>
+      </a>
+      <a href="admin.html" class="tbn-icon" title="Inventario">
+        <svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="tbn-label">Inventario</span>
+      </a>
+      <a href="stats.html" class="tbn-icon" title="Reportes">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="tbn-label">Reportes</span>
+      </a>
+      <span class="tbn-sep"></span>
+      <a href="index.html" class="tbn-icon" title="Tienda">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="tbn-label">Tienda</span>
+      </a>
+      
+    </nav>
+    <span class="tbn-sep"></span>
+    <span class="user-avatar" id="user-avatar" style="cursor:pointer" title="Mi cuenta">?</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="act-search-wrap">
+    <input type="search" class="act-search-input" id="filter-search" placeholder="Buscar cliente, producto o nota…" oninput="onSearchInput()" autocomplete="off">
+    <button type="button" class="act-search-clear" id="filter-search-clear" onclick="clearSearch()" style="display:none" title="Limpiar búsqueda">✕</button>
+  </div>
+
+  <div class="filters-bar">
+    <select class="filter-select" id="filter-period" onchange="load()">
+      <option value="1" selected>Hoy</option>
+      <option value="7">7 días</option>
+      <option value="30">30 días</option>
+      <option value="0">Todo</option>
+    </select>
+    <select class="filter-select" id="filter-user" onchange="load()">
+      <option value="">Todos</option>
+    </select>
+    <div class="chip-group-wrap" id="chip-group-wrap">
+      <div class="chip-group" id="chip-group" onscroll="_chipsScroll()">
+        <button class="chip active" data-type="" onclick="setType(this,'')">Todos</button>
+        <button class="chip" data-type="venta" onclick="setType(this,'venta')"><svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Ventas</button>
+        <button class="chip" data-type="inventario" onclick="setType(this,'inventario')"><svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Inventario</button>
+        <button class="chip" data-type="apartado" onclick="setType(this,'apartado')"><svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Apartados</button>
+        <button class="chip" data-type="sistema" onclick="setType(this,'sistema')"><svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sistema</button>
+        <button class="chip" id="chip-night" onclick="toggleNightFilter(this)">🌙 Fuera de horario</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="feed"><div class="spinner"></div></div>
+</div>
+
+<script src="negocio.js"></script>
+<script src="activity.js"></script>
+<script src="shared.js"></script>
+</body>
+</html>

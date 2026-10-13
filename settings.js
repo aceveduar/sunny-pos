@@ -1,0 +1,1885 @@
+const SUPABASE_URL         = NEGOCIO.supabaseUrl;
+const SUPABASE_ANON_KEY    = NEGOCIO.supabaseAnonKey;
+const SESSION_KEY          = 'te_admin_session';
+const CAT_PALETTE          = ['#C9A462','#60a5fa','#f472b6','#34d399','#a78bfa','#fb923c','#fbbf24','#a3e635','#2dd4bf','#f87171'];
+
+/* ── AUTH + ROL ── */
+let ROLE = 'operador';
+(function(){
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.access_token || s.expires_at <= Date.now()/1000 + 60) return window.location.href = 'admin.html';
+    ROLE = s?.user?.user_metadata?.role ||
+      (() => { try { return JSON.parse(atob(s.access_token.split('.')[1]))?.user_metadata?.role; } catch{} })() ||
+      'operador';
+  } catch { window.location.href = 'admin.html'; }
+})();
+
+async function doLogout() {
+  await logActivity('sesion_cerrada', 'Cerró sesión');
+  sessionStorage.removeItem('te_user_can');
+  localStorage.removeItem(SESSION_KEY);
+  window.location.href = 'admin.html';
+}
+
+/* ── API ── */
+function _getSettingsToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return s?.access_token || SUPABASE_ANON_KEY;
+  } catch { return SUPABASE_ANON_KEY; }
+}
+async function _refreshSettingsToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.refresh_token) return false;
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d?.access_token) return false;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      access_token: d.access_token, refresh_token: d.refresh_token,
+      expires_at: Math.floor(Date.now()/1000) + (d.expires_in||3600),
+      email: d.user?.email || s.email, user: d.user || s.user
+    }));
+    return true;
+  } catch { return false; }
+}
+// Timeout en todo fetch a Supabase (convención del proyecto): sin esto una
+// conexión colgada dejaba los botones en "Guardando…" para siempre, y un
+// error de red lanzaba excepción en vez de devolver { ok:false }.
+function _settingsFetchTimeout(url, opts = {}, ms = 20000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+const _SETTINGS_NET_FAIL = { ok: false, status: 0, data: { message: 'Sin conexión o el servidor no respondió. Intenta de nuevo.' } };
+
+async function api(path, opts = {}) {
+  const _call = (tk) => _settingsFetchTimeout(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${tk}`, 'Content-Type': 'application/json', ...opts.headers }
+  }).then(async r => {
+    const text = await r.text();
+    let data; try { data = JSON.parse(text); } catch { data = text || null; }
+    return { ok: r.ok, status: r.status, data };
+  });
+  try {
+    const r = await _call(_getSettingsToken());
+    if (r.status === 401 && await _refreshSettingsToken()) return await _call(_getSettingsToken());
+    return r;
+  } catch { return _SETTINGS_NET_FAIL; }
+}
+
+// Invoca una Supabase Edge Function con el JWT de la sesión activa -- mismo
+// patrón que api() (refresca el token una vez si viene expirado), pero
+// contra /functions/v1/ en vez de /rest/v1/.
+async function edgeFn(name, payload = {}, ms = 20000) {
+  const _call = (tk) => _settingsFetchTimeout(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${tk}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }, ms).then(async r => {
+    const text = await r.text();
+    let data; try { data = JSON.parse(text); } catch { data = text || null; }
+    return { ok: r.ok, status: r.status, data };
+  });
+  try {
+    const r = await _call(_getSettingsToken());
+    if (r.status === 401 && await _refreshSettingsToken()) return await _call(_getSettingsToken());
+    return r;
+  } catch { return _SETTINGS_NET_FAIL; }
+}
+
+/* ── STATE ── */
+let categories = [];
+// La clave de Groq ya no es legible desde el navegador: solo se sabe si hay
+// una configurada (te_ai_configured). Las llamadas pasan por groq-proxy.
+let _aiConfigured = false;
+let _openSections = new Set();
+let _dragCode = null, _dragType = null;
+let _catCounts = {};
+let driveEp    = null;
+let driveSecret= null;
+// drive_secret ya no es legible por SELECT (2026-10-07): se pide con
+// te_get_drive_secret (canManageSettings). false = no se pudo leer, y entonces
+// NO se genera uno nuevo al guardar (rompería el Apps Script ya configurado).
+let _driveSecretLoaded = false;
+let nameMap    = {};
+let userPermsMap = {};  // { "email": { role, canXxx: bool, … } }
+const _myEmail = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)||'{}')?.user?.email||''; } catch { return ''; } })();
+function logActivity(action, summary, meta = null) {
+  return api('activity_log', {
+    method: 'POST',
+    body: JSON.stringify({ user_email: _myEmail, action, summary, meta })
+  }).catch(() => {});
+}
+
+/* ── INIT ── */
+async function init() {
+  const [cfgR, catR, namesR, aiR, secretR] = await Promise.all([
+    api('config?id=in.(drive_ep,wa_float,captura_rapida,show_creator,show_restock,show_recv,show_recv_ia,show_libreta,user_permissions)&select=id,value'),
+    api('config?id=eq.categories&select=value'),
+    api('config?id=eq.user_names&select=value'),
+    api('rpc/te_ai_configured', { method: 'POST', body: '{}' }),
+    api('rpc/te_get_drive_secret', { method: 'POST', body: '{}' })
+  ]);
+  _aiConfigured = aiR.ok && aiR.data === true;
+  _driveSecretLoaded = secretR.ok;
+  driveSecret = secretR.ok && typeof secretR.data === 'string' && secretR.data ? secretR.data : null;
+
+  if (cfgR.ok && cfgR.data) {
+    cfgR.data.forEach(row => {
+      if (row.id === 'drive_ep')          driveEp      = row.value || null;
+      if (row.id === 'user_permissions')  {
+        try {
+          userPermsMap = JSON.parse(row.value||'{}');
+          // Rol 'dueña' retirado 2026-09-05 (nunca se mostraba en la UI y en la
+          // práctica ya corría con acceso de superadmin) -- normaliza cualquier
+          // cuenta que se haya quedado guardada con ese rol, sin necesitar una
+          // migración SQL aparte.
+          Object.values(userPermsMap).forEach(p => { if (p && p.role === 'duena') p.role = 'superadmin'; });
+        } catch {}
+      }
+      if (row.id === 'wa_float') {
+        const toggle = document.getElementById('wa-float-toggle');
+        if (toggle) toggle.checked = row.value !== 'false';
+      }
+      if (row.id === 'captura_rapida') {
+        const toggle = document.getElementById('captura-rapida-toggle');
+        if (toggle) toggle.checked = row.value !== 'false';
+      }
+      if (row.id === 'show_creator') {
+        const toggle = document.getElementById('show-creator-toggle');
+        if (toggle) toggle.checked = row.value === 'true';
+      }
+      if (row.id === 'show_restock') {
+        const toggle = document.getElementById('show-restock-toggle');
+        if (toggle) toggle.checked = row.value !== 'false';
+      }
+      if (row.id === 'show_libreta') {
+        const toggle = document.getElementById('show-libreta-toggle');
+        if (toggle) toggle.checked = row.value === 'true';
+      }
+      if (row.id === 'show_recv') {
+        const toggle = document.getElementById('show-recv-toggle');
+        if (toggle) toggle.checked = row.value === 'true';
+      }
+      if (row.id === 'show_recv_ia') {
+        const toggle = document.getElementById('show-recv-ia-toggle');
+        if (toggle) toggle.checked = row.value === 'true';
+      }
+    });
+  }
+
+  // Migración silenciosa: corregir operadores con canDelete/canPublish:true (bug pre-2026-06-19)
+  let _driftFixed = false;
+  Object.values(userPermsMap).forEach(perms => {
+    if ((!perms.role || perms.role === 'operador') &&
+        (perms.canDeleteProduct === true || perms.canPublishProduct === true)) {
+      perms.canDeleteProduct  = false;
+      perms.canPublishProduct = false;
+      _driftFixed = true;
+    }
+  });
+  if (_driftFixed) api('config', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: 'user_permissions', value: JSON.stringify(userPermsMap) })
+  });
+
+  if (catR.ok && catR.data?.[0]?.value) {
+    try { categories = JSON.parse(catR.data[0].value); } catch { categories = []; }
+  }
+
+  if (namesR.ok && namesR.data?.[0]?.value) {
+    try { nameMap = JSON.parse(namesR.data[0].value); } catch {}
+  }
+
+  renderUsersPerms();
+  loadGroqKeyStatus();
+  loadDriveConfig();
+}
+
+/* ── GROQ ── */
+function loadGroqKeyStatus() {
+  const el = document.getElementById('groq-key-status');
+  if (!el) return;
+  if (_aiConfigured) {
+    el.textContent = '✓ Configurado'; el.classList.add('ok');
+  }
+}
+
+async function saveGroqKey() {
+  const val = document.getElementById('groq-key-input').value.trim();
+  if (!val || !val.startsWith('gsk_')) { toast('Ingresa una key válida (empieza con gsk_)', 'err'); return; }
+  // Vía te_save_config_value (exige canManageSettings): un POST directo a
+  // config solo funciona para superadmin y falla en silencio para los demás.
+  const r = await _saveConfigValue('groq_key', val);
+  if (r.ok) {
+    _aiConfigured = true;
+    document.getElementById('groq-key-input').value = '';
+    loadGroqKeyStatus();
+    logActivity('configuracion_editada', 'Actualizó la Groq API key', { setting: 'groq_key' });
+    toast('🤖 Groq key guardada — IA activa en todos los dispositivos ✓', 'ok');
+  } else { toast('Error al guardar la key', 'err'); }
+}
+
+/* ── DRIVE ── */
+function loadDriveConfig() {
+  if (!driveEp) return;
+  document.getElementById('drive-endpoint-input').value = driveEp;
+  document.getElementById('drive-secret-input').value   = driveSecret || '';
+  const st = document.getElementById('drive-status-txt');
+  st.textContent = '✓ Conectado'; st.classList.add('ok');
+  document.getElementById('drive-test-btn').style.display = '';
+  document.getElementById('drive-clear-btn').style.display = '';
+}
+
+async function saveDriveEndpoint() {
+  const ep = document.getElementById('drive-endpoint-input').value.trim();
+  if (!ep) { toast('Pega primero la URL del Apps Script', 'err'); return; }
+  if (!_driveSecretLoaded) { toast('No se pudo leer el secreto actual de Drive — recarga la página antes de guardar', 'err'); return; }
+  const newSecret = driveSecret || 'te_' + crypto.randomUUID().replace(/-/g, '');
+  // Por te_save_config_value (no POST directo a config: ese solo funciona para superadmin).
+  const [r1, r2] = await Promise.all([
+    _saveConfigValue('drive_ep', ep),
+    _saveConfigValue('drive_secret', newSecret)
+  ]);
+  if (!r1.ok || !r2.ok) { toast((r1.ok ? r2 : r1).data?.message || 'Error al guardar en Supabase — intenta de nuevo', 'err'); return; }
+  driveEp = ep; driveSecret = newSecret;
+  document.getElementById('drive-secret-input').value = driveSecret;
+  const st = document.getElementById('drive-status-txt');
+  st.textContent = '✓ Conectado'; st.classList.add('ok');
+  document.getElementById('drive-test-btn').style.display = '';
+  document.getElementById('drive-clear-btn').style.display = '';
+  logActivity('configuracion_editada', 'Configuró/actualizó Google Drive', { setting: 'drive_ep' });
+  toast('Drive guardado — copia el secreto del campo gris y pégalo en tu Apps Script ✓', 'ok');
+}
+
+function copyDriveSecret() {
+  const val = document.getElementById('drive-secret-input').value;
+  if (!val) return;
+  navigator.clipboard.writeText(val)
+    .then(() => toast('Secreto copiado al portapapeles ✓', 'ok'))
+    .catch(() => toast('Selecciona el texto y copia con Ctrl+C / ⌘C', ''));
+}
+
+async function clearDrive() {
+  if (!(await teConfirm({ title: 'Desconectar Google Drive', message: '¿Desconectar Google Drive? Las imágenes futuras se guardarán dentro de la base de datos en lugar de Drive.', confirmText: 'Desconectar', danger: true }))) return;
+  // Vacío en vez de DELETE: quien lee trata '' como "no configurado", y así pasa
+  // por te_save_config_value (DELETE directo solo funciona para superadmin).
+  const [r1, r2] = await Promise.all([
+    _saveConfigValue('drive_ep', ''),
+    _saveConfigValue('drive_secret', '')
+  ]);
+  if (!r1.ok || !r2.ok) { toast((r1.ok ? r2 : r1).data?.message || 'No se pudo desconectar — intenta de nuevo', 'err'); return; }
+  driveEp = null; driveSecret = null;
+  document.getElementById('drive-endpoint-input').value = '';
+  document.getElementById('drive-secret-input').value   = '';
+  const st = document.getElementById('drive-status-txt');
+  st.textContent = '(no configurado)'; st.classList.remove('ok');
+  document.getElementById('drive-test-btn').style.display  = 'none';
+  document.getElementById('drive-clear-btn').style.display = 'none';
+  logActivity('configuracion_editada', 'Desconectó Google Drive', { setting: 'drive_ep' });
+  toast('Drive desconectado', '');
+}
+
+async function testDriveEndpoint() {
+  if (!driveEp) return;
+  const btn = document.getElementById('drive-test-btn');
+  btn.textContent = 'Probando…'; btn.disabled = true;
+  try {
+    const r = await fetch(driveEp);
+    const txt = await r.text();
+    toast(txt === 'OK' ? 'Conexión con Drive OK ✓' : 'Respuesta inesperada: ' + txt, txt === 'OK' ? 'ok' : 'err');
+  } catch(e) { toast('Error al conectar: ' + e.message, 'err'); }
+  btn.textContent = 'Probar conexión'; btn.disabled = false;
+}
+
+/* ── AUDITORÍA DE IMÁGENES DE DRIVE (2026-09-12) ──
+   Compara los archivos que de verdad existen en la carpeta de Drive contra
+   las imágenes que algún producto usa hoy (principal + adicionales,
+   incluidos archivados) -- lo que sobra es candidato a borrar. Nunca borra
+   solo: siempre muestra la lista para que se decida a mano. Requiere que
+   el Apps Script tenga el action "list" (ver
+   assets/apps_script_actualizado.gs) ya desplegado. */
+function _driveFileId(url) {
+  if (!url || !url.includes('drive.google.com')) return null;
+  const m = url.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : null;
+}
+
+let _driveAuditFiles = []; // [{id,name,createdDate,size,selected}]
+
+/* ── ERRORES DE LA APP (client_errors, solo superadmin) ── */
+async function _loadClientErrors() {
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  return api(`client_errors?select=*&last_at=gte.${encodeURIComponent(since)}&order=last_at.desc&limit=100`);
+}
+async function _refreshClientErrorsTag() {
+  const r = await _loadClientErrors();
+  const tag = document.getElementById('client-errors-tag');
+  if (!tag || !r.ok || !Array.isArray(r.data)) return;
+  const n = r.data.length;
+  tag.innerHTML = n ? ` — <strong>${n} distinto${n !== 1 ? 's' : ''}</strong>` : ' — sin errores';
+}
+/* ── RESPALDO AUTOMÁTICO (config.ultimo_respaldo, lo escribe
+   scripts/respaldo-supabase.ps1 cada noche en la PC de Eduardo) ──
+   Antes, si el respaldo fallaba solo quedaba en un log de esa PC: estuvo
+   guardando zips vacíos del 2 al 10 de octubre sin que nadie lo notara. */
+async function _refreshAutoBackup() {
+  const desc = document.getElementById('auto-backup-desc');
+  if (!desc) return;
+  const r = await api('config?id=eq.ultimo_respaldo&select=value');
+  let st = null;
+  try { st = r.ok && r.data?.[0]?.value ? JSON.parse(r.data[0].value) : null; } catch {}
+  if (!st?.at) {
+    desc.innerHTML = '<strong style="color:var(--red)">Sin registro todavía.</strong> Se anota la primera vez que corra el respaldo nocturno (9:30 p. m.).';
+    return;
+  }
+  const at = new Date(st.at);
+  const horas = (Date.now() - at.getTime()) / 3600000;
+  const cuando = at.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  if (!st.ok) {
+    desc.innerHTML = `<strong style="color:var(--red)">Falló el ${escH(cuando)}</strong> (${Number(st.errores) || 0} error${st.errores == 1 ? '' : 'es'}). Revisa respaldo.log en la PC de los respaldos.`;
+  } else if (horas > 50) {
+    desc.innerHTML = `<strong style="color:var(--red)">El último respaldo fue el ${escH(cuando)}.</strong> La PC de los respaldos no lo ha hecho desde entonces (¿apagada?).`;
+  } else if (st.drive === 'error') {
+    desc.innerHTML = `Último: ${escH(cuando)} · ${Number(st.mb || 0).toFixed(1)} MB. <strong style="color:var(--red)">No se pudo subir la copia a Google Drive</strong> (se guardó solo en la PC; revisa respaldo.log).`;
+  } else {
+    desc.textContent = `Último: ${cuando} · ${Number(st.mb || 0).toFixed(1)} MB, ${Number(st.tablas) || 0} tablas${st.drive === 'ok' ? ', con copia en Google Drive' : ''}. Se hace cada noche.`;
+  }
+}
+
+async function openClientErrors() {
+  document.getElementById('client-errors-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const body = document.getElementById('client-errors-body');
+  body.innerHTML = '<p class="field-hint">Cargando…</p>';
+  const r = await _loadClientErrors();
+  if (!r.ok) { body.innerHTML = '<p class="field-hint">No se pudo cargar — intenta de nuevo.</p>'; return; }
+  if (!r.data.length) { body.innerHTML = '<p class="field-hint">No hay errores en los últimos 30 días.</p>'; return; }
+  const fmt = v => new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(v));
+  body.innerHTML = r.data.map(e => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:.84rem;font-weight:600;color:var(--charcoal);word-break:break-word">${escH(e.message)}</div>
+      <div style="font-size:.76rem;color:var(--muted);margin-top:3px">${escH(e.module || '')}${e.source ? ' · ' + escH(e.source) : ''} · ${escH((nameMap[e.user_email] || (e.user_email || '').split('@')[0]))} · ${fmt(e.last_at)}${e.veces > 1 ? ` · ${e.veces} veces` : ''}</div>
+    </div>`).join('');
+}
+function closeClientErrors() {
+  document.getElementById('client-errors-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function openDriveAudit() {
+  document.getElementById('drive-audit-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _runDriveAudit();
+}
+function closeDriveAudit() {
+  document.getElementById('drive-audit-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Spinner animado (mismo estilo que "Cargando catálogo…" en Inventario) con
+// un mensaje que cambia por paso -- el proceso son 2 llamadas encadenadas
+// (catálogo, luego Drive) y la segunda puede tardar si hay muchos archivos;
+// sin esto se sentía "atorado" en un solo texto estático.
+function _driveAuditSpinner(msg) {
+  return `<div style="text-align:center;padding:28px 0;color:var(--muted)">
+    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
+    <br>${msg}
+  </div>`;
+}
+
+async function _runDriveAudit() {
+  const body = document.getElementById('drive-audit-body');
+  const foot = document.getElementById('drive-audit-foot');
+  foot.style.display = 'none';
+  body.innerHTML = _driveAuditSpinner('Leyendo tu catálogo de productos…');
+  if (!driveEp) {
+    body.innerHTML = '<p class="field-hint">Conecta Google Drive primero (arriba, en Integraciones).</p>';
+    return;
+  }
+
+  // 1) Todas las imágenes que algún producto usa hoy (incluye archivados --
+  // se pueden restaurar, así que su imagen sigue en uso real).
+  // También componentes de kits (kit_items guarda la foto de cada uno) y el
+  // registro de ventas viejas: el historial de Caja muestra esas fotos aunque
+  // el producto ya no exista. Se busca cualquier URL de Drive en el JSON.
+  const prodR = await _posPaginatedFetch('products?select=image,images,kit_items&order=id.asc');
+  if (!prodR.ok) { body.innerHTML = '<p class="field-hint">No se pudo leer el catálogo — intenta de nuevo.</p>'; return; }
+  const salesR = await _posPaginatedFetch('sales?select=items&order=id.asc');
+  if (!salesR.ok) { body.innerHTML = '<p class="field-hint">No se pudo leer el historial de ventas — intenta de nuevo.</p>'; return; }
+  const used = new Set();
+  [...(prodR.data || []), ...(salesR.data || [])].forEach(row => {
+    for (const m of JSON.stringify(row).matchAll(/drive\.google\.com[^"]*?[?&]id=([\w-]+)/g)) used.add(m[1]);
+  });
+
+  // 2) Todos los archivos que de verdad existen en la carpeta de Drive.
+  // Sin timeout esto se queda esperando para siempre si Drive tarda o el
+  // Apps Script se cuelga -- mismo bug que ya se corrigió hoy en Caja/
+  // Reportes (_posFetchTimeout/_statsFetchTimeout), aquí se le había
+  // olvidado a esta función nueva. 100s de margen: Apps Script en sí tiene
+  // un límite duro de 6 min de ejecución -- si la carpeta es tan grande que
+  // ni siquiera Apps Script logra terminar de listarla, este timeout no lo
+  // resuelve, solo evita que la pantalla se quede colgada sin avisar.
+  body.innerHTML = _driveAuditSpinner(`Comparando contra ${used.size} imagen(es) en uso… listando Drive, puede tardar si hay muchos archivos.`);
+  // Vía drive-proxy (el secreto ya no llega al navegador), por páginas de 300
+  // (~5 s cada una): de un solo golpe tardaba ~25 s y Google no entregaba la
+  // respuesta al servidor. Un Apps Script viejo ignora la paginación y
+  // regresa todo sin nextPageToken: el ciclo termina en la primera vuelta.
+  const allFiles = [];
+  let pageToken = null;
+  for (let page = 0; page < 100; page++) {
+    // Google a veces responde 404 al azar (también fuera de Supabase); pedir la
+    // misma página otra vez es seguro, así que se reintenta hasta 3 veces.
+    let r, res;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt) await new Promise(ok => setTimeout(ok, 1500));
+      r = await edgeFn('drive-proxy', { action: 'list', ...(pageToken ? { pageToken } : {}) }, 65000);
+      res = r.data && typeof r.data === 'object' ? r.data : null;
+      if (res?.ok || [401, 403, 412].includes(r.status)) break;
+    }
+    if (r.status === 0 || r.status === 504) {
+      body.innerHTML = '<p class="field-hint">Drive tardó demasiado en responder — intenta de nuevo en un momento.</p>';
+      return;
+    }
+    if (!res?.ok) {
+      body.innerHTML = `<p class="field-hint">No se pudo listar Drive${res?.error ? ' (' + escH(String(res.error)) + ')' : ''} — confirma que ya pegaste la versión nueva del Apps Script y creaste una "Nueva versión" de la implementación.</p>`;
+      return;
+    }
+    allFiles.push(...(res.files || []));
+    pageToken = res.nextPageToken || null;
+    if (!pageToken) break;
+    body.innerHTML = _driveAuditSpinner(`Listando Drive… ${allFiles.length} archivo(s) revisados.`);
+  }
+  const listRes = { files: allFiles };
+
+  _driveAuditFiles = (listRes.files || [])
+    .filter(f => !used.has(f.id))
+    .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate))
+    .map(f => ({ ...f, selected: true }));
+
+  _renderDriveAudit();
+}
+
+function _renderDriveAudit() {
+  const body = document.getElementById('drive-audit-body');
+  const foot = document.getElementById('drive-audit-foot');
+  if (!_driveAuditFiles.length) {
+    body.innerHTML = '<p class="field-hint">No se encontró ningún archivo huérfano — Drive está limpio ✓</p>';
+    foot.style.display = 'none';
+    return;
+  }
+  const n = _driveAuditFiles.filter(f => f.selected).length;
+  const totalMB = (_driveAuditFiles.reduce((s, f) => s + (f.size || 0), 0) / 1024 / 1024).toFixed(1);
+  body.innerHTML = `
+    <p class="field-hint" style="margin-bottom:10px">${_driveAuditFiles.length} archivo(s) sin usar por ningún producto (~${totalMB} MB). Revisa antes de borrar — la papelera de Drive los conserva unos días por si acaso.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;margin-bottom:8px;cursor:pointer">
+      <input type="checkbox" ${n === _driveAuditFiles.length ? 'checked' : ''} onchange="_toggleDriveAuditAll(this.checked)"> Seleccionar todos
+    </label>
+    <div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+      ${_driveAuditFiles.map((f, i) => `
+        <label style="display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+          <input type="checkbox" ${f.selected ? 'checked' : ''} onchange="_toggleDriveAuditItem(${i}, this.checked)">
+          <img src="https://drive.google.com/thumbnail?id=${f.id}&sz=w80" style="width:40px;height:40px;object-fit:cover;border-radius:6px;background:var(--surface-soft);flex-shrink:0" onerror="this.style.visibility='hidden'">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(f.name)}</div>
+            <div style="font-size:.68rem;color:var(--muted)">${new Date(f.createdDate).toLocaleDateString('es-MX')} · ${((f.size||0)/1024).toFixed(0)} KB</div>
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  `;
+  foot.style.display = 'flex';
+  document.getElementById('drive-audit-delete-btn').textContent = `Eliminar seleccionadas (${n})`;
+  document.getElementById('drive-audit-delete-btn').disabled = n === 0;
+}
+
+function _toggleDriveAuditItem(i, checked) {
+  _driveAuditFiles[i].selected = checked;
+  _renderDriveAudit();
+}
+function _toggleDriveAuditAll(checked) {
+  _driveAuditFiles.forEach(f => f.selected = checked);
+  _renderDriveAudit();
+}
+
+async function _driveAuditDeleteSelected() {
+  const toDelete = _driveAuditFiles.filter(f => f.selected);
+  if (!toDelete.length) return;
+  const ok = await teConfirm({
+    title: 'Eliminar de Drive',
+    message: `¿Eliminar ${toDelete.length} archivo(s) de Drive? Van a la papelera, no se borran para siempre de inmediato.`,
+    confirmText: 'Eliminar', danger: true
+  });
+  if (!ok) return;
+  const btn = document.getElementById('drive-audit-delete-btn');
+  btn.disabled = true;
+  // 6 a la vez (de una en una, 500 fotos tardaban ~35 min) y hasta 2
+  // reintentos: Google a veces responde 404 al azar; mandar a la papelera un
+  // archivo que ya está ahí no hace daño.
+  const deletedIds = new Set();
+  let done = 0;
+  const queue = [...toDelete];
+  const worker = async () => {
+    while (queue.length) {
+      const f = queue.shift();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const r = await edgeFn('drive-proxy', { action: 'delete', fileId: f.id });
+        if (r.data?.ok) { deletedIds.add(f.id); break; }
+        if ([401, 403, 412].includes(r.status)) break;
+      }
+      done++;
+      btn.textContent = `Eliminando… ${done} de ${toDelete.length}`;
+    }
+  };
+  btn.textContent = `Eliminando… 0 de ${toDelete.length}`;
+  await Promise.all(Array.from({ length: Math.min(6, toDelete.length) }, worker));
+  _driveAuditFiles = _driveAuditFiles.filter(f => !deletedIds.has(f.id));
+  toast(`${deletedIds.size} de ${toDelete.length} archivo(s) eliminados ✓`, deletedIds.size === toDelete.length ? 'ok' : 'err');
+  if (deletedIds.size) logActivity('configuracion_editada', `Eliminó ${deletedIds.size} imagen(es) huérfana(s) de Drive`, { count: deletedIds.size });
+  _renderDriveAudit();
+}
+
+// Vía RPC (no POST directo a la tabla config): valida el permiso correcto
+// según qué llave se está tocando (canManageCatalogSettings/canImportExport/
+// canManageSettings), antes de escribir. Necesario porque config_insert/
+// config_update en RLS solo aceptan superadmin -- alguien con acceso parcial
+// (ej. Areli, canManageCatalogSettings) no pasaría un POST directo a la tabla.
+async function _saveConfigValue(id, value) {
+  return api('rpc/te_save_config_value', {
+    method: 'POST',
+    body: JSON.stringify({ p_id: id, p_value: value })
+  });
+}
+
+/* ── WA FLOAT ── */
+async function toggleCapturaRapida(enabled) {
+  const r = await _saveConfigValue('captura_rapida', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Captura rápida`, { setting: 'captura_rapida', value: enabled });
+    toast(enabled ? '📸 Captura rápida activada' : '📸 Captura rápida desactivada', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('captura-rapida-toggle').checked = !enabled;
+  }
+}
+
+async function toggleShowCreator(enabled) {
+  const r = await _saveConfigValue('show_creator', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Ver creador`, { setting: 'show_creator', value: enabled });
+    toast(enabled ? '👤 Ver creador activado' : '👤 Ver creador desactivado', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('show-creator-toggle').checked = !enabled;
+  }
+}
+
+async function toggleShowRecv(enabled) {
+  const r = await _saveConfigValue('show_recv', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Recibir mercancía`, { setting: 'show_recv', value: enabled });
+    toast(enabled ? '🚚 Recibir mercancía activado en Inventario' : '🚚 Recibir mercancía desactivado', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('show-recv-toggle').checked = !enabled;
+  }
+}
+
+async function toggleShowRecvIa(enabled) {
+  const r = await _saveConfigValue('show_recv_ia', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Recepción con IA`, { setting: 'show_recv_ia', value: enabled });
+    toast(enabled ? 'Recepción con IA activada en Inventario' : 'Recepción con IA desactivada', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('show-recv-ia-toggle').checked = !enabled;
+  }
+}
+
+async function toggleShowLibreta(enabled) {
+  const r = await _saveConfigValue('show_libreta', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Apartados de libreta`, { setting: 'show_libreta', value: enabled });
+    toast(enabled ? 'Apartados de libreta activados en Caja' : 'Apartados de libreta desactivados', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('show-libreta-toggle').checked = !enabled;
+  }
+}
+
+async function toggleShowRestock(enabled) {
+  const r = await _saveConfigValue('show_restock', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} Reabastecimiento en Caja`, { setting: 'show_restock', value: enabled });
+    toast(enabled ? 'Reabastecimiento activado en Caja' : 'Reabastecimiento desactivado en Caja', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('show-restock-toggle').checked = !enabled;
+  }
+}
+
+async function toggleWaFloat(enabled) {
+  const r = await _saveConfigValue('wa_float', String(enabled));
+  if (r.ok) {
+    logActivity('configuracion_editada', `${enabled ? 'Activó' : 'Desactivó'} el botón WhatsApp flotante en Tienda`, { setting: 'wa_float', value: enabled });
+    toast(enabled ? '💬 Botón WhatsApp activado en Tienda' : '💬 Botón WhatsApp desactivado', 'ok');
+  } else {
+    toast(r.data?.message || 'Error al guardar', 'err');
+    document.getElementById('wa-float-toggle').checked = !enabled;
+  }
+}
+
+// El toggle "Avisarme al vender" vivía aquí y se movió al menú del avatar
+// (shared.js, 2026-09-06) -- es una preferencia por dispositivo, no un
+// ajuste de negocio, así que no debía depender de tener acceso a
+// Configuración. El motor de polling (_startSalesNotifPolling, etc.) sigue
+// en shared.js, sin cambios -- solo se movió la fila de UI que lo prendía.
+
+/* ── CATEGORIES ── */
+function rootCats()    { return categories.filter(c => !c.parent); }
+function subCats(code) { return categories.filter(c => c.parent === code); }
+
+async function _saveCats() {
+  const r = await _saveConfigValue('categories', JSON.stringify(categories));
+  // Ninguno de los llamadores revisaba r.ok -- si el guardado fallaba (RLS,
+  // red), la UI mutaba el estado local y mostraba un toast verde de éxito
+  // igual; el cambio se revertía solo al recargar, sin que nadie se enterara
+  // de que nunca se guardó de verdad.
+  if (!r.ok) toast(r.data?.message || 'Error al guardar — el cambio no se guardó, recarga para verificar', 'err');
+  return r;
+}
+
+function openCatManager() {
+  renderCatList();
+  populateCatParent();
+  document.getElementById('cat-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  api('products?select=category').then(r => {
+    if (!r.ok || !Array.isArray(r.data)) return;
+    _catCounts = {};
+    r.data.forEach(p => { if (p.category) _catCounts[p.category] = (_catCounts[p.category]||0)+1; });
+    renderCatList();
+  });
+}
+
+function closeCatManager() {
+  document.getElementById('cat-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderCatList() {
+  const el = document.getElementById('cat-list');
+  if (!categories.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:.84rem;text-align:center;padding:16px">Sin categorías</p>';
+    return;
+  }
+  const roots = rootCats();
+  el.innerHTML = roots.map(r => {
+    const ri = categories.indexOf(r);
+    const subs = subCats(r.code);
+    const otherRoots = roots.filter(x => x.code !== r.code);
+    const parentOpts = otherRoots.map(x => `<option value="${x.code}">${escH(x.label)}</option>`).join('');
+    const subRows = subs.map(s => {
+      const si = categories.indexOf(s);
+      const moveOpts = otherRoots.map(x => `<option value="${x.code}">${escH(x.label)}</option>`).join('');
+      const cnt = _catCounts[s.code];
+      return `<div class="cat-sub-row" draggable="true" data-code="${s.code}"
+        ondragstart="_catDragStart(event,'sub','${s.code}')"
+        ondragover="_catDragOverSub(event,'${s.code}')"
+        ondrop="_catDropSub(event,'${s.code}')"
+        ondragend="_catDragEnd()">
+        <span class="cat-drag-handle" title="Arrastrar">⠿</span>
+        <span class="cat-dot" style="background:${s.color||r.color||'#9B8B78'}" title="${s.code}"></span>
+        <input type="text" class="cat-sub-name" value="${escH(s.label)}"
+          onblur="updateCatLabel(${si},this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+        ${cnt ? `<span class="cat-prod-count">${cnt}</span>` : ''}
+        ${otherRoots.length ? `<select class="cat-move-sel" onchange="_catMoveToParent('${s.code}',this.value)" title="Mover a otra categoría">
+          <option value="" disabled selected>↳</option>
+          ${moveOpts}
+        </select>` : ''}
+        <button class="cat-del" onclick="deleteCategoryAt(${si})" title="Eliminar">✕</button>
+      </div>`;
+    }).join('');
+    const rootCount = (_catCounts[r.code]||0) + subs.reduce((n,s) => n+(_catCounts[s.code]||0), 0);
+    return `<div class="cat-section" draggable="true" data-code="${r.code}"
+      ondragstart="_catDragStart(event,'root','${r.code}')"
+      ondragover="_catDragOverSection(event,'${r.code}')"
+      ondrop="_catDropSection(event,'${r.code}')"
+      ondragend="_catDragEnd()">
+      <div class="cat-sec-head" onclick="toggleCatSection('${r.code}')"
+        ondragover="_catDragOverHead(event,'${r.code}')"
+        ondrop="_catDropOnHead(event,'${r.code}')">
+        <span class="cat-drag-handle" title="Arrastrar para reordenar">⠿</span>
+        <span class="cat-sec-arrow">▶</span>
+        <span class="cat-dot" style="background:${r.color||'#9B8B78'}" title="${r.code}"></span>
+        <input type="text" class="cat-sec-name" value="${escH(r.label)}"
+          onclick="event.stopPropagation()"
+          onblur="updateCatLabel(${ri},this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();event.stopPropagation()">
+        ${subs.length ? `<span class="cat-sec-count">${subs.length} sub</span>` : ''}
+        ${rootCount ? `<span class="cat-prod-count">${rootCount}</span>` : ''}
+        ${otherRoots.length ? `<select class="cat-move-sel" onclick="event.stopPropagation()" onchange="event.stopPropagation();_catMakeSubOf('${r.code}',this.value)" title="Mover como subcategoría de…">
+          <option value="" disabled selected>↳</option>
+          ${parentOpts}
+        </select>` : ''}
+        <button class="cat-mgr-add-sub" onclick="event.stopPropagation();_catAddSubInline('${r.code}')" title="Agregar subcategoría">+ Sub</button>
+        <button class="cat-del" onclick="event.stopPropagation();deleteCategoryAt(${ri})" title="Eliminar raíz">✕</button>
+      </div>
+      <div class="cat-sec-body">
+        ${subRows ? `<div class="cat-subs-list">${subRows}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  // Restaurar secciones que estaban abiertas
+  _openSections.forEach(code => {
+    const s = document.querySelector(`.cat-section[data-code="${CSS.escape(code)}"]`);
+    if (s) s.classList.add('open');
+  });
+}
+
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function toggleCatSection(code) {
+  const section = document.querySelector(`.cat-section[data-code="${CSS.escape(code)}"]`);
+  if (!section) return;
+  section.classList.toggle('open');
+  section.classList.contains('open') ? _openSections.add(code) : _openSections.delete(code);
+}
+
+function _catOpenSection(code) {
+  _openSections.add(code);
+  const s = document.querySelector(`.cat-section[data-code="${CSS.escape(code)}"]`);
+  if (s) s.classList.add('open');
+}
+
+function _catAddSubInline(parentCode) {
+  const section = document.querySelector(`.cat-section[data-code="${CSS.escape(parentCode)}"]`);
+  if (!section) return;
+  _catOpenSection(parentCode);
+  const existing = document.getElementById(`cat-sub-form-${parentCode}`);
+  if (existing) { existing.remove(); return; }
+  const parent = categories.find(c => c.code === parentCode);
+  if (!parent) return;
+  const form = document.createElement('div');
+  form.id = `cat-sub-form-${parentCode}`;
+  form.className = 'cat-sub-inline-form';
+  form.innerHTML = `
+    <span class="cat-dot" style="background:${parent.color||'#9B8B78'}"></span>
+    <input id="cat-sub-inp-${parentCode}" type="text" placeholder="Nombre de la subcategoría…" class="cat-sub-new-inp"
+      onkeydown="if(event.key==='Enter')_catSubConfirm('${parentCode}');if(event.key==='Escape')this.closest('.cat-sub-inline-form').remove()">
+    <button onclick="_catSubConfirm('${parentCode}')" class="btn btn-gold btn-sm" style="flex-shrink:0;padding:6px 12px">✓</button>
+    <button onclick="document.getElementById('cat-sub-form-${parentCode}').remove()" class="cat-del">✕</button>`;
+  section.querySelector('.cat-sec-body').appendChild(form);
+  document.getElementById(`cat-sub-inp-${parentCode}`)?.focus();
+}
+
+async function _catSubConfirm(parentCode) {
+  const input = document.getElementById(`cat-sub-inp-${parentCode}`);
+  const label = input?.value.trim();
+  if (!label) { input?.focus(); return; }
+  const code = parentCode + '_' + label.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+  if (categories.find(c => c.code === code)) { toast('Ya existe esa subcategoría', 'err'); input?.focus(); return; }
+  const parent = categories.find(c => c.code === parentCode);
+  const color = parent?.color || CAT_PALETTE[categories.length % CAT_PALETTE.length];
+  categories.push({ code, label, color, parent: parentCode });
+  await _saveCats();
+  renderCatList();
+  populateCatParent();
+  _catOpenSection(parentCode);
+  toast(`"${label}" agregada ✓`, 'ok');
+}
+
+async function _catMoveToParent(subCode, newParentCode) {
+  if (!newParentCode) return;
+  const sub = categories.find(c => c.code === subCode);
+  const newParent = categories.find(c => c.code === newParentCode);
+  if (!sub || !newParent) return;
+  sub.parent = newParentCode;
+  sub.color = newParent.color || sub.color;
+  await _saveCats();
+  renderCatList();
+  populateCatParent();
+  _catOpenSection(newParentCode);
+  toast(`"${sub.label}" movida a "${newParent.label}" ✓`, 'ok');
+}
+
+async function _catMakeSubOf(rootCode, newParentCode) {
+  if (!newParentCode) { renderCatList(); return; }
+  const root = categories.find(c => c.code === rootCode);
+  const newParent = categories.find(c => c.code === newParentCode);
+  if (!root || !newParent) { renderCatList(); return; }
+  const children = subCats(rootCode);
+  const msg = children.length
+    ? `¿Mover "${root.label}" y sus ${children.length} subcategoría(s) a "${newParent.label}"?`
+    : `¿Mover "${root.label}" a "${newParent.label}"?`;
+  if (!(await teConfirm({ title: 'Mover categoría', message: msg, confirmText: 'Mover' }))) { renderCatList(); return; }
+  root.parent = newParentCode;
+  root.color = newParent.color || root.color;
+  children.forEach(c => { c.parent = newParentCode; c.color = newParent.color || c.color; });
+  await _saveCats();
+  renderCatList();
+  populateCatParent();
+  _catOpenSection(newParentCode);
+  const msg2 = children.length
+    ? `"${root.label}" y ${children.length} sub(s) movidas a "${newParent.label}" ✓`
+    : `"${root.label}" movida a "${newParent.label}" ✓`;
+  toast(msg2, 'ok');
+}
+
+/* ── DRAG & DROP ─────────────────────────────────────────────────── */
+function _catDragStart(e, type, code) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') {
+    e.preventDefault(); return;
+  }
+  if (type === 'sub') e.stopPropagation(); // evita que burbujee al .cat-section padre
+  _dragCode = code; _dragType = type;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', code);
+  setTimeout(() => {
+    const el = document.querySelector(
+      type === 'root' ? `.cat-section[data-code="${CSS.escape(code)}"]`
+                      : `.cat-sub-row[data-code="${CSS.escape(code)}"]`);
+    if (el) el.classList.add('cat-dragging');
+  }, 0);
+}
+
+function _catDragEnd() {
+  document.querySelectorAll('.cat-dragging,.cat-drag-over,.cat-drag-accept')
+    .forEach(el => el.classList.remove('cat-dragging','cat-drag-over','cat-drag-accept'));
+  _dragCode = null; _dragType = null;
+}
+
+function _catDragOverSection(e, targetCode) {
+  if (_dragType !== 'root' || _dragCode === targetCode) return;
+  e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll('.cat-drag-over').forEach(el => el.classList.remove('cat-drag-over'));
+  e.currentTarget.classList.add('cat-drag-over');
+}
+
+function _catDropSection(e, targetCode) {
+  e.preventDefault(); e.stopPropagation();
+  if (_dragType !== 'root' || _dragCode === targetCode) return;
+  _catReorder(_dragCode, targetCode);
+}
+
+function _catDragOverHead(e, parentCode) {
+  if (_dragCode === parentCode) return;
+  if (_dragType === 'sub') {
+    const sub = categories.find(c => c.code === _dragCode);
+    if (!sub || sub.parent === parentCode) return;
+  }
+  e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll('.cat-drag-accept,.cat-drag-over').forEach(el => el.classList.remove('cat-drag-accept','cat-drag-over'));
+  e.currentTarget.classList.add('cat-drag-accept');
+}
+
+function _catDropOnHead(e, parentCode) {
+  e.preventDefault(); e.stopPropagation();
+  if (_dragCode === parentCode) return;
+  const newParent = categories.find(c => c.code === parentCode);
+  if (!newParent) return;
+
+  if (_dragType === 'sub') {
+    const sub = categories.find(c => c.code === _dragCode);
+    if (!sub || sub.parent === parentCode) return;
+    sub.parent = parentCode;
+    sub.color = newParent.color || sub.color;
+    _saveCats().then(() => {
+      renderCatList(); populateCatParent(); _catOpenSection(parentCode);
+      toast(`"${sub.label}" movida a "${newParent.label}" ✓`, 'ok');
+    });
+    return;
+  }
+
+  if (_dragType === 'root') {
+    const root = categories.find(c => c.code === _dragCode);
+    if (!root) return;
+    const children = subCats(root.code);
+    root.parent = parentCode;
+    root.color = newParent.color || root.color;
+    children.forEach(c => { c.parent = parentCode; c.color = newParent.color || c.color; });
+    _saveCats().then(() => {
+      renderCatList(); populateCatParent(); _catOpenSection(parentCode);
+      const msg = children.length
+        ? `"${root.label}" y ${children.length} sub(s) movidas a "${newParent.label}" ✓`
+        : `"${root.label}" movida a "${newParent.label}" ✓`;
+      toast(msg, 'ok');
+    });
+  }
+}
+
+function _catDragOverSub(e, targetCode) {
+  if (_dragType !== 'sub' || _dragCode === targetCode) return;
+  e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll('.cat-sub-row.cat-drag-over').forEach(el => el.classList.remove('cat-drag-over'));
+  e.currentTarget.classList.add('cat-drag-over');
+}
+
+function _catDropSub(e, targetCode) {
+  e.preventDefault(); e.stopPropagation();
+  if (_dragType !== 'sub' || _dragCode === targetCode) return;
+  const src = categories.find(c => c.code === _dragCode);
+  const tgt = categories.find(c => c.code === targetCode);
+  if (!src || !tgt || src.parent !== tgt.parent) return;
+  _catReorder(_dragCode, targetCode);
+}
+
+async function _catReorder(srcCode, tgtCode) {
+  const srcIdx = categories.findIndex(c => c.code === srcCode);
+  const tgtIdx = categories.findIndex(c => c.code === tgtCode);
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  const [item] = categories.splice(srcIdx, 1);
+  const newTgt = categories.findIndex(c => c.code === tgtCode);
+  categories.splice(newTgt, 0, item);
+  await _saveCats();
+  renderCatList();
+  if (item.parent) _catOpenSection(item.parent);
+}
+
+function populateCatParent() {
+  const sel = document.getElementById('new-cat-parent');
+  sel.innerHTML = '<option value="">— Es categoría raíz —</option>';
+  rootCats().forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.code; o.textContent = r.label;
+    sel.appendChild(o);
+  });
+}
+
+async function updateCatLabel(idx, newLabel) {
+  const label = newLabel.trim();
+  if (!label || label === categories[idx]?.label) return;
+  const code = categories[idx].code;
+  categories[idx].label = label;
+  await _saveCats();
+  await api(`products?category=eq.${code}`, { method:'PATCH', body: JSON.stringify({ category_label: label }) });
+  toast(`"${label}" actualizado ✓`, 'ok');
+}
+
+async function deleteCategoryAt(idx) {
+  const c = categories[idx];
+  // Si es una raíz con subcategorías, hay que contar y borrar también sus
+  // hijas -- antes splice(idx,1) solo quitaba la raíz, dejando las
+  // subcategorías huérfanas en la config (con parent apuntando a un código
+  // que ya no existe) y el conteo del diálogo por debajo del real, porque
+  // solo consultaba productos con category=eq.<código de la raíz>.
+  const children = !c.parent ? subCats(c.code) : [];
+  const codes = [c.code, ...children.map(x => x.code)];
+  const r = await api(`products?category=in.(${codes.join(',')})&select=id`);
+  const count = r.ok && Array.isArray(r.data) ? r.data.length : 0;
+  const childWarning = children.length
+    ? ` (incluye ${children.length} subcategoría${children.length !== 1 ? 's' : ''}: ${children.map(x => x.label).join(', ')})`
+    : '';
+  // El mensaje anterior decía "quedarán sin categoría", pero eso no es lo
+  // que pasa -- el producto conserva el código eliminado y desaparece de
+  // los filtros sin avisar (el riesgo ya documentado, causante de ~300
+  // productos huérfanos encontrados y corregidos por separado esta misma
+  // sesión). El mensaje ahora describe la consecuencia real.
+  const msg = count > 0
+    ? `¿Eliminar "${c.label}"${childWarning}? ${count} producto(s) quedarán con una categoría que ya no existe — desaparecerán de los filtros de Inventario/Caja/Tienda aunque sigan existiendo (solo se verán en "Todos" o buscando por texto). ¿Continuar?`
+    : `¿Eliminar la categoría "${c.label}"${childWarning}?`;
+  if (!(await teConfirm({ title: 'Eliminar categoría', message: msg, confirmText: 'Eliminar', danger: true }))) return;
+  const removeCodes = new Set(codes);
+  const snapshot = categories;
+  categories = categories.filter(x => !removeCodes.has(x.code));
+  const saveResult = await _saveCats();
+  if (!saveResult.ok) { categories = snapshot; return; }
+  renderCatList();
+  populateCatParent();
+  logActivity('configuracion_editada', `Eliminó la categoría "${c.label}"${children.length ? ` y ${children.length} subcategoría(s)` : ''}`, { code: c.code, label: c.label, childCodes: children.map(x => x.code) });
+  toast('Categoría eliminada', '');
+}
+
+async function addCategory() {
+  const labelInput = document.getElementById('new-cat-label');
+  const parentSel  = document.getElementById('new-cat-parent');
+  const label  = labelInput.value.trim();
+  const parent = parentSel.value;
+  if (!label) { toast('Escribe el nombre de la categoría', 'err'); labelInput.focus(); return; }
+  const base = label.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+  const code = parent ? `${parent}_${base}` : base;
+  if (categories.find(c => c.code === code)) { toast('Ya existe una categoría con ese nombre', 'err'); return; }
+  const color = CAT_PALETTE[categories.length % CAT_PALETTE.length];
+  const newCat = { code, label, color };
+  if (parent && categories.find(c => c.code === parent)) newCat.parent = parent;
+  categories.push(newCat);
+  await _saveCats();
+  renderCatList();
+  populateCatParent();
+  labelInput.value = '';
+  parentSel.value = '';
+  if (parent) _catOpenSection(parent);
+  logActivity('configuracion_editada', `Creó ${parent ? 'la subcategoría' : 'la categoría'} "${label}"`, { code, label, parent: parent || null });
+  toast(`${parent ? 'Subcategoría' : 'Categoría'} "${label}" creada ✓`, 'ok');
+}
+
+/* ── REVISTA ── */
+async function openRevista() {
+  document.getElementById('revista-url-input').value = '';
+  document.getElementById('revista-cover-input').value = '';
+  document.getElementById('revista-preview').style.display = 'none';
+  document.getElementById('revista-file')._pendingFile = null;
+  try {
+    const r = await api('config?id=in.(revista_url,revista_cover)&select=id,value');
+    if (r.ok && r.data) {
+      r.data.forEach(row => {
+        if (row.id === 'revista_url') document.getElementById('revista-url-input').value = row.value || '';
+        if (row.id === 'revista_cover') document.getElementById('revista-cover-input').value = row.value || '';
+      });
+    }
+  } catch {}
+  document.getElementById('revista-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  initRevistaZone();
+}
+
+function closeRevista() {
+  document.getElementById('revista-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function initRevistaZone() {
+  const zone = document.getElementById('revista-upload-zone');
+  const clone = zone.cloneNode(true);
+  zone.parentNode.replaceChild(clone, zone);
+  clone.addEventListener('click', () => document.getElementById('revista-file').click());
+  clone.addEventListener('dragover', e => { e.preventDefault(); clone.classList.add('drag-over'); });
+  clone.addEventListener('dragleave', () => clone.classList.remove('drag-over'));
+  clone.addEventListener('drop', e => {
+    e.preventDefault(); clone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') processRevistaFile(file);
+  });
+}
+
+function handleRevistaFile(input) {
+  if (input.files[0]) processRevistaFile(input.files[0]);
+}
+
+function processRevistaFile(file) {
+  if (file.type !== 'application/pdf') { toast('Solo se permiten archivos PDF', 'err'); return; }
+  if (file.size > 50 * 1024 * 1024) { toast('El PDF es muy grande. Máx 50MB.', 'err'); return; }
+  document.getElementById('revista-url-input').value = '';
+  document.getElementById('revista-preview').style.display = 'block';
+  document.getElementById('revista-filename').textContent = `${file.name} · ${(file.size/1024/1024).toFixed(1)} MB`;
+  document.getElementById('revista-file')._pendingFile = file;
+}
+
+function clearRevistaFile() {
+  document.getElementById('revista-file').value = '';
+  document.getElementById('revista-file')._pendingFile = null;
+  document.getElementById('revista-url-input').value = '';
+  document.getElementById('revista-preview').style.display = 'none';
+}
+
+async function saveRevista() {
+  const fileInput   = document.getElementById('revista-file');
+  const pendingFile = fileInput._pendingFile;
+  const urlVal      = document.getElementById('revista-url-input').value.trim();
+  if (!pendingFile && !urlVal) { toast('Ingresa una URL o sube un PDF', 'err'); return; }
+
+  const saveBtn = document.getElementById('revista-save-btn');
+  let finalUrl  = urlVal;
+
+  if (pendingFile) {
+    saveBtn.textContent = 'Subiendo PDF…'; saveBtn.disabled = true;
+    try {
+      await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${_getSettingsToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id:'revistas', name:'revistas', public: true })
+      });
+    } catch {}
+    try {
+      const filename = `revista-${Date.now()}.pdf`;
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/revistas/${filename}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${_getSettingsToken()}`, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+        body: pendingFile
+      });
+      saveBtn.textContent = 'Guardar revista'; saveBtn.disabled = false;
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        toast(`Error al subir: ${err.message || err.error || uploadRes.status}`, 'err');
+        return;
+      }
+      finalUrl = `${SUPABASE_URL}/storage/v1/object/public/revistas/${filename}`;
+    } catch(e) {
+      saveBtn.textContent = 'Guardar revista'; saveBtn.disabled = false;
+      toast('Error de conexión: ' + e.message, 'err');
+      return;
+    }
+  }
+
+  const r = await _saveConfigValue('revista_url', finalUrl);
+  if (!r.ok) { toast(r.data?.message || 'Error al guardar el enlace', 'err'); return; }
+
+  const coverVal = document.getElementById('revista-cover-input').value.trim();
+  await _saveConfigValue('revista_cover', coverVal);
+
+  closeRevista();
+  logActivity('configuracion_editada', 'Actualizó la Revista Digital Natura', { setting: 'revista_url' });
+  toast('Revista guardada ✓', 'ok');
+}
+
+/* ── RESPALDO COMPLETO ──
+   Solo lectura — descarga una copia de las tablas críticas en un JSON. No es
+   un mecanismo de restauración: sales/sale_payments están bloqueadas contra
+   escritura directa a propósito (fase 2 del lockdown de Caja v2, ver
+   CLAUDE.md), así que "restaurar" esas tablas desde un archivo no es un
+   camino que este botón ofrezca ni deba ofrecer. Para recuperación real ante
+   un incidente, el mecanismo es el respaldo/point-in-time-recovery de
+   Supabase (Dashboard → Database → Backups), fuera del alcance del código. */
+async function exportFullBackup() {
+  const btn = document.getElementById('backup-full-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Exportando…'; }
+  const tables = [
+    ['products',      'products?select=*&order=id.asc'],
+    ['sales',         'sales?select=*&order=id.asc'],
+    ['sale_payments', 'sale_payments?select=*&order=id.asc'],
+    ['customers',     'customers?select=*&order=id.asc'],
+    ['activity_log',  'activity_log?select=*&order=id.asc'],
+    ['config',        'config?select=*']
+  ];
+  const result = {};
+  for (const [name, query] of tables) {
+    const r = await _posPaginatedFetch(query);
+    if (!r.ok) {
+      toast(`No se pudo exportar "${name}" — respaldo cancelado, ningún archivo se descargó`, 'err');
+      if (btn) { btn.disabled = false; btn.textContent = 'Exportar todo'; }
+      return;
+    }
+    result[name] = r.data || [];
+  }
+  const payload = { exported_at: new Date().toISOString(), ...result };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tres-encantos-respaldo-completo-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  const counts = Object.fromEntries(Object.entries(result).map(([k, v]) => [k, v.length]));
+  const totalRows = Object.values(counts).reduce((s, n) => s + n, 0);
+  toast(`Respaldo completo generado — ${totalRows.toLocaleString('es-MX')} registros ✓`, 'ok');
+  logActivity('respaldo_generado', `Respaldo completo generado (${totalRows.toLocaleString('es-MX')} registros)`, counts);
+  if (btn) { btn.disabled = false; btn.textContent = 'Exportar todo'; }
+}
+
+/* ── EXPORT CSV: apartados y pagos (2026-09-18) ──
+   Para llevarlos a Google Sheets / Excel. CSV y no JSON porque el JSON trae
+   listas anidadas (productos, abonos) que no se leen en una hoja.
+   - UTF-8 con BOM: sin él Excel rompe acentos y ñ.
+   - Fechas en hora de Ciudad de México ("2026-09-18 13:10").
+   - Una celda de texto que empiece con = + - @ se le antepone ' para que
+     Sheets/Excel no la interprete como fórmula (nombres y productos vienen
+     de texto libre). Los números salen como número, sin ese guard.
+   - Contiene nombres, teléfonos y saldos de clientas: solo con
+     canViewReports, y cada descarga queda en Actividad. */
+const _CSV_TZ = 'America/Mexico_City';
+
+function _csvCell(value) {
+  if (value === null || value === undefined) return '';
+  let s = String(value);
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function _csvDownload(filename, header, rows) {
+  const lines = [header, ...rows].map(cells => cells.map(_csvCell).join(','));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+const _csvDateTime = iso => iso
+  ? new Intl.DateTimeFormat('sv-SE', { timeZone: _CSV_TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
+  : '';
+
+function _csvExportAllowed() {
+  if (_getMyPermsCached?.()?.canViewReports === false) {
+    toast('Sin permiso para exportar apartados', 'err');
+    return false;
+  }
+  return true;
+}
+
+function _csvSetBusy(ids, busy) {
+  ids.forEach(id => { const b = document.getElementById(id); if (b) b.disabled = busy; });
+}
+
+async function exportApartadosCsv() {
+  if (!_csvExportAllowed()) return;
+  const scope = document.getElementById('csv-apt-scope')?.value === 'todos' ? 'todos' : 'activos';
+  _csvSetBusy(['csv-apt-btn', 'csv-pay-btn'], true);
+  const r = await _posPaginatedFetch(
+    `sales?select=id,customer,created_at,due_date,status,total,paid_amount,discount,items,note&origin_type=eq.apartado${scope === 'activos' ? '&status=eq.activo' : ''}&order=id.asc`
+  );
+  _csvSetBusy(['csv-apt-btn', 'csv-pay-btn'], false);
+  if (!r.ok) { toast('No se pudieron leer los apartados — no se descargó nada', 'err'); return; }
+  if (!r.data.length) { toast('No hay apartados para exportar', ''); return; }
+
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: _CSV_TZ }).format(new Date());
+  const STATUS = { activo: 'Activo', liquidado: 'Liquidado', cancelado: 'Cancelado' };
+  const rows = r.data.map(s => {
+    const [nombre, tel] = (s.customer || '').split(' · 📱 ');
+    const total  = parseFloat(s.total) || 0;
+    const pagado = parseFloat(s.paid_amount) || 0;
+    const activo = s.status === 'activo';
+    const diasVencido = activo && s.due_date
+      ? Math.max(0, Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(s.due_date + 'T00:00:00Z')) / 86400000))
+      : '';
+    const productos = (Array.isArray(s.items) ? s.items : [])
+      .map(i => `${i.qty || 1}× ${i.name}`).join('; ');
+    return [
+      s.id, nombre || '', tel || '', _csvDateTime(s.created_at), s.due_date || '',
+      STATUS[s.status] || s.status || '', diasVencido,
+      total, parseFloat(s.discount) || 0, pagado,
+      activo ? Math.max(Math.round((total - pagado) * 100) / 100, 0) : 0,
+      productos, s.note || ''
+    ];
+  });
+  _csvDownload(
+    `tres-encantos-apartados-${scope}-${today}.csv`,
+    ['Folio', 'Cliente', 'Teléfono', 'Creado', 'Fecha límite', 'Estado', 'Días vencido', 'Total', 'Descuento', 'Pagado', 'Pendiente', 'Productos', 'Nota'],
+    rows
+  );
+  toast(`${rows.length.toLocaleString('es-MX')} apartados exportados ✓`, 'ok');
+  logActivity('respaldo_generado', `Exportó ${rows.length.toLocaleString('es-MX')} apartados a CSV (${scope})`, { tipo: 'csv_apartados', scope, filas: rows.length });
+}
+
+function _csvPaymentType(p) {
+  if (p.kind === 'refund') return 'Devolución';
+  if (p.kind === 'adjustment') return p.source === 'rpc_apartado_reactivation' ? 'Reactivación' : 'Ajuste';
+  return ({ rpc_apartado_initial: 'Anticipo', rpc_apartado_payment: 'Abono', rpc_apartado_liquidation: 'Liquidación' })[p.source] || 'Pago';
+}
+
+async function exportPagosCsv() {
+  if (!_csvExportAllowed()) return;
+  const scope = document.getElementById('csv-apt-scope')?.value === 'todos' ? 'todos' : 'activos';
+  _csvSetBusy(['csv-apt-btn', 'csv-pay-btn'], true);
+  const r = await _posPaginatedFetch(
+    `sale_payments?select=id,sale_id,amount,kind,method,paid_at,collected_by_email,source,sales!inner(customer,status,origin_type)&sales.origin_type=eq.apartado${scope === 'activos' ? '&sales.status=eq.activo' : ''}&order=paid_at.asc,id.asc`
+  );
+  _csvSetBusy(['csv-apt-btn', 'csv-pay-btn'], false);
+  if (!r.ok) { toast('No se pudieron leer los pagos — no se descargó nada', 'err'); return; }
+  if (!r.data.length) { toast('No hay pagos para exportar', ''); return; }
+
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: _CSV_TZ }).format(new Date());
+  const STATUS = { activo: 'Activo', liquidado: 'Liquidado', cancelado: 'Cancelado' };
+  const rows = r.data.map(p => {
+    const s = Array.isArray(p.sales) ? p.sales[0] : p.sales;
+    return [
+      p.sale_id, _csvDateTime(p.paid_at), (s?.customer || '').split(' · 📱 ')[0],
+      STATUS[s?.status] || s?.status || '', _csvPaymentType(p),
+      p.method === 'transferencia' ? 'Transferencia' : p.method === 'efectivo' ? 'Efectivo' : 'Sin método',
+      parseFloat(p.amount) || 0, p.collected_by_email || ''
+    ];
+  });
+  _csvDownload(
+    `tres-encantos-pagos-apartados-${scope}-${today}.csv`,
+    ['Folio', 'Fecha', 'Cliente', 'Estado del apartado', 'Tipo', 'Método', 'Monto', 'Cobró (correo)'],
+    rows
+  );
+  toast(`${rows.length.toLocaleString('es-MX')} pagos exportados ✓`, 'ok');
+  logActivity('respaldo_generado', `Exportó ${rows.length.toLocaleString('es-MX')} pagos de apartados a CSV (${scope})`, { tipo: 'csv_pagos', scope, filas: rows.length });
+}
+
+/* ── EXPORT / IMPORT ── */
+async function exportProducts() {
+  const r = await api('products?select=*&order=position.asc');
+  if (!r.ok || !r.data?.length) { toast('Sin productos para exportar', ''); return; }
+  const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tres-encantos-productos-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast(`${r.data.length} productos exportados ✓`, 'ok');
+}
+
+function importProducts(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const raw = JSON.parse(e.target.result);
+      if (!Array.isArray(raw) || !raw.length) { toast('Archivo inválido', 'err'); return; }
+      if (!(await teConfirm({ title: 'Importar catálogo', message: `¿Importar ${raw.length} productos? Los existentes con el mismo ID se actualizarán.`, confirmText: 'Importar' }))) return;
+      toast('Importando…', '');
+      const r = await api('products', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(raw)
+      });
+      if (r.ok) toast(`${raw.length} productos importados ✓`, 'ok');
+      else toast('Error al importar', 'err');
+    } catch { toast('Archivo JSON inválido', 'err'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* ── LOG DE ACTIVIDAD ── */
+async function clearActivityLog() {
+  const range = document.getElementById('log-range-select')?.value || 'all';
+  const labels = { '1w':'más de 1 semana', '1m':'más de 1 mes', '3m':'más de 3 meses', '6m':'más de 6 meses', 'all':'todo el historial' };
+  if (!(await teConfirm({ title: 'Limpiar historial', message: `¿Borrar los registros de ${labels[range]}?\nEsta acción no se puede deshacer.`, confirmText: 'Borrar', danger: true }))) return;
+
+  let filter;
+  if (range === 'all') {
+    filter = 'activity_log?id=gt.0';
+  } else {
+    const days = { '1w': 7, '1m': 30, '3m': 90, '6m': 180 }[range];
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+    filter = `activity_log?created_at=lt.${encodeURIComponent(cutoff)}`;
+  }
+
+  const r = await api(filter, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  if (r.ok) {
+    // Se registra despues de borrar -- si se registrara antes, el propio
+    // borrado (rango "todo") eliminaria esta marca junto con el resto.
+    logActivity('configuracion_editada', `Limpió el historial de Actividad (${labels[range]})`, { range });
+    toast(`Registros de ${labels[range]} eliminados ✓`, 'ok');
+  }
+  else toast('Error al borrar el historial', 'err');
+}
+
+/* ── USER PERMISSIONS PANEL ── */
+const _UP_ROLE_LABELS = {superadmin:'Superadmin', encargado:'Encargada', operador:'Operador'};
+const _UP_AVATAR_COLORS = ['#C9A462','#60a5fa','#f472b6','#34d399','#a78bfa','#fb923c'];
+
+function _upAvatarColor(email) {
+  let h = 0;
+  for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) >>> 0;
+  return _UP_AVATAR_COLORS[h % _UP_AVATAR_COLORS.length];
+}
+
+// Cuenta cuántos permisos de `email` difieren del default de su rol —
+// usado tanto para el badge "Personalizado" en la fila colapsada como
+// para habilitar "Restablecer al rol" en el detalle.
+function _upOverrideCount(email) {
+  const perms = userPermsMap[email] || {};
+  const role  = perms.role || 'operador';
+  const defs  = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+  return UP_PERMS.reduce((n, p) => {
+    const val = p.key in perms ? perms[p.key] : defs[p.key];
+    return n + (val !== defs[p.key] ? 1 : 0);
+  }, 0);
+}
+
+function renderUsersPerms() {
+  const list = document.getElementById('up-list');
+  if (!list) return;
+
+  const allEmails = [...new Set([...Object.keys(nameMap), ...Object.keys(userPermsMap)])].sort();
+  if (!allEmails.length) {
+    list.innerHTML = '<div class="up-loading">Sin usuarios registrados</div>';
+  } else {
+    list.innerHTML = allEmails.map(email => _renderUserCard(email)).join('');
+  }
+  _renderUpMatrix();
+}
+
+/* ── VISTA DE MATRIZ (permisos × personas) ──
+   Complementa la lista (que edita a una persona a la vez): aquí se ve todo
+   el panorama de un vistazo -- quién tiene qué, y quién ya no coincide con
+   el default de su rol -- sin tener que abrir tarjeta por tarjeta. Los
+   puntos son interactivos: togglear aquí escribe en el mismo userPermsMap
+   de siempre, así que la lista queda sincronizada al volver a ella. */
+function _upSetView(mode) {
+  const listBtn   = document.getElementById('up-view-btn-list');
+  const matrixBtn = document.getElementById('up-view-btn-matrix');
+  const listCard  = document.getElementById('up-list-card');
+  const matrixCard= document.getElementById('up-matrix-card');
+  const isMatrix  = mode === 'matrix';
+  listBtn?.classList.toggle('up-view-active', !isMatrix);
+  matrixBtn?.classList.toggle('up-view-active', isMatrix);
+  if (listCard) listCard.style.display = isMatrix ? 'none' : '';
+  if (matrixCard) matrixCard.style.display = isMatrix ? '' : 'none';
+  if (isMatrix) _renderUpMatrix();
+}
+
+function _renderUpMatrix() {
+  const wrap = document.getElementById('up-matrix');
+  if (!wrap) return;
+  const allEmails = [...new Set([...Object.keys(nameMap), ...Object.keys(userPermsMap)])].sort();
+  if (!allEmails.length) { wrap.innerHTML = '<div class="up-loading">Sin usuarios registrados</div>'; return; }
+
+  const term = (document.getElementById('up-matrix-search')?.value || '').toLowerCase().trim();
+  const groups = [...new Set(UP_PERMS.map(p => p.group))];
+
+  const personHeadHtml = allEmails.map(email => {
+    const name = nameMap[email] || email.split('@')[0];
+    const role = userPermsMap[email]?.role || 'operador';
+    const overrideN = _upOverrideCount(email);
+    return `<th class="up-mx-person" title="${escH(email)}">
+      <span class="up-mx-avatar" style="background:${_upAvatarColor(email)}">${escH(name.slice(0,1).toUpperCase())}</span>
+      <span class="up-mx-name">${escH(name)}</span>
+      <span class="up-mx-role">${escH(_UP_ROLE_LABELS[role]||role)}${overrideN ? ` · ${overrideN}≠` : ''}</span>
+    </th>`;
+  }).join('');
+
+  const bodyHtml = groups.map(group => {
+    const items = UP_PERMS.filter(p => p.group === group && (!term || p.label.toLowerCase().includes(term)));
+    if (!items.length) return '';
+    const rows = items.map(p => {
+      const cells = allEmails.map(email => {
+        const perms = userPermsMap[email] || {};
+        const role  = perms.role || 'operador';
+        const defs  = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+        const val   = p.key in perms ? perms[p.key] : defs[p.key];
+        const isOverride = val !== defs[p.key];
+        const name  = nameMap[email] || email.split('@')[0];
+        return `<td class="up-mx-cell">
+          <button type="button" class="up-mx-dot${val ? ' up-mx-on' : ''}${isOverride ? ' up-mx-override' : ''}"
+            onclick="_upMatrixToggle('${escH(email).replace(/'/g,"\\'")}','${p.key}')"
+            title="${escH(p.label)} — ${escH(name)}${isOverride ? ' (≠ rol)' : ''}"></button>
+        </td>`;
+      }).join('');
+      return `<tr><th class="up-mx-perm-name" title="${escH(p.desc||'')}">${escH(p.label)}</th>${cells}</tr>`;
+    }).join('');
+    return `<tr class="up-mx-group-row"><td colspan="${allEmails.length+1}">${escH(group)}</td></tr>${rows}`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="up-mx-scroll"><table class="up-mx-table">
+    <thead><tr><th class="up-mx-corner"></th>${personHeadHtml}</tr></thead>
+    <tbody>${bodyHtml || `<tr><td colspan="${allEmails.length+1}" class="up-loading">Sin resultados para "${escH(term)}"</td></tr>`}</tbody>
+  </table></div>`;
+}
+
+function _upMatrixToggle(email, key) {
+  const role = userPermsMap[email]?.role || 'operador';
+  const defs = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+  if (!userPermsMap[email]) userPermsMap[email] = { ...defs, role };
+  const perms = userPermsMap[email];
+  const current = key in perms ? perms[key] : defs[key];
+  perms[key] = !current;
+  _renderUpMatrix();
+  _upRefreshBadge(email);
+  // Si la tarjeta de esa persona está abierta en la vista de lista, se
+  // refresca también para que no se vea desactualizada al cambiar de vista.
+  const card = document.querySelector(`.up-card[data-email="${CSS.escape(email)}"] .up-perms`);
+  if (card && card.style.display !== 'none') card.innerHTML = _renderPermsBody(email);
+  _upSavePerms();
+}
+
+function _renderUserCard(email) {
+  const name   = nameMap[email] || email.split('@')[0];
+  const initial= name.slice(0,1).toUpperCase();
+  const color  = _upAvatarColor(email);
+  const isMe   = email === _myEmail;
+  const perms  = userPermsMap[email] || {};
+  const role   = perms.role || 'operador';
+
+  const roleOpts = ['superadmin','encargado','operador'].map(v =>
+    `<option value="${v}"${v===role?' selected':''}>${escH(_UP_ROLE_LABELS[v]||v)}</option>`
+  ).join('');
+  const overrideCount = _upOverrideCount(email);
+  const overrideBadge = overrideCount
+    ? `<span class="up-override-badge" title="${overrideCount} permiso${overrideCount>1?'s':''} distinto${overrideCount>1?'s':''} al default de ${escH(_UP_ROLE_LABELS[role]||role)}">${overrideCount} personalizado${overrideCount>1?'s':''}</span>`
+    : '';
+
+  return `<div class="up-card" data-email="${escH(email)}">
+    <div class="up-head">
+      <div class="up-toggle-area" onclick="_upToggleCard(this)">
+        <div class="up-avatar" style="background:${color}">${escH(initial)}</div>
+        <div class="up-meta">
+          <div class="up-name">
+            <input class="up-name-inp" style="width:${Math.max(name.length,3)+1.5}ch" value="${escH(name)}" data-orig="${escH(name)}" title="Tocar para editar el nombre"
+              onclick="event.stopPropagation()"
+              oninput="this.style.width=(Math.max(this.value.length,3)+1.5)+'ch'"
+              onblur="_upSaveName(this,'${escH(email).replace(/'/g,"\\'")}')"
+              onkeydown="if(event.key==='Enter')this.blur();else if(event.key==='Escape'){this.value=this.dataset.orig;this.style.width=(Math.max(this.dataset.orig.length,3)+1.5)+'ch';this.blur()}">
+            <button type="button" class="up-name-edit-ico" title="Editar nombre" onclick="event.stopPropagation();const i=this.closest('.up-name').querySelector('.up-name-inp');i.focus();i.select()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+            ${isMe?` <span class="up-me">tú</span>`:''}
+            ${overrideBadge}
+          </div>
+          <div class="up-email">${escH(email)}</div>
+        </div>
+        <span class="up-chevron" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <select class="up-role-sel" onclick="event.stopPropagation()" onchange="_upRoleChange(this)"${isMe ? ' disabled title="No puedes cambiar tu propio rol"' : ''}>
+        ${roleOpts}
+      </select>
+      ${isMe ? '' : `<button class="up-remove-btn" onclick="event.stopPropagation();_upRemoveUser('${escH(email).replace(/'/g,"\\'")}')" title="Quitar usuario">✕</button>`}
+    </div>
+    <div class="up-perms" style="display:none">${_renderPermsBody(email)}</div>
+  </div>`;
+}
+
+function _renderPermsBody(email) {
+  const perms  = userPermsMap[email] || {};
+  const role   = perms.role || 'operador';
+  const defs   = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+  const groups = [...new Set(UP_PERMS.map(p => p.group))];
+  const overrideCount = _upOverrideCount(email);
+  const intro = `<div class="up-perm-intro">Estos son los permisos de <strong>${escH(_UP_ROLE_LABELS[role]||role)}</strong>. Lo marcado en dorado ya no coincide con el rol.</div>`;
+  const groupsHtml = groups.map(group => {
+    const items = UP_PERMS.filter(p => p.group === group);
+    const rows  = items.map(p => {
+      const val = p.key in perms ? perms[p.key] : defs[p.key];
+      const isOverride = val !== defs[p.key];
+      return `<label class="up-perm-row${isOverride ? ' up-perm-overridden' : ''}" title="${escH(p.desc||'')}">
+        <input type="checkbox" class="up-perm-cb"${val?' checked':''} onchange="_upPermChange(this,'${p.key}')">
+        <span class="up-perm-label">${escH(p.label)}</span>
+        ${isOverride ? `<button type="button" class="up-perm-diff-tag" title="Regresar solo este permiso al default de ${escH(_UP_ROLE_LABELS[role]||role)}" onclick="event.preventDefault();event.stopPropagation();_upRevertOne('${escH(email).replace(/'/g,"\\'")}','${p.key}')">≠ rol <svg width="9" height="9" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>` : ''}
+      </label>`;
+    }).join('');
+    return `<div class="up-perm-group">
+      <div class="up-perm-group-lbl">${escH(group)}</div>
+      <div class="up-perm-grid">${rows}</div>
+    </div>`;
+  }).join('');
+  const otherEmails = [...new Set([...Object.keys(nameMap), ...Object.keys(userPermsMap)])]
+    .filter(e => e !== email).sort();
+  const copyRow = otherEmails.length ? `<div class="up-copy-row">
+      <select class="up-copy-sel">
+        <option value="">Copiar permisos de…</option>
+        ${otherEmails.map(e => `<option value="${escH(e)}">${escH(nameMap[e] || e.split('@')[0])}</option>`).join('')}
+      </select>
+      <button type="button" class="up-copy-btn" onclick="_upCopyFrom('${escH(email).replace(/'/g,"\\'")}', this.previousElementSibling.value)">Copiar</button>
+    </div>` : '';
+  return intro + groupsHtml + copyRow + `<button class="up-reset-btn" onclick="_upResetPerms('${escH(email).replace(/'/g,"\\'")}')" ${!overrideCount ? 'disabled' : ''}><svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Restablecer al rol</button>`;
+}
+
+// Copia TODOS los valores de permisos (no el rol) de sourceEmail a email --
+// para el patrón real de Eduardo de "le doy a X algo, luego decido que Y
+// también debería tenerlo" sin repetir el trabajo permiso por permiso.
+async function _upCopyFrom(email, sourceEmail) {
+  if (!sourceEmail) { toast('Elige de quién copiar', 'error'); return; }
+  const sourcePerms = userPermsMap[sourceEmail];
+  if (!sourcePerms) { toast('Esa persona no tiene permisos guardados todavía', 'error'); return; }
+  const targetName = nameMap[email] || email.split('@')[0];
+  const sourceName = nameMap[sourceEmail] || sourceEmail.split('@')[0];
+  if (!(await teConfirm({ title: 'Copiar permisos', message: `¿Copiar todos los permisos de ${sourceName} a ${targetName}?\n\nEsto reemplaza los permisos actuales de ${targetName} (su rol se mantiene igual: ${_UP_ROLE_LABELS[userPermsMap[email]?.role||'operador']}).`, confirmText: 'Copiar' }))) return;
+
+  const role = userPermsMap[email]?.role || 'operador';
+  const sourceDefs = UP_ROLE_DEFAULTS[sourcePerms.role || 'operador'] || UP_ROLE_DEFAULTS.operador;
+  const newPerms = { role };
+  UP_PERMS.forEach(p => { newPerms[p.key] = p.key in sourcePerms ? sourcePerms[p.key] : sourceDefs[p.key]; });
+  userPermsMap[email] = newPerms;
+
+  const card = document.querySelector(`.up-card[data-email="${CSS.escape(email)}"]`);
+  if (card) {
+    const permsDiv = card.querySelector('.up-perms');
+    if (permsDiv) permsDiv.innerHTML = _renderPermsBody(email);
+  }
+  _upRefreshBadge(email);
+  _upSavePerms();
+  _renderUpMatrix();
+  toast(`Permisos de ${sourceName} copiados a ${targetName} ✓`, 'ok');
+}
+
+function _upToggleCard(el) {
+  const card    = el.closest('.up-card');
+  const permsDiv= card.querySelector('.up-perms');
+  const chevron = card.querySelector('.up-chevron');
+  const open    = permsDiv.style.display !== 'none';
+  permsDiv.style.display  = open ? 'none' : '';
+  chevron.style.transform = open ? '' : 'rotate(-180deg)';
+  card.classList.toggle('up-card-open', !open);
+}
+
+async function _upRoleChange(sel) {
+  const card    = sel.closest('.up-card');
+  const email   = card.dataset.email;
+  const prevRole= (userPermsMap[email]?.role) || 'operador';
+  const newRole = sel.value;
+  const name    = nameMap[email] || email.split('@')[0];
+  if (prevRole === 'superadmin' && newRole !== 'superadmin') {
+    if (!(await teConfirm({ title: 'Cambiar rol', message: `¿Cambiar a ${name} de Superadmin a ${_UP_ROLE_LABELS[newRole]||newRole}?\nPerderá acceso a Configuración.`, confirmText: 'Cambiar', danger: true }))) {
+      sel.value = prevRole;
+      return;
+    }
+  }
+  // Cambiar de rol reemplaza todo el mapa de permisos por los defaults del
+  // rol nuevo -- si ya tenia permisos personalizados, se pierden. Avisar
+  // solo cuando de verdad hay algo que perder, para no interrumpir el caso
+  // comun (cambiar el rol de alguien sin overrides).
+  const overrideCount = _upOverrideCount(email);
+  if (overrideCount > 0 && !(await teConfirm({ title: 'Cambiar rol', message: `${name} tiene ${overrideCount} permiso${overrideCount>1?'s':''} personalizado${overrideCount>1?'s':''} distinto${overrideCount>1?'s':''} de su rol actual.\n\nCambiar de rol los reemplaza por los de ${_UP_ROLE_LABELS[newRole]||newRole}. ¿Continuar?`, confirmText: 'Cambiar' }))) {
+    sel.value = prevRole;
+    return;
+  }
+  const defs    = UP_ROLE_DEFAULTS[newRole] || UP_ROLE_DEFAULTS.operador;
+  userPermsMap[email] = { ...defs, role: newRole };
+  const permsDiv = card.querySelector('.up-perms');
+  if (permsDiv) permsDiv.innerHTML = _renderPermsBody(email);
+  _upRefreshBadge(email);
+  _upSavePerms();
+  _renderUpMatrix();
+}
+
+// Refresca solo el badge "N personalizados" de una tarjeta sin
+// re-renderizar toda la lista (evita perder el scroll/estado abierto).
+function _upRefreshBadge(email) {
+  const card = document.querySelector(`.up-card[data-email="${CSS.escape(email)}"]`);
+  if (!card) return;
+  const nameDiv = card.querySelector('.up-name');
+  if (!nameDiv) return;
+  nameDiv.querySelector('.up-override-badge')?.remove();
+  const n = _upOverrideCount(email);
+  if (n > 0) {
+    const role = userPermsMap[email]?.role || 'operador';
+    const badge = document.createElement('span');
+    badge.className = 'up-override-badge';
+    badge.title = `${n} permiso${n>1?'s':''} distinto${n>1?'s':''} al default de ${_UP_ROLE_LABELS[role]||role}`;
+    badge.textContent = `${n} personalizado${n>1?'s':''}`;
+    nameDiv.appendChild(badge);
+  }
+}
+
+function _upPermChange(cb, key) {
+  const card  = cb.closest('.up-card');
+  const email = card.dataset.email;
+  if (!userPermsMap[email]) {
+    const roleSel = card.querySelector('.up-role-sel');
+    const role = roleSel?.value || 'operador';
+    userPermsMap[email] = { ...UP_ROLE_DEFAULTS[role]||UP_ROLE_DEFAULTS.operador, role };
+  }
+  userPermsMap[email][key] = cb.checked;
+
+  // Feedback visual inmediato del cambio -- sin esto, el "≠ rol" y el badge
+  // solo se veian correctos al cerrar y volver a abrir la tarjeta.
+  const role = userPermsMap[email].role || 'operador';
+  const defs = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+  const row  = cb.closest('.up-perm-row');
+  const isOverride = cb.checked !== defs[key];
+  row?.classList.toggle('up-perm-overridden', isOverride);
+  row?.querySelector('.up-perm-diff-tag')?.remove();
+  if (isOverride && row) {
+    const roleLabel = escH(_UP_ROLE_LABELS[role] || role);
+    const emailEsc  = escH(email).replace(/'/g, "\\'");
+    row.insertAdjacentHTML('beforeend', `<button type="button" class="up-perm-diff-tag" title="Regresar solo este permiso al default de ${roleLabel}" onclick="event.preventDefault();event.stopPropagation();_upRevertOne('${emailEsc}','${key}')">≠ rol <svg width="9" height="9" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>`);
+  }
+  const resetBtn = card.querySelector('.up-reset-btn');
+  if (resetBtn) resetBtn.disabled = _upOverrideCount(email) === 0;
+  _upRefreshBadge(email);
+
+  _upSavePerms();
+  _renderUpMatrix();
+}
+
+// 'invite' = manda correo de invitación (la persona fija su propia
+// contraseña) · 'password' = quien la crea fija la contraseña aquí mismo y
+// se la comparte por el canal que prefiera. Eduardo quiso las dos opciones,
+// no solo una -- según el caso, a veces es más rápido no depender de que
+// llegue un correo.
+let _upAddMode = 'invite';
+function _upSetAddMode(mode) {
+  _upAddMode = mode;
+  document.getElementById('up-mode-invite')?.classList.toggle('active', mode === 'invite');
+  document.getElementById('up-mode-password')?.classList.toggle('active', mode === 'password');
+  const passInp = document.getElementById('up-new-password');
+  if (passInp) { passInp.style.display = mode === 'password' ? '' : 'none'; passInp.value = ''; }
+  const hint = document.getElementById('up-add-hint');
+  if (hint) hint.textContent = mode === 'password'
+    ? 'Se crea la cuenta ya activa con esa contraseña — no hace falta entrar a Supabase. Compártela con la persona por el canal que prefieras.'
+    : 'Se crea la cuenta y se le envía un correo de invitación para que fije su propia contraseña — no hace falta entrar a Supabase.';
+}
+
+async function _upAddUser() {
+  const input   = document.getElementById('up-new-email');
+  const passInp = document.getElementById('up-new-password');
+  const roleSel = document.getElementById('up-new-role');
+  const btn     = document.getElementById('up-add-btn');
+  const email   = (input?.value||'').trim().toLowerCase();
+  const password = _upAddMode === 'password' ? (passInp?.value || '') : '';
+  const role    = roleSel?.value || 'operador';
+  if (!email || !email.includes('@')) { toast('Ingresa un correo válido', 'err'); return; }
+  if (userPermsMap[email]) { toast('Este usuario ya está en la lista', ''); input.value=''; return; }
+  // Mismo criterio que Supabase Auth (Sign In / Providers → Email): 10+ con letras y números.
+  if (_upAddMode === 'password' && (password.length < 10 || !/[a-zA-Z]/.test(password) || !/\d/.test(password))) { toast('La contraseña debe tener al menos 10 caracteres, con letras y números', 'err'); return; }
+
+  const confirmMsg = _upAddMode === 'password'
+    ? `¿Crear la cuenta de ${email} como ${_UP_ROLE_LABELS[role]||role} con esa contraseña?`
+    : `¿Crear la cuenta de ${email} como ${_UP_ROLE_LABELS[role]||role}?\n\nSe le enviará un correo de invitación para que fije su propia contraseña.`;
+  if (!(await teConfirm({ title: 'Crear cuenta', message: confirmMsg, confirmText: 'Crear' }))) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Creando…'; }
+  const r = await edgeFn('create-user', { email, role, password });
+  if (btn) { btn.disabled = false; btn.textContent = '+ Agregar'; }
+
+  if (!r.ok) { toast(r.data?.error || 'No se pudo crear la cuenta', 'err'); return; }
+
+  userPermsMap[email] = { ...UP_ROLE_DEFAULTS[role]||UP_ROLE_DEFAULTS.operador, role };
+  input.value = '';
+  if (passInp) passInp.value = '';
+  if (roleSel) roleSel.value = 'operador';
+  renderUsersPerms();
+  _upSavePerms();
+  toast(_upAddMode === 'password' ? `Cuenta creada — comparte la contraseña con ${email}` : `Cuenta creada — le llegará un correo de invitación a ${email}`, 'ok');
+}
+
+async function _upSaveName(inp, email) {
+  const newName = inp.value.trim();
+  const oldName = nameMap[email] || email.split('@')[0];
+  if (!newName) { inp.value = oldName; return; }
+  if (newName === oldName) return;
+  nameMap[email] = newName;
+  inp.dataset.orig = newName;
+  const r = await _saveConfigValue('user_names', JSON.stringify(nameMap));
+  if (r.ok) toast('Nombre actualizado ✓', 'ok');
+  else { toast(r.data?.message || 'Error al guardar el nombre', 'err'); nameMap[email] = oldName; inp.value = oldName; inp.dataset.orig = oldName; }
+}
+
+async function _upRemoveUser(email) {
+  if (email === _myEmail) { toast('No puedes eliminarte a ti mismo', 'err'); return; }
+  const name = nameMap[email] || email.split('@')[0];
+  if (!(await teConfirm({ title: 'Quitar usuario', message: `¿Quitar a ${name} de la lista de permisos?`, confirmText: 'Quitar', danger: true }))) return;
+  delete userPermsMap[email];
+  delete nameMap[email];
+  renderUsersPerms();
+  _upSavePerms();
+  _saveConfigValue('user_names', JSON.stringify(nameMap));
+}
+
+async function _upResetPerms(email) {
+  const name = nameMap[email] || email.split('@')[0];
+  const n = _upOverrideCount(email);
+  if (!(await teConfirm({ title: 'Restablecer permisos', message: `¿Restablecer TODOS los permisos de ${name} a los de su rol?\n\nSe perderán ${n} personalización${n!==1?'es':''} — esto no se puede deshacer.`, confirmText: 'Restablecer', danger: true }))) return;
+  const role = userPermsMap[email]?.role || 'operador';
+  userPermsMap[email] = { ...UP_ROLE_DEFAULTS[role], role };
+  const card = document.querySelector(`.up-card[data-email="${CSS.escape(email)}"]`);
+  if (card) {
+    const permsDiv = card.querySelector('.up-perms');
+    if (permsDiv) permsDiv.innerHTML = _renderPermsBody(email);
+  }
+  _upRefreshBadge(email);
+  _upSavePerms();
+  _renderUpMatrix();
+  toast('Permisos restablecidos al rol ✓', 'ok');
+}
+
+// Revierte SOLO un permiso puntual al default de su rol -- a diferencia de
+// _upResetPerms() (todo o nada), para cuando cambiaste de opinión sobre una
+// sola cosa y no quieres perder el resto de tus ajustes para esa persona.
+function _upRevertOne(email, key) {
+  const perms = userPermsMap[email] || {};
+  const role  = perms.role || 'operador';
+  const defs  = UP_ROLE_DEFAULTS[role] || UP_ROLE_DEFAULTS.operador;
+  if (!userPermsMap[email]) userPermsMap[email] = { ...defs, role };
+  userPermsMap[email][key] = defs[key];
+  const card = document.querySelector(`.up-card[data-email="${CSS.escape(email)}"]`);
+  if (card) {
+    const permsDiv = card.querySelector('.up-perms');
+    if (permsDiv) permsDiv.innerHTML = _renderPermsBody(email);
+  }
+  _upRefreshBadge(email);
+  _upSavePerms();
+  _renderUpMatrix();
+}
+
+let _upSaveTimer = null;
+function _upSavePerms() {
+  clearTimeout(_upSaveTimer);
+  _upSaveTimer = setTimeout(async () => {
+    // Via RPC (no POST directo a la tabla config): valida canManageSettings
+    // en el servidor y registra en Actividad quien cambio que, antes de
+    // escribir. Unico camino permitido para tocar user_permissions.
+    const r = await api('rpc/te_save_user_permissions', {
+      method: 'POST',
+      body: JSON.stringify({ p_permissions: userPermsMap })
+    });
+    if (r.ok) {
+      sessionStorage.removeItem('te_user_can');
+      toast('Permisos guardados ✓', 'ok');
+    } else { toast(r.data?.message || 'Error al guardar permisos', 'err'); }
+  }, 600);
+}
+
+/* ── TOAST ── */
+let _toastT;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast${type ? ' '+type : ''} show`;
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), type === 'err' ? 5000 : 3000);
+}
+
+/* ── CLOSE ON BACKDROP ── */
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'), document.body.style.overflow = ''; });
+});
+
+/* ── ESCAPE KEY ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(ov => { ov.classList.remove('open'); document.body.style.overflow = ''; });
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const permissionState = await _loadMyPerms({ requireFresh: true, withMeta: true });
+  const permissions = permissionState?.permissions;
+  const isFullSettings   = permissions?.canManageSettings === true;
+  const isCatalogOnly    = !isFullSettings && permissions?.canManageCatalogSettings === true;
+  const isImportExportOnly = !isFullSettings && !isCatalogOnly && permissions?.canImportExport === true;
+  if (permissionState?.source !== 'server' || (!isFullSettings && !isCatalogOnly && !isImportExportOnly)) {
+    window.location.replace('admin.html');
+    return;
+  }
+  if (isCatalogOnly) {
+    ['section-users', 'section-data', 'section-integrations'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+  if (isImportExportOnly) {
+    // Igual que "solo Catálogo" pero para Datos: entra a Configuración y ve
+    // únicamente esa sección (JSON, nombres de usuario, revisión de
+    // duplicados) -- "Limpiar historial" sigue oculto por su propio check
+    // ROLE==='superadmin' más abajo, sin importar este permiso.
+    ['section-users', 'section-catalog', 'section-integrations'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    // "Exportar todo" es más sensible que el resto de Datos -- descarga
+    // drive_secret en texto plano (groq_key ya no es legible desde el
+    // navegador desde 2026-10-02) -- y se queda encerrado en
+    // canManageSettings a propósito, sin volverse más delegable (ver
+    // CLAUDE.md). canImportExport solo da acceso al resto de la sección.
+    const backupFull = document.getElementById('scard-backup-full');
+    if (backupFull) backupFull.style.display = 'none';
+  }
+  // Apartados/pagos en CSV llevan nombres, teléfonos y saldos de clientas:
+  // se muestran solo con canViewReports (mismo criterio que Reportes).
+  const csvCard = document.getElementById('scard-export-apartados');
+  if (csvCard && permissions?.canViewReports === true) csvCard.style.display = '';
+  if (permissions.role) ROLE = permissions.role;
+  try {
+    const _s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    const _m = _s?.user?.user_metadata || {};
+    const _n = _m.full_name || _m.name || _s?.user?.email?.split('@')[0] || '';
+    const _av = document.getElementById('user-avatar');
+    const _nl = document.getElementById('user-name-lbl');
+    if (_av) _av.textContent = _n ? _n[0].toUpperCase() : '?';
+    if (_nl) _nl.textContent = _n;
+  } catch {}
+  init();
+  if (ROLE === 'superadmin') {
+    const row = document.getElementById('clear-log-row');
+    if (row) row.style.display = '';
+    const errRow = document.getElementById('scard-client-errors');
+    if (errRow) { errRow.style.display = ''; _refreshClientErrorsTag(); }
+    const bkRow = document.getElementById('scard-auto-backup');
+    if (bkRow) { bkRow.style.display = ''; _refreshAutoBackup(); }
+  }
+  // Mostrar conteo de duplicados desde última revisión en Inventario
+  const dupCount = parseInt(localStorage.getItem('te_dup_last_count') || '0');
+  const dupTag = document.getElementById('dup-count-tag');
+  if (dupTag && dupCount > 0) {
+    dupTag.innerHTML = ` — <strong style="color:#D97706">${dupCount} posibles</strong>`;
+  }
+});

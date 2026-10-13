@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es" data-theme-ready="1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="img/icono-192.png">
+<title>Caja — Tres Encantos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="pos.css">
+<script>
+/* Aplica el modo oscuro guardado ANTES del primer paint, para que no haya
+   flash claro→oscuro. data-theme-ready marca qué módulos ya tienen su
+   propia paleta oscura — ver shared.js _initThemeToggle(). */
+(function(){try{if(localStorage.getItem('te_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+</script>
+</head>
+<body>
+<!-- Input trampa: captura escáner USB en Android sin mostrar teclado virtual -->
+<input id="scan-trap" type="text" inputmode="none" tabindex="-1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+  style="position:fixed;top:-200px;left:-200px;width:1px;height:1px;opacity:0;border:none;outline:none;padding:0;margin:0;pointer-events:none">
+
+<!-- ABRIR CAJA — bloqueante, sin botón de cerrar (onclick vacío en el fondo).
+     Visible por default para que no haya un parpadeo del resto de Caja antes
+     de confirmar si hay turno abierto; _posShiftGateInit() (pos-core.js) la
+     retira en cuanto confirma un turno, o la deja para declarar el fondo. -->
+<div class="overlay open" id="open-shift-overlay" onclick="void 0">
+  <div class="sale-done-modal" style="text-align:left;max-width:340px">
+    <div id="open-shift-checking" style="text-align:center;padding:24px 0">
+      <p style="font-size:.86rem;color:var(--muted)">Verificando tu turno…</p>
+    </div>
+    <div id="open-shift-form" style="display:none">
+      <h2 style="text-align:center;margin-bottom:4px">Abrir caja</h2>
+      <p style="text-align:center;font-size:.82rem;color:var(--muted);margin-bottom:18px">Antes de vender, declara el fondo con el que empiezas tu turno.</p>
+      <div class="open-shift-notice" id="open-shift-notice" role="status" hidden></div>
+      <label for="open-shift-fondo" style="font-size:.8rem;font-weight:600;color:var(--charcoal);display:block;margin-bottom:6px">Fondo inicial</label>
+      <div class="money-field">
+        <span class="money-field-sign">$</span>
+        <input id="open-shift-fondo" type="number" min="0" inputmode="decimal" placeholder="0">
+      </div>
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:16px">Cuenta el efectivo que hay en la caja ahora mismo. Puede ser $0.</p>
+      <div id="open-shift-error" style="display:none;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:8px;padding:8px 12px;font-size:.78rem;margin-bottom:12px"></div>
+      <button id="open-shift-btn" style="width:100%;padding:13px;border-radius:50px;border:none;background:var(--ink);color:#fff;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit">Abrir caja e iniciar turno</button>
+      <button type="button" class="open-shift-viewonly" onclick="_posViewApartadosOnly()">Solo ver apartados, sin abrir caja</button>
+    </div>
+    <div id="open-shift-retry-wrap" style="display:none;text-align:center;padding:12px 0">
+      <p style="font-size:.84rem;color:var(--red);margin-bottom:12px">No se pudo verificar tu turno. Revisa tu conexión.</p>
+      <button id="open-shift-retry-btn" style="padding:10px 20px;border-radius:50px;border:1.5px solid var(--border);background:var(--surface);font-size:.84rem;font-weight:700;cursor:pointer;font-family:inherit">Reintentar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <!-- IZQUIERDA: solo título -->
+  <div class="topbar-left">
+    <span class="topbar-title">Caja</span>
+  </div>
+  <!-- DERECHA: acciones de Caja + nav de módulos + usuario + salir -->
+  <div class="topbar-right">
+    <button type="button" id="apt-vencidos-alert" style="display:none;background:#FEE2E2;color:#E85D5D;border:1.5px solid #FECACA;border-radius:50px;padding:4px 12px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:.15s" onclick="openApartados('vencidos')" aria-label="Ver apartados vencidos" title="Ver apartados vencidos"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span id="apt-vencidos-count"></span></button>
+    <button id="btn-apt-pos" onclick="openApartados()" title="Apartados">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <span class="btn-label">Apartados</span>
+    </button>
+    <button id="btn-history-pos" onclick="openHistory()" title="Historial de ventas">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="btn-label">Historial</span>
+    </button>
+    <button id="btn-corte-pos" onclick="openCorte()" title="Corte de caja">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="btn-label">Corte</span>
+    </button>
+    <nav class="topbar-nav-mobile" aria-label="Módulos">
+      <span class="tbn-icon tbn-active" title="Caja" aria-current="page">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="tbn-label">Caja</span>
+      </span>
+      <a href="admin.html" class="tbn-icon" title="Inventario">
+        <svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="tbn-label">Inventario</span>
+      </a>
+      <a href="stats.html" class="tbn-icon" title="Reportes">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="tbn-label">Reportes</span>
+      </a>
+      <span class="tbn-sep"></span>
+      <a href="index.html" class="tbn-icon" title="Tienda">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="tbn-label">Tienda</span>
+      </a>
+    </nav>
+    <span class="tbn-sep"></span>
+    <span class="user-avatar" id="user-avatar" style="cursor:pointer" title="Mi cuenta">?</span>
+    
+  </div>
+</div>
+
+<!-- BANNER APARTADOS VENCIDOS -->
+
+<!-- RECORDATORIO DE FIN DE TURNO — no bloquea nada, solo invita a cerrar
+     caja con conteo real en vez de dejar el turno abierto indefinidamente -->
+<div id="shift-reminder-banner" class="shift-reminder-banner">
+  <button type="button" class="shift-reminder-banner-main" onclick="openCorte()" aria-label="Abrir Corte de caja">
+    <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span id="shift-reminder-txt"></span>
+    <span style="margin-left:auto;font-size:.75rem;font-weight:600;opacity:.7">Corte →</span>
+  </button>
+  <button type="button" class="shift-reminder-banner-close" onclick="event.stopPropagation();dismissShiftReminder()" aria-label="Cerrar por este turno" title="Cerrar por este turno">✕</button>
+</div>
+
+<!-- MAIN -->
+<div class="pos-body">
+
+  <!-- IZQUIERDO: búsqueda + productos -->
+  <div class="pos-left" id="pos-left">
+    <div class="pos-search-bar">
+      <div style="position:relative;flex:1;min-width:0;display:flex">
+        <input type="text" id="pos-search" placeholder="Buscar producto..." oninput="_posSearchDebounce(this.value)" autocomplete="off" style="flex:1;min-width:0;padding-right:32px">
+        <button id="pos-search-clear" onclick="clearPosSearch()" title="Limpiar" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-light);font-size:1rem;padding:4px;line-height:1;touch-action:manipulation">✕</button>
+      </div>
+      <div class="pos-view-toggle">
+        <button class="pos-vbtn active" id="pos-vbtn-list"  onclick="setPosView('list')"  title="Ver como lista" aria-label="Ver como lista"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+        <button class="pos-vbtn"        id="pos-vbtn-cards" onclick="setPosView('cards')" title="Ver como cuadrícula" aria-label="Ver como cuadrícula"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+      </div>
+      <span class="pos-sort-sep"></span>
+      <button class="btn btn-gold" onclick="openPosScanner()" title="Escanear código de barras"><svg style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg></button>
+    </div>
+    <!-- Chips de categoría -->
+    <div class="cat-chip-bar-wrap" id="cat-chip-bar-wrap">
+      <div class="cat-chip-bar" id="cat-chip-bar" onscroll="_catChipScroll()"></div>
+    </div>
+    <!-- Productos frecuentes -->
+    <div class="pos-freq-bar" id="pos-frecuentes">
+      <span class="pos-freq-label">Freq.</span>
+    </div>
+    <!-- Resumen de caja diario — solo mobile -->
+    <div id="daily-summary-mobile" style="display:none;align-items:center;gap:8px;padding:5px 14px;background:var(--gold-light);border-bottom:1px solid var(--border);font-size:.73rem;color:var(--charcoal);flex-shrink:0"></div>
+    <div class="pos-results" id="pos-results">
+      <div class="pos-empty"><div class="em"><svg style="width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>Cargando productos…</div>
+    </div>
+  </div>
+
+  <!-- DIVISOR ARRASTRABLE -->
+  <div class="pos-divider" id="pos-divider"></div>
+
+  <!-- DERECHO: carrito + cobro -->
+  <div class="pos-right" id="pos-right">
+    <div class="cart-header">
+      <span><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Carrito <span id="cart-count" style="color:var(--muted);font-weight:400"></span></span>
+      <button class="cart-clear" onclick="clearCart()">Vaciar</button>
+    </div>
+
+    <div class="cart-items" id="cart-items">
+      <div class="cart-empty"><div class="em"><svg style="width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>El carrito está vacío</div>
+    </div>
+
+    <!-- Apartados movidos al offcanvas -->
+
+    <div class="pos-checkout">
+      <!-- Total -->
+      <div class="total-row">
+        <span class="total-label">Total</span>
+        <span class="total-amount" id="pos-total">$0</span>
+      </div>
+
+      <!-- Todo lo de abajo (descuento, método de pago, efectivo, nota,
+           apartado, cliente) no tiene sentido sin nada en el carrito --
+           renderCart() lo oculta por completo mientras el carrito esté
+           vacío, en vez de mostrar un formulario de cobro inutilizable. -->
+      <div id="checkout-fields-wrap" style="display:none">
+
+      <!-- Método de pago — se oculta en apartado, donde vive dentro del sheet junto al anticipo -->
+      <div class="pay-method-row" id="pay-method-row-main">
+        <button class="pay-btn active" id="pay-efectivo" onclick="setPayMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
+        <button class="pay-btn" id="pay-transferencia" onclick="setPayMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
+      </div>
+
+      <!-- Efectivo (solo si pago en efectivo) -->
+      <div id="cash-section">
+        <div class="cash-quick" id="cash-quick">
+          <button id="quick-cash-1">$100</button>
+          <button id="quick-cash-2">$200</button>
+          <button id="quick-cash-3">$500</button>
+          <button onclick="setCash(getDiscountedTotal())" class="exact-btn">Exacto</button>
+        </div>
+        <div class="cash-row">
+          <div class="cash-field">
+            <label>Efectivo recibido</label>
+            <input type="text" inputmode="decimal" id="pos-cash" placeholder="" autocomplete="off" oninput="_onCashInput()">
+          </div>
+          <div class="cash-field">
+            <label>Cambio</label>
+            <!-- Texto, no campo: es lo que la cajera le entrega a la clienta,
+                 no algo que se escribe. "Faltan $X" si no alcanza. -->
+            <div id="pos-change-input" class="cash-change is-empty" aria-live="polite">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apartado — agrupado visualmente en su propio bloque; se resalta cuando está activo. Se
+           queda siempre visible (no colapsado en "Más opciones") porque cambia todo el flujo de
+           cobro, a diferencia de descuento/nota/cliente/Ofelia que solo agregan información. -->
+      <div class="apartado-group" id="apartado-group">
+        <label class="apartado-toggle-label">
+          <input type="checkbox" id="pos-is-apartado" onchange="toggleApartadoMode()">
+          <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Es apartado / anticipo
+        </label>
+        <button type="button" class="note-toggle-btn" id="apartado-details-btn" style="display:none" onclick="openApartadoSheet()"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Agregar cliente y datos del apartado</button>
+        <div class="apartado-summary-row" id="apartado-summary" style="display:none" onclick="openApartadoSheet()"></div>
+      </div>
+
+      <!-- Más opciones — agrupa descuento/nota/cliente/"Ya lo cobró Ofelia": 4 add-ons que casi
+           nunca se usan juntos y antes competían por espacio, uno tras otro, con lo esencial de
+           arriba. Colapsado por default; el contador (N) evita que algo quede activo sin verse
+           una vez cerrado (ver _updateMoreOptionsLabel(), pos-apartados.js). -->
+      <button type="button" class="note-toggle-btn" id="more-options-toggle-btn" onclick="toggleMoreOptions()">▾ Más opciones</button>
+      <div id="more-options-wrap" style="display:none">
+
+        <!-- Descuento -->
+        <button type="button" class="note-toggle-btn" id="discount-toggle-btn" onclick="toggleDiscountField()"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>Agregar descuento</button>
+        <div id="discount-row-wrap" style="display:none">
+        <div class="discount-row">
+          <span class="discount-label">Descuento</span>
+          <button class="discount-type-btn" id="disc-pct-btn" onclick="setDiscountType('pct')">%</button>
+          <button class="discount-type-btn active" id="disc-fixed-btn" onclick="setDiscountType('fixed')">$</button>
+          <input type="number" id="pos-discount" min="0" placeholder="0" oninput="clampDiscount();updateChange();_updateMoreOptionsLabel()" onblur="autoCollapseDiscount()">
+          <span class="discount-amount" id="pos-discount-amount"></span>
+          <button type="button" class="discount-clear-btn" onclick="clearDiscountField()" title="Quitar descuento">✕</button>
+        </div>
+        </div>
+
+        <button type="button" class="collected-by-btn" id="pos-collected-ofelia" onclick="this.classList.toggle('active');_updateMoreOptionsLabel()"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+
+        <!-- Nota -->
+        <div class="note-cliente-row">
+          <button type="button" class="note-toggle-btn" id="note-toggle-btn" onclick="toggleNoteField()"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Agregar nota</button>
+          <div class="note-input-wrap" id="note-input-wrap" style="display:none">
+            <input type="text" id="pos-note" placeholder="Escribe una nota…" oninput="_updateMoreOptionsLabel()" onblur="autoCollapseNote()">
+            <button type="button" class="note-clear-btn" onclick="clearNoteField()" title="Quitar nota">✕</button>
+          </div>
+        </div>
+
+        <!-- Cliente (venta normal, opcional) — oculto durante apartado, donde el cliente vive en el sheet -->
+        <div class="note-cliente-row" id="cliente-normal-row">
+          <button type="button" class="note-toggle-btn" id="customer-toggle-btn" onclick="toggleCustomerField()"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Agregar cliente</button>
+          <div class="note-input-wrap" id="customer-input-wrap" style="display:none">
+            <input type="text" id="pos-customer" placeholder="Nombre del cliente" oninput="updateAnticipoInfo();_updateMoreOptionsLabel()" onblur="autoCollapseCustomer()">
+            <button type="button" class="note-clear-btn" onclick="clearCustomerField()" title="Quitar cliente">✕</button>
+          </div>
+          <div class="note-input-wrap" id="customer-phone-wrap" style="display:none">
+            <input type="tel" id="pos-customer-phone" placeholder="Teléfono (opcional)" maxlength="10" inputmode="numeric" onblur="_lookupCustomerByPhone('pos-customer-phone','pos-customer','pos-customer-hint')">
+          </div>
+          <p class="cust-hint" id="pos-customer-hint" style="display:none"></p>
+        </div>
+      </div>
+
+      </div>
+
+      <button id="cobrar-btn" class="btn btn-green" onclick="cobrar()" disabled>Cobrar</button>
+      <p id="cobrar-hint" style="display:none;text-align:center;font-size:.74rem;color:var(--muted);margin-top:5px;line-height:1.4"></p>
+    </div>
+  </div>
+
+  <!-- BARRA MINI DE TOTAL — pestaña Catálogo con carrito (≤1024px) -->
+  <div class="pos-mini-cart-bar" id="pos-mini-cart-bar" onclick="switchPosTab('cart')">
+    <div class="pmc-info">
+      <span class="pmc-count" id="pmc-count">0</span>
+      <span class="pmc-total" id="pmc-total">$0</span>
+    </div>
+    <span class="pmc-cta">Cobrar →</span>
+  </div>
+
+  <!-- TAB BAR — solo teléfonos (≤640px) -->
+  <div class="pos-tab-bar" id="pos-tab-bar">
+    <button class="pos-tab active" id="tab-catalog" onclick="switchPosTab('catalog')">
+      <svg class="pos-tab-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Catálogo</span>
+    </button>
+    <button class="pos-tab" id="tab-cart" onclick="switchPosTab('cart')">
+      <svg class="pos-tab-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Cobrar</span>
+      <span class="pos-tab-badge" id="tab-cart-badge" style="display:none"></span>
+    </button>
+    <button class="pos-tab" id="tab-apartados" onclick="openApartados()">
+      <svg class="pos-tab-icon" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <span>Apartados</span>
+      <span class="pos-tab-badge is-alert" id="tab-apt-badge" style="display:none" aria-label="apartados vencidos"></span>
+    </button>
+    <button class="pos-tab" onclick="openHistory()">
+      <svg class="pos-tab-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Historial</span>
+    </button>
+    <button class="pos-tab" onclick="openCorte()">
+      <svg class="pos-tab-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>Corte</span>
+    </button>
+  </div>
+</div>
+
+
+<!-- ABONAR MODAL -->
+<div class="abonar-overlay" id="abonar-overlay" style="display:none" onclick="if(event.target===this)closeAbonarModal()">
+  <div class="abonar-modal">
+    <h3>Registrar abono</h3>
+    <p class="apt-info-lbl" id="abonar-info"></p>
+    <label style="display:flex;justify-content:space-between;align-items:center">
+      Monto del abono
+      <button type="button" id="abonar-max-hint" onclick="_fillAbonarMax()" style="font-size:.75rem;font-weight:600;color:var(--gold-dark);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:inherit;padding:4px"></button>
+    </label>
+    <div class="money-field money-field-sm">
+      <span class="money-field-sign">$</span>
+      <input type="number" id="abonar-amount" min="1" step="1" placeholder="0" inputmode="decimal"
+             oninput="validateAbonarAmount()">
+    </div>
+    <div id="abonar-restante-preview" style="font-size:.78rem;color:var(--muted);margin-top:4px;min-height:1.1em"></div>
+    <label>Método de pago</label>
+    <div class="abonar-pay-btns">
+      <button class="abonar-pay-btn active" id="abpay-efectivo" onclick="setAbonarMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
+      <button class="abonar-pay-btn" id="abpay-transferencia" onclick="setAbonarMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
+    </div>
+    <button type="button" class="collected-by-btn" id="abonar-collected-ofelia" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+    <div class="abonar-footer">
+      <button class="btn-cancel" onclick="closeAbonarModal()">Cancelar</button>
+      <button class="btn-confirm" id="abonar-confirm-btn" onclick="confirmAbonar()">Confirmar abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- APARTADO SHEET — todo lo que conlleva un apartado: cliente, teléfono, anticipo y fecha límite -->
+<div class="abonar-overlay" id="apartado-sheet-overlay" style="display:none" onclick="if(event.target===this)closeApartadoSheet()">
+  <div class="abonar-modal">
+    <h3><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Datos del apartado</h3>
+    <p class="apt-info-lbl">El anticipo es opcional — déjalo en 0 si se cobrará todo al entregar</p>
+    <label>Nombre del cliente <span style="color:var(--red)">*</span></label>
+    <input type="text" id="pos-apt-customer" class="apt-input" placeholder="Ej. María López" oninput="updateAnticipoInfo()">
+    <label>Teléfono <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+    <input type="tel" id="pos-phone" placeholder="Para enviar el comprobante por WhatsApp" onblur="_lookupCustomerByPhone('pos-phone','pos-apt-customer','pos-apt-customer-hint')" class="apt-input" inputmode="tel">
+    <p class="cust-hint" id="pos-apt-customer-hint" style="display:none;margin:-2px 0 14px"></p>
+    <div class="cash-field">
+      <label>Anticipo <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <div class="money-field money-field-sm">
+        <span class="money-field-sign">$</span>
+        <input type="number" id="pos-anticipo" min="0" step="1" inputmode="decimal" placeholder="0" oninput="updateAnticipoInfo()">
+      </div>
+    </div>
+    <!-- Botones rápidos de anticipo -- justo debajo del campo que llenan,
+         no después del resultado calculado (Pendiente) -->
+    <div class="cash-quick anticipo-quick" style="margin:6px 0 12px">
+      <button onclick="setAnticipo(.25)">25%</button>
+      <button onclick="setAnticipo(.50)">50%</button>
+      <button onclick="setAnticipo(.75)">75%</button>
+      <button onclick="setAnticipo(1)" class="exact-btn">Exacto</button>
+    </div>
+    <div class="cash-field" style="margin-bottom:14px">
+      <label>Pendiente</label>
+      <input type="text" id="pos-pendiente" class="apt-pending" readonly tabindex="-1">
+    </div>
+    <!-- El método de pago del anticipo no aplica si el anticipo es $0 --
+         updateAnticipoInfo() lo oculta en ese caso -->
+    <div class="cash-field" style="margin-bottom:14px" id="apt-anticipo-method-wrap">
+      <label>Método del anticipo</label>
+      <div class="pay-method-row" style="margin:0">
+        <button class="pay-btn active" id="apt-pay-efectivo" onclick="setPayMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
+        <button class="pay-btn" id="apt-pay-transferencia" onclick="setPayMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
+      </div>
+      <button type="button" class="collected-by-btn" id="apt-collected-ofelia" style="margin-top:2px" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+    </div>
+    <!-- Fuera del bloque del anticipo: ese bloque se oculta con anticipo $0 y el
+         fiado casi siempre es sin anticipo. -->
+    <button type="button" class="collected-by-btn" id="apt-se-lo-lleva" aria-pressed="false" style="margin:0 0 14px" onclick="toggleSeLoLleva(this)"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Se lo lleva hoy (fiado, persona de confianza)</button>
+    <div class="cash-field">
+      <label>Fecha límite de pago</label>
+      <input type="date" id="pos-due-date" class="apt-input">
+    </div>
+    <div class="abonar-footer" style="margin-top:16px">
+      <button class="btn-cancel" onclick="_cancelApartadoSheet()">Quitar apartado</button>
+      <button class="btn-confirm" onclick="_confirmApartadoSheet()">Listo</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTOCK PROMPT -->
+<div id="restock-prompt" style="display:none;position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center" onclick="if(event.target===this)_closeRestockPrompt()">
+  <div class="restock-sheet" style="background:var(--surface);border-radius:20px 20px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;box-shadow:0 -8px 32px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-weight:700;font-size:.95rem;color:var(--charcoal)"><svg style="width:15px;height:15px;vertical-align:-2px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Sin stock — ¿Reabastecer?</span>
+      <button onclick="_closeRestockPrompt()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);touch-action:manipulation">✕</button>
+    </div>
+    <div id="restock-prod-name" style="font-size:.82rem;color:var(--muted);margin-bottom:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+      <span style="font-size:.88rem;font-weight:600;color:var(--charcoal)">Unidades a agregar</span>
+      <div style="display:flex;align-items:center;gap:14px">
+        <button onclick="_restockChangeQty(-1)" style="width:38px;height:38px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);font-size:1.3rem;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center">−</button>
+        <span id="restock-qty-val" style="font-size:1.3rem;font-weight:700;min-width:28px;text-align:center">1</span>
+        <button onclick="_restockChangeQty(1)" style="width:38px;height:38px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);font-size:1.3rem;font-weight:700;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+    </div>
+    <button id="restock-confirm-btn" onclick="_confirmRestock()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:12px;padding:15px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;margin-bottom:10px">Reabastecer y agregar al carrito →</button>
+    <button onclick="_closeRestockPrompt()" style="width:100%;background:none;border:none;color:var(--muted);font-size:.85rem;cursor:pointer;font-family:inherit;touch-action:manipulation;padding:6px">Cancelar</button>
+  </div>
+</div>
+
+<!-- CANCELAR APARTADO — modal propio (antes era confirm() nativo, muy fácil de aceptar sin querer) -->
+<div class="abonar-overlay" id="cancel-apt-overlay" style="display:none" onclick="if(event.target===this)_closeCancelAptModal()">
+  <div class="abonar-modal">
+    <h3 id="cancel-apt-title">¿Cancelar este apartado?</h3>
+    <p class="apt-info-lbl" id="cancel-apt-info"></p>
+    <div id="cancel-apt-warning" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#B91C1C;margin-bottom:16px;line-height:1.5"></div>
+    <!-- Motivo OBLIGATORIO (antes opcional y en texto libre): cancelar era dos toques
+         seguidos y se podía pasar de largo en piloto automático. Elegir un motivo
+         obliga a detenerse un segundo y deja un dato útil en Actividad. -->
+    <div class="adm-section-title">Motivo de la cancelación</div>
+    <div class="cancel-reasons" id="cancel-apt-reasons" role="radiogroup" aria-label="Motivo de la cancelación">
+      <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-reason="El cliente desistió" onclick="_selectCancelReason(this)">El cliente desistió</button>
+      <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-reason="No pagó (vencido)" onclick="_selectCancelReason(this)">No pagó (vencido)</button>
+      <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-reason="Error de captura" onclick="_selectCancelReason(this)">Error de captura</button>
+      <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-reason="Otro" onclick="_selectCancelReason(this)">Otro</button>
+    </div>
+    <div id="cancel-apt-money" style="display:none">
+      <div class="adm-section-title" id="cancel-apt-money-title">¿Qué pasa con lo que pagó?</div>
+      <div class="cancel-reasons" role="radiogroup" aria-label="Qué pasa con su dinero" style="margin-bottom:6px">
+        <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-money="favor" onclick="_selectCancelMoney('favor')">Queda a su favor</button>
+        <button type="button" class="cancel-reason-btn" role="radio" aria-checked="false" data-money="devolver" onclick="_selectCancelMoney('devolver')">Se lo devuelvo ahora</button>
+      </div>
+      <p class="cancel-money-hint" id="cancel-apt-money-hint"></p>
+    </div>
+    <input type="text" id="cancel-apt-reason" placeholder="Cuéntanos qué pasó…" maxlength="140" aria-label="Otro motivo" oninput="_updateCancelAptConfirm()" style="display:none;width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.85rem;font-family:inherit;margin-bottom:12px;box-sizing:border-box;background:var(--surface);color:var(--charcoal)">
+    <!-- Solo si ya hay pagos: cancelar registra una salida de dinero de la caja
+         (devolución), que la cajera tiene que confirmar que va a entregar. -->
+    <label class="cancel-refund-check" id="cancel-apt-refund-wrap" style="display:none">
+      <input type="checkbox" id="cancel-apt-refund-ok" onchange="_updateCancelAptConfirm()">
+      <span id="cancel-apt-refund-txt"></span>
+    </label>
+    <div class="abonar-footer">
+      <button class="btn-cancel" onclick="_closeCancelAptModal()">No, mantenerlo</button>
+      <button class="btn-confirm" id="cancel-apt-confirm-btn" style="background:var(--red)" onclick="_confirmCancelApartado()" disabled>Sí, cancelar apartado</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASAR DE LA LIBRETA — apartados que se llevaban en papel (pos-libreta.js).
+     Encabezado y pie fijos como Editar apartado; el pie siempre dice cuánto debe. -->
+<div class="abonar-overlay" id="libreta-overlay" style="display:none" onclick="if(event.target===this)closeLibreta()">
+  <div class="abonar-modal edit-apt-modal libreta-modal" role="dialog" aria-modal="true" aria-labelledby="lib-title" style="max-height:92vh">
+    <div class="eam-head">
+      <div class="lib-head-row">
+        <h3 id="lib-title">Pasar de la libreta</h3>
+        <button type="button" class="lib-close" onclick="closeLibreta()" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="apt-info-lbl" id="lib-sub"></p>
+      <div class="lib-saved" id="lib-saved" role="status" hidden></div>
+    </div>
+    <div class="eam-body">
+      <div class="lib-step"><span class="lib-step-n">1</span>¿Quién es?</div>
+      <div class="edit-apt-fields">
+        <div class="cash-field edit-apt-field-wide">
+          <label for="lib-name">Nombre</label>
+          <input type="text" id="lib-name" maxlength="80" autocomplete="off" class="apt-input" placeholder="Como viene en la libreta" oninput="_libOnName()">
+        </div>
+        <div class="lib-dup edit-apt-field-wide" id="lib-dup" hidden></div>
+        <div class="cash-field edit-apt-field-wide">
+          <label for="lib-phone">Teléfono <span class="lib-opt">(opcional, para mandarle su saldo)</span></label>
+          <input type="tel" id="lib-phone" placeholder="10 dígitos" inputmode="numeric" maxlength="10" class="apt-input"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,10);_libRecalc()">
+        </div>
+      </div>
+
+      <div class="lib-step"><span class="lib-step-n">2</span>La cuenta</div>
+      <div class="lib-mode" id="lib-mode-toggle" role="group" aria-label="Qué dice la libreta">
+        <button type="button" data-mode="total" onclick="setLibretaMode('total')">Tiene el total</button>
+        <button type="button" data-mode="debe" onclick="setLibretaMode('debe')">Solo sé cuánto debe</button>
+      </div>
+      <div id="lib-total-block" class="lib-ledger">
+        <label for="lib-total">Total del apartado</label>
+        <div class="money-field money-field-sm">
+          <span class="money-field-sign">$</span>
+          <input type="number" id="lib-total" min="0" step="any" placeholder="0" inputmode="decimal" oninput="_libRecalc()">
+        </div>
+        <div id="lib-abonos"></div>
+        <button type="button" class="lib-add-abono" onclick="addLibretaAbono()">+ Anotar abono</button>
+        <p class="lib-hint">Copia cada abono como está en la libreta. La fecha es opcional.</p>
+      </div>
+      <div id="lib-debe-block" hidden>
+        <label for="lib-debe" id="lib-debe-label">¿Cuánto debe?</label>
+        <div class="money-field money-field-sm">
+          <span class="money-field-sign">$</span>
+          <input type="number" id="lib-debe" min="0" step="any" placeholder="0" inputmode="decimal" oninput="_libRecalc()">
+        </div>
+        <p class="lib-hint" id="lib-edit-paid" hidden></p>
+      </div>
+
+      <div class="lib-step"><span class="lib-step-n">3</span>Detalles <span class="lib-opt">(opcional)</span></div>
+      <div class="edit-apt-fields">
+        <div class="cash-field edit-apt-field-wide">
+          <label for="lib-note">¿Qué apartó?</label>
+          <input type="text" id="lib-note" maxlength="300" autocomplete="off" class="apt-input" placeholder="Ej. bolsa café, perfume Ekos" oninput="_libRecalc()">
+        </div>
+        <div class="cash-field" id="lib-opened-wrap">
+          <label for="lib-opened">Fecha del apartado</label>
+          <input type="date" id="lib-opened" class="apt-input">
+          <p class="lib-hint">Si no viene en la libreta, déjala vacía.</p>
+        </div>
+        <div class="cash-field">
+          <label for="lib-due">Fecha límite para pagar</label>
+          <input type="date" id="lib-due" class="apt-input">
+        </div>
+        <div class="lib-photo edit-apt-field-wide" id="lib-photo-wrap">
+          <button type="button" class="lib-photo-btn" id="lib-photo-btn" onclick="document.getElementById('lib-photo-input').click()"></button>
+          <input type="file" id="lib-photo-input" accept="image/*" hidden onchange="_libPickPhoto(this)">
+          <div class="lib-photo-prev" id="lib-photo-prev" hidden></div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-apt-foot">
+      <div class="lib-error" id="lib-error" role="alert"></div>
+      <div class="edit-apt-summary">
+        <div>
+          <div class="eas-sub">Le queda por pagar</div>
+          <div class="eas-total" id="lib-foot-total">$0</div>
+        </div>
+        <div class="lib-foot-detail" id="lib-foot-detail"></div>
+      </div>
+      <div class="abonar-footer">
+        <button class="btn-cancel" onclick="closeLibreta()">Cerrar</button>
+        <button class="btn-confirm" id="lib-save-btn" onclick="saveLibreta()" disabled>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RONDA DE COBRANZA — recordatorios a apartados vencidos, uno tras otro -->
+<div class="abonar-overlay" id="cobranza-overlay" style="display:none" onclick="if(event.target===this)closeCobranza()">
+  <div class="abonar-modal" style="max-height:85vh;display:flex;flex-direction:column">
+    <h3>Recordar a vencidas</h3>
+    <p class="apt-info-lbl" id="cobranza-sub"></p>
+    <div id="cobranza-list" style="overflow-y:auto;flex:1;margin:12px 0;min-height:60px"></div>
+    <div class="abonar-footer">
+      <button class="btn-cancel" onclick="closeCobranza()" style="width:100%">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL DE TRANSACCIÓN — timeline de Actividad para una venta/apartado puntual -->
+<div class="abonar-overlay" id="txn-timeline-overlay" style="display:none" onclick="if(event.target===this)closeTransactionTimeline()">
+  <div class="abonar-modal" style="max-height:78vh;display:flex;flex-direction:column">
+    <h3><svg aria-hidden="true" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Historial de esta transacción</h3>
+    <p class="apt-info-lbl" id="txn-timeline-sub"></p>
+    <div id="txn-timeline-list" style="overflow-y:auto;flex:1;margin:12px 0;min-height:60px"></div>
+    <div class="abonar-footer">
+      <button class="btn-cancel" onclick="closeTransactionTimeline()" style="width:100%">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SALE DONE OVERLAY — onclick vacío: no cierra al tocar fuera -->
+<div class="overlay" id="sale-done-overlay" onclick="void 0">
+  <div class="sale-done-modal">
+    <button class="sd-close" onclick="closeSaleDone()" aria-label="Cerrar">✕</button>
+    <div class="sd-icon" id="sd-icon">✓</div>
+    <h2 id="sd-title">Venta completada</h2>
+    <p class="sd-sub" id="sd-sub" hidden></p>
+    <div class="sd-row"><span id="sd-total-label">Total cobrado</span><strong id="sd-total"></strong></div>
+    <div class="sd-row" id="sd-discount-row" style="display:none"><span>Descuento aplicado</span><strong id="sd-discount" style="color:var(--red)"></strong></div>
+    <div class="sd-row"><span>Método de pago</span><strong id="sd-method"></strong></div>
+    <div class="sd-row" id="sd-cash-row"><span id="sd-cash-label">Recibido</span><strong id="sd-cash"></strong></div>
+    <div class="sd-row sd-change" id="sd-change-row"><span>Cambio</span><strong id="sd-change"></strong></div>
+    <div class="sd-row" id="sd-pending-row" style="display:none"><span>Pendiente</span><strong id="sd-pending" style="color:var(--red)"></strong></div>
+    <div class="sd-row" id="sd-due-row" style="display:none"><span><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Fecha límite</span><strong id="sd-due"></strong></div>
+    <div class="sd-row" id="sd-customer-row" style="display:none"><span>Cliente</span><strong id="sd-customer" style="font-size:.85rem"></strong></div>
+    <div class="sd-row" id="sd-note-row" style="display:none"><span>Nota</span><strong id="sd-note" style="font-size:.85rem"></strong></div>
+    <div id="sd-transfer-alert" style="display:none;margin-top:10px;padding:10px 14px;background:#FEF3C7;border-radius:10px;font-size:.82rem;color:#92400E;text-align:left">
+      <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><strong>Transferencia pendiente:</strong> confirma el recibo antes de entregar el producto. El ticket de WhatsApp incluye este aviso.
+    </div>
+    <button class="btn-wa-ticket" onclick="sendWhatsAppTicket()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0z"/></svg>
+      Enviar ticket por WhatsApp
+    </button>
+    <button class="btn btn-green" onclick="closeSaleDone()" style="margin-top:8px">+ Nueva venta</button>
+    <button type="button" id="sd-era-apartado-btn" class="sd-era-apartado" onclick="convertLastSaleToApartado()" style="display:none">Era apartado</button>
+  </div>
+</div>
+
+<!-- COMPROBANTE DE PAGO (abono / liquidar saldo) -->
+<div class="overlay" id="abono-done-overlay" onclick="void 0">
+  <div class="sale-done-modal">
+    <button class="sd-close" onclick="closeAbonoDone(true)" aria-label="Cerrar">✕</button>
+    <div class="sd-icon">✓</div>
+    <h2 id="ad-title">Abono registrado</h2>
+    <div class="sd-row"><span>Cliente</span><strong id="ad-customer"></strong></div>
+    <div class="sd-row"><span id="ad-amount-label">Abono recibido</span><strong id="ad-amount"></strong></div>
+    <div class="sd-row"><span>Método de pago</span><strong id="ad-method"></strong></div>
+    <div class="sd-row" id="ad-pending-row"><span>Saldo pendiente</span><strong id="ad-pending" style="color:var(--red)"></strong></div>
+    <p class="ad-handover" id="ad-handover" hidden></p>
+    <div id="ad-phone-row" style="display:none;text-align:left;margin-top:10px">
+      <label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:4px">Sin teléfono guardado — captúralo para enviarle directo:</label>
+      <input type="tel" id="ad-phone-input" placeholder="10 dígitos" inputmode="numeric" maxlength="10"
+        style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.9rem;outline:none;font-family:inherit;box-sizing:border-box">
+    </div>
+    <button class="btn-wa-ticket" onclick="sendPaymentReceipt()" style="margin-top:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0z"/></svg>
+      Enviar comprobante por WhatsApp
+    </button>
+    <button class="btn btn-green" onclick="closeAbonoDone(true)" style="margin-top:8px">Listo</button>
+  </div>
+</div>
+
+<!-- LIQUIDAR MODAL -->
+<div class="abonar-overlay" id="liquidar-overlay" style="display:none" onclick="if(event.target===this)closeLiqModal()">
+  <div class="abonar-modal">
+    <h3>Liquidar apartado</h3>
+    <p class="apt-info-lbl" id="liq-info"></p>
+    <label>Restante a cobrar</label>
+    <div style="font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;color:var(--charcoal);margin-bottom:16px" id="liq-amount-display"></div>
+    <label>Método de pago</label>
+    <div class="abonar-pay-btns">
+      <button class="abonar-pay-btn active" id="liq-pay-efectivo" onclick="setLiqMethod('efectivo')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo</button>
+      <button class="abonar-pay-btn" id="liq-pay-transf" onclick="setLiqMethod('transferencia')"><svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia</button>
+    </div>
+    <button type="button" class="collected-by-btn" id="liq-collected-ofelia" onclick="this.classList.toggle('active')"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Ya lo cobró Ofelia (no está en la caja)</button>
+    <div class="abonar-footer">
+      <button class="btn-cancel" onclick="closeLiqModal()">Cancelar</button>
+      <button class="btn-confirm" id="liq-confirm-btn" onclick="confirmLiquidar()">✓ Liquidar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITAR APARTADO MODAL -->
+<div class="abonar-overlay" id="edit-apt-overlay" style="display:none" onclick="if(event.target===this)closeEditApt()">
+  <!-- Encabezado y pie fijos; solo .eam-body se desplaza (con 5+ productos el modal
+       entero hacía scroll y el título/total se perdían de vista). -->
+  <div class="abonar-modal edit-apt-modal" style="max-height:90vh">
+    <div class="eam-head">
+      <h3>Editar apartado</h3>
+      <p class="apt-info-lbl" id="edit-apt-info"></p>
+    </div>
+    <div class="eam-body">
+    <div class="adm-section-title">Productos</div>
+    <div id="edit-apt-items" style="margin-bottom:10px"></div>
+    <div style="position:relative;margin-bottom:10px">
+      <svg aria-hidden="true" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="edit-apt-search" placeholder="Agregar producto…" autocomplete="off"
+        style="width:100%;padding:9px 40px 9px 36px;border:1.5px solid var(--border);border-radius:9px;font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box;background:var(--surface);color:var(--charcoal)"
+        oninput="searchEditApt(this.value)"
+        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+      <button type="button" onclick="openEditAptScanner()" title="Escanear código de barras" aria-label="Escanear código de barras"
+        style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:7px;cursor:pointer;color:var(--muted)">
+        <svg aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M21 5v14"/></svg>
+      </button>
+      <div id="edit-apt-search-results" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:9px;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1)"></div>
+    </div>
+    <div class="adm-section-title" style="margin-top:14px">Datos del apartado</div>
+    <!-- Campos del apartado: 1 columna en mobile, y en ≥641px Nombre ocupa toda la
+         fila y Teléfono + Fecha límite van lado a lado (pos.css .edit-apt-fields). -->
+    <div class="edit-apt-fields">
+    <!-- Nombre -- antes inmutable después de crear el apartado. Solo corrige el
+         nombre de ESTE apartado; el registro de la clienta (Reportes → Clientes
+         frecuentes) se edita aparte, y el nombre puede ser a propósito una
+         descripción ("Hija de Marlen calle torres"). -->
+    <div class="cash-field edit-apt-field-wide">
+      <label>Nombre del apartado</label>
+      <input type="text" id="edit-apt-name" maxlength="80" autocomplete="off" placeholder="Nombre de quien lo aparta" class="apt-input">
+    </div>
+    <!-- Teléfono -- antes solo se podía capturar al crear el apartado; si se
+         omitía no había forma de agregarlo después salvo SQL a mano, y sin
+         teléfono "Reenviar comprobante" no tiene a quién mandarle el WhatsApp. -->
+    <div class="cash-field">
+      <label>Teléfono (para WhatsApp)</label>
+      <input type="tel" id="edit-apt-phone" placeholder="10 dígitos" inputmode="numeric" maxlength="10" class="apt-input"
+        oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)">
+    </div>
+    <!-- Fecha límite -- visible y editable aquí (antes no aparecía en absoluto
+         al editar): se conserva tal cual si no se toca, nunca se recalcula sola
+         solo porque cambiaron los productos. -->
+    <div class="cash-field">
+      <label>Fecha límite de pago</label>
+      <input type="date" id="edit-apt-due-date" class="apt-input">
+    </div>
+    </div><!-- /.edit-apt-fields -->
+    <button type="button" class="collected-by-btn" id="edit-apt-fiado" aria-pressed="false" onclick="_editAptToggleFiado(this)"><svg style="width:13px;height:13px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Se lo llevó (fiado): ya tiene el producto</button>
+    <div id="edit-apt-pagado-row" style="display:none;background:var(--gold-light);border:1px solid #EAD9B8;border-radius:9px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:.74rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Anticipo registrado</div>
+        <div id="edit-apt-pagado-amt" style="font-size:.95rem;font-weight:700;color:var(--charcoal);margin-top:2px"></div>
+      </div>
+      <button id="edit-apt-refund-btn" onclick="_editAptAnularPago()" style="background:#FEE2E2;color:var(--red);border:none;border-radius:7px;padding:8px 12px;min-height:44px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit" aria-label="Registrar devolución total del dinero pagado">Reembolsar</button>
+    </div>
+    </div><!-- /.eam-body -->
+    <!-- Pie fijo: el total (con lo que cambió) siempre a la vista junto al botón
+         de guardar, sin importar cuánto se haya desplazado el formulario. -->
+    <div class="edit-apt-foot">
+      <div id="edit-apt-total" class="edit-apt-summary"></div>
+      <div class="abonar-footer">
+        <button class="btn-cancel" onclick="closeEditApt()">Cancelar</button>
+        <button class="btn-confirm" id="edit-apt-save-btn" onclick="saveEditApt()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REENVIAR COMPROBANTE — captura de teléfono cuando el cliente no tiene uno guardado,
+     mismo patrón interactivo que #ad-phone-row en el flujo en vivo -->
+<div class="abonar-overlay" id="resend-phone-overlay" style="display:none" onclick="if(event.target===this)_closeResendPhonePrompt()">
+  <div class="abonar-modal" style="max-width:340px">
+    <h3>Falta el teléfono</h3>
+    <p class="apt-info-lbl">Este cliente no tiene teléfono guardado — captúralo para enviarle el comprobante directo</p>
+    <input type="tel" id="resend-phone-input" placeholder="10 dígitos" inputmode="numeric" maxlength="10"
+      style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.9rem;outline:none;font-family:inherit;box-sizing:border-box;margin-top:10px">
+    <div class="abonar-footer" style="margin-top:16px">
+      <button class="btn-cancel" onclick="_closeResendPhonePrompt()">Cancelar</button>
+      <button class="btn-confirm" onclick="_confirmResendPhone()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CORTE DE CAJA MODAL -->
+<div class="history-backdrop" id="corte-backdrop" onclick="closeCorte()" style="display:none"></div>
+<div class="history-offcanvas" id="corte-offcanvas" style="max-width:420px">
+  <div class="history-oc-head">
+    <span class="history-oc-title"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Corte de caja</span>
+    <button class="history-oc-close" onclick="closeCorte()">✕</button>
+  </div>
+  <div class="corte-body">
+    <div class="apt-view-toggle corte-toggle" id="corte-mode-toggle">
+      <button type="button" class="active" id="corte-mode-mio" onclick="setCorteMode('mio')">Mi turno</button>
+      <button type="button" id="corte-mode-general" onclick="setCorteMode('general')">General — hoy</button>
+    </div>
+    <div id="corte-periodo" class="corte-periodo"></div>
+
+    <!-- MI TURNO, paso 1: contar. Conteo a ciegas real: aquí no aparece
+         ningún monto cobrado del turno (ni efectivo, ni total, ni detalle).
+         Con fondo + efectivo a la vista el esperado se saca de cabeza y el
+         conteo deja de ser conteo; todo eso se revela al comparar. -->
+    <div id="corte-personal-sections">
+      <section class="corte-card">
+        <div class="corte-row">
+          <span class="corte-row-lbl">Fondo inicial</span>
+          <span class="corte-row-val" id="corte-fondo">$0</span>
+        </div>
+        <label class="corte-count" for="corte-conteo">
+          <span class="corte-count-lbl">Efectivo en el cajón</span>
+          <span class="corte-count-hint">Cuenta billetes y monedas, con el fondo incluido</span>
+          <span class="corte-count-field money-field">
+            <span class="money-field-sign" aria-hidden="true">$</span>
+            <input id="corte-conteo" type="text" inputmode="decimal" placeholder="0" autocomplete="off" oninput="_onConteoInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();compararConteo()}">
+          </span>
+        </label>
+        <div class="corte-mov">
+          <div class="corte-mov-head">
+            <span class="corte-row-lbl">Gastos, ingresos y retiros</span>
+            <button type="button" class="corte-link-btn" onclick="showGastoForm()">+ Agregar</button>
+          </div>
+          <div id="gastos-form" class="corte-mov-form" style="display:none">
+            <div class="gasto-kind-toggle" style="display:flex;gap:6px;background:var(--surface-soft);border:1.5px solid var(--border);border-radius:10px;padding:3px">
+              <button type="button" id="gasto-kind-gasto" onclick="_setGastoKind('gasto')" style="flex:1;min-height:40px;padding:7px 10px;border-radius:8px;border:none;background:var(--surface);color:var(--charcoal);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;box-shadow:0 1px 3px rgba(0,0,0,.12)">− Gasto</button>
+              <button type="button" id="gasto-kind-ingreso" onclick="_setGastoKind('ingreso')" style="flex:1;min-height:40px;padding:7px 10px;border-radius:8px;border:none;background:none;color:var(--charcoal);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">+ Ingreso</button>
+              <button type="button" id="gasto-kind-retiro" onclick="_setGastoKind('retiro')" style="flex:1;min-height:40px;padding:7px 10px;border-radius:8px;border:none;background:none;color:var(--charcoal);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">Retiro</button>
+            </div>
+            <div id="gasto-kind-hint" class="corte-count-hint" style="display:none">Dinero que sale del cajón sin ser gasto (ej. Ofelia se lleva la venta).</div>
+            <input id="gasto-desc" class="corte-input" type="text" placeholder="Descripción (ej: Refresco, Taxi, Recarga…)">
+            <div style="display:flex;gap:8px">
+              <input id="gasto-monto" class="corte-input" type="number" inputmode="decimal" placeholder="Monto $" min="0" style="flex:1;min-width:0">
+              <button type="button" class="corte-mov-ok" onclick="agregarGasto()" aria-label="Agregar movimiento">✓</button>
+              <button type="button" class="corte-mov-x" onclick="hideGastoForm()" aria-label="Cancelar">✕</button>
+            </div>
+          </div>
+          <div id="gastos-list"></div>
+        </div>
+      </section>
+      <button type="button" id="corte-comparar-btn" class="corte-primary" onclick="compararConteo()">Comparar conteo</button>
+
+      <!-- MI TURNO, paso 2: resultado (solo después de comparar) -->
+      <section id="corte-result" class="corte-card" style="display:none">
+        <div class="corte-result-head">
+          <span class="corte-result-lbl">Diferencia</span>
+          <span id="corte-diff-val" class="corte-result-val"></span>
+          <span id="corte-diff-tag" class="corte-result-tag"></span>
+        </div>
+        <div class="corte-row">
+          <span class="corte-row-lbl">Contaste</span>
+          <span class="corte-row-val" id="corte-contado"></span>
+        </div>
+        <div class="corte-row">
+          <span class="corte-row-lbl">Debía haber<span id="corte-esperado-formula" class="corte-row-sub"></span></span>
+          <span class="corte-row-val" id="corte-esperado"></span>
+        </div>
+        <button type="button" id="corte-corregir-btn" class="corte-link-btn corte-corregir" onclick="corregirConteo()">Corregir conteo</button>
+      </section>
+    </div>
+
+    <!-- Resumen de cobros: en "General" siempre; en "Mi turno" después de comparar -->
+    <div id="corte-summary">
+      <div id="corte-content"></div>
+      <div id="corte-detalle-section"></div>
+      <div id="corte-breakdown"></div>
+    </div>
+
+    <button type="button" id="corte-cerrar-btn" class="corte-primary" onclick="confirmCloseTurno()" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span id="corte-cerrar-label">Cerrar turno</span>
+    </button>
+    <button type="button" id="corte-wa-btn" class="corte-secondary" onclick="compartirCorteWA()">
+      <svg width="16" height="16" fill="#25D366" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0z"/></svg>
+      Compartir por WhatsApp
+    </button>
+  </div>
+</div>
+
+<!-- APARTADOS OFFCANVAS -->
+<div class="history-backdrop" id="apt-backdrop" onclick="closeApartados()" style="display:none" aria-hidden="true"></div>
+<aside class="history-offcanvas" id="apt-offcanvas" role="dialog" aria-modal="true" aria-labelledby="apt-oc-title" aria-hidden="true">
+  <div class="history-oc-head">
+    <div>
+      <div class="history-oc-title" id="apt-oc-title"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Apartados pendientes</div>
+      <div id="apt-oc-count" style="font-size:.74rem;color:var(--muted);margin-top:1px"></div>
+    </div>
+    <button type="button" class="apt-new-btn libreta-entry" hidden onclick="openLibreta()" aria-label="Pasar apartados de la libreta"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h6"/><path d="M9 11h4"/></svg><span>Libreta</span></button>
+    <button type="button" class="history-oc-close" onclick="closeApartados()" aria-label="Cerrar apartados">✕</button>
+  </div>
+  <div style="padding:8px 12px 4px;border-bottom:1px solid var(--border)">
+    <div class="apt-view-toggle" id="apt-view-toggle-oc" style="margin-bottom:8px" role="tablist" aria-label="Estado de los apartados" onkeydown="aptViewTabKeydown(event,'oc')">
+      <button type="button" class="active" role="tab" aria-selected="true" aria-controls="apt-offcanvas-list" data-mode="activos" onclick="selectAptView('activos','oc')">Activos</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="apt-offcanvas-list" tabindex="-1" data-mode="liquidados" onclick="selectAptView('liquidados','oc')">Liquidados</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="apt-offcanvas-list" tabindex="-1" data-mode="cancelados" onclick="selectAptView('cancelados','oc')">Cancelados</button>
+    </div>
+    <div class="apt-due-filters-wrap" id="apt-due-filters-wrap-oc">
+      <div class="apt-due-filters" id="apt-due-filters-oc" role="group" aria-label="Filtrar activos por vencimiento" onscroll="_aptDueFiltersScroll('oc')">
+        <button type="button" class="apt-due-filter active" data-due-filter="todos" aria-pressed="true" onclick="setAptDueFilter('todos','offcanvas')">Todos</button>
+        <button type="button" class="apt-due-filter" data-due-filter="vencidos" aria-pressed="false" onclick="setAptDueFilter('vencidos','offcanvas')">Vencidos</button>
+        <button type="button" class="apt-due-filter" data-due-filter="proximos" aria-pressed="false" onclick="setAptDueFilter('proximos','offcanvas')">Próximos 7 días</button>
+        <button type="button" class="apt-due-filter" data-due-filter="sin-fecha" aria-pressed="false" onclick="setAptDueFilter('sin-fecha','offcanvas')">Sin fecha</button>
+      </div>
+    </div>
+    <button type="button" class="apt-cobranza-btn" id="apt-cobranza-btn-oc" onclick="openCobranza()" style="display:none">Recordar a vencidas</button>
+    <div style="position:relative">
+      <svg aria-hidden="true" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--muted);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="apt-search" placeholder="Buscar cliente…" autocomplete="off"
+        aria-label="Buscar apartado por cliente"
+        style="width:100%;padding:8px 32px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;font-family:inherit;box-sizing:border-box"
+        oninput="filterApartadosWithDue(this.value,'offcanvas')"
+        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+      <button type="button" id="apt-search-clear" onclick="clearAptSearchWithDue('offcanvas')" aria-label="Limpiar búsqueda" style="display:none;position:absolute;right:2px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;line-height:1;padding:2px">✕</button>
+    </div>
+  </div>
+  <div class="history-oc-body" id="apt-offcanvas-list" role="tabpanel" aria-live="polite">
+    <div class="history-empty">Cargando…</div>
+  </div>
+</aside>
+
+<!-- APT PAGE — full-screen overlay en desktop -->
+<div id="apt-page" role="dialog" aria-modal="true" aria-labelledby="apt-page-title" aria-hidden="true">
+  <div class="apt-page-head">
+    <button type="button" class="apt-page-back" onclick="closeAptPage()" aria-label="Volver a Caja">← Caja</button>
+    <span class="apt-page-title" id="apt-page-title"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Apartados</span>
+    <span class="apt-page-count" id="apt-page-count"></span>
+    <button type="button" class="apt-new-btn libreta-entry" hidden onclick="openLibreta()" aria-label="Pasar apartados de la libreta"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h6"/><path d="M9 11h4"/></svg><span>Pasar de la libreta</span></button>
+    <div class="apt-view-toggle" id="apt-view-toggle-page" role="tablist" aria-label="Estado de los apartados" onkeydown="aptViewTabKeydown(event,'page')">
+      <button type="button" class="active" role="tab" aria-selected="true" aria-controls="apt-page-list" data-mode="activos" onclick="selectAptView('activos','page')">Activos</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="apt-page-list" tabindex="-1" data-mode="liquidados" onclick="selectAptView('liquidados','page')">Liquidados</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="apt-page-list" tabindex="-1" data-mode="cancelados" onclick="selectAptView('cancelados','page')">Cancelados</button>
+    </div>
+    <div class="apt-page-search-wrap">
+      <svg class="aps-ico" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="apt-page-search" placeholder="Buscar cliente…" autocomplete="off"
+        aria-label="Buscar apartado por cliente"
+        oninput="filterApartadosWithDue(this.value,'page')"
+        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor=''">
+      <button type="button" class="apt-page-search-clear" id="apt-page-search-clear" onclick="clearAptPageSearch()" aria-label="Limpiar búsqueda">✕</button>
+    </div>
+  </div>
+  <div class="apt-page-body">
+    <div class="apt-due-filters-wrap" id="apt-due-filters-wrap-page">
+      <div class="apt-due-filters" id="apt-due-filters-page" role="group" aria-label="Filtrar activos por vencimiento" onscroll="_aptDueFiltersScroll('page')">
+        <button type="button" class="apt-due-filter active" data-due-filter="todos" aria-pressed="true" onclick="setAptDueFilter('todos','page')">Todos</button>
+        <button type="button" class="apt-due-filter" data-due-filter="vencidos" aria-pressed="false" onclick="setAptDueFilter('vencidos','page')">Vencidos</button>
+        <button type="button" class="apt-due-filter" data-due-filter="proximos" aria-pressed="false" onclick="setAptDueFilter('proximos','page')">Próximos 7 días</button>
+        <button type="button" class="apt-due-filter" data-due-filter="sin-fecha" aria-pressed="false" onclick="setAptDueFilter('sin-fecha','page')">Sin fecha</button>
+      </div>
+    </div>
+    <button type="button" class="apt-cobranza-btn" id="apt-cobranza-btn-page" onclick="openCobranza()" style="display:none">Recordar a vencidas</button>
+    <div class="apt-page-grid" id="apt-page-list" role="tabpanel" aria-live="polite">
+      <div class="history-empty" style="grid-column:1/-1">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- APT DETAIL MODAL -->
+<div id="apt-detail-modal" role="dialog" aria-modal="true" aria-labelledby="adm-customer" aria-hidden="true" onclick="_aptDetailBackdrop(event)">
+  <div class="adm-box" role="document">
+    <div class="adm-head">
+      <div class="adm-head-info">
+        <h2 class="adm-customer" id="adm-customer" tabindex="-1"></h2>
+        <div class="adm-meta" id="adm-meta"></div>
+      </div>
+      <button type="button" class="adm-close" onclick="closeAptDetail()" aria-label="Cerrar detalle del apartado">✕</button>
+    </div>
+    <div class="adm-body" id="adm-body"></div>
+    <div class="adm-footer" id="adm-footer"></div>
+  </div>
+</div>
+
+<!-- HISTORY OFFCANVAS -->
+<div class="history-backdrop" id="history-backdrop" onclick="closeHistory()"></div>
+<div class="history-offcanvas" id="history-offcanvas">
+  <div class="history-oc-head">
+    <span class="history-oc-title"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Movimientos recientes</span>
+    <button class="history-oc-close" onclick="closeHistory()">✕</button>
+  </div>
+  <div class="history-oc-body" id="history-list">
+    <div class="history-empty">Cargando movimientos…</div>
+  </div>
+</div>
+
+<!-- SCANNER MODAL -->
+<div class="overlay" id="pos-scanner-overlay">
+  <div class="scan-modal">
+    <div class="scan-head">
+      <h3>Escanear código</h3>
+      <button class="scan-close" onclick="closePosScanner()">✕</button>
+    </div>
+    <div id="pos-reader"></div>
+    <div class="scan-status" id="pos-scan-status">Iniciando cámara...</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="negocio.js"></script>
+<script src="pos-core.js"></script>
+<script src="pos-cart.js"></script>
+<script src="pos-ui.js"></script>
+<script src="pos-apartados.js"></script>
+<script src="pos-libreta.js"></script>
+<script src="pos-fiado.js"></script>
+<script src="pos-checkout.js"></script>
+<div class="pos-preview" id="pos-preview" onclick="closePosPreview()">
+  <div class="pos-preview-inner" onclick="event.stopPropagation()">
+    <div class="pos-preview-pill"></div>
+    <div class="pos-preview-img-zone">
+      <img class="pos-preview-img" id="pos-preview-img" src="" alt="" style="cursor:zoom-in">
+      <button class="pos-preview-close" onclick="closePosPreview()">✕</button>
+    </div>
+    <div class="pos-preview-right">
+      <div class="pos-preview-body">
+        <div class="pos-preview-cat" id="pos-preview-cat"></div>
+        <div class="pos-preview-name" id="pos-preview-name"></div>
+        <div class="pos-preview-price" id="pos-preview-price"></div>
+        <div class="pos-preview-stock" id="pos-preview-stock"></div>
+        <div class="pos-preview-desc" id="pos-preview-desc"></div>
+      </div>
+      <div class="pos-preview-footer">
+        <button class="pos-preview-add-btn" id="pos-preview-add-btn">Agregar al carrito</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="img-lightbox" id="img-lightbox" onclick="closeLightbox()">
+  <img class="img-lightbox-img" id="img-lightbox-img" src="" alt="">
+  <div class="img-lightbox-info" id="img-lightbox-info" onclick="event.stopPropagation()">
+    <div class="img-lb-name" id="img-lb-name"></div>
+    <div class="img-lb-row" id="img-lb-price-row">
+      <span class="img-lb-label">Precio</span>
+      <span class="img-lb-val" id="img-lb-price"></span>
+    </div>
+    <div class="img-lb-row" id="img-lb-seller-row">
+      <span class="img-lb-label">Vendedor</span>
+      <span class="img-lb-val" id="img-lb-seller"></span>
+    </div>
+  </div>
+</div>
+<script src="shared.js"></script>
+</body>
+</html>

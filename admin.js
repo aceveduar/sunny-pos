@@ -1,0 +1,1256 @@
+// Relativo a donde está publicado el panel (hoy GitHub Pages, /tresencantos/):
+// antes apuntaba fijo a tresencantos.netlify.app, que ya no existe, y todo
+// enlace de producto compartido desde Inventario llevaba a un 404.
+const SITE_URL     = new URL('index.html', window.location.href).href.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//, 'https://aceveduar.github.io/tresencantos/');
+const SESSION_KEY  = "te_admin_session";
+const LOCKOUT_KEY  = "te_admin_lock";
+/* Sin fondo pintado a propósito -- antes traía fill="#F7F2EB" horneado en el
+   SVG, un cuadro crema fijo que no cambiaba con el tema (modo oscuro). Ahora
+   es transparente y hereda el fondo del contenedor que ya está themado
+   (--surface-soft, etc.) en cada lugar donde se usa. */
+const DEFAULT_IMG  = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22400%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20x%3D%22130%22%20y%3D%22100%22%20width%3D%22140%22%20height%3D%22140%22%20rx%3D%2210%22%20fill%3D%22none%22%20stroke%3D%22%23D4BC94%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%22127%22%20r%3D%2214%22%20fill%3D%22%23D4BC94%22%2F%3E%3Cpath%20d%3D%22M130%20210%20L175%20165%20L210%20195%20L255%20150%20L280%20180%20L280%20240%20L130%20240Z%22%20fill%3D%22%23D4BC94%22%20fill-opacity%3D%22.4%22%2F%3E%3C%2Fsvg%3E';
+
+// "Imagen base64 real" (candidata a migrar a Drive) se distingue por tipo, no por igualar
+// el string exacto de DEFAULT_IMG: una foto real siempre se guarda como JPEG raster en
+// base64 (_fileToBase64Resized), el placeholder de "sin foto" siempre es svg+xml. Versiones
+// anteriores de DEFAULT_IMG (antes tenía fondo crema horneado, ver comentario arriba) dejaron
+// productos viejos con un string de placeholder distinto al actual — comparar por igualdad
+// exacta los colaba como "con foto", incluyendo en la migración masiva a Drive.
+const _isRealBase64Image = img => !!img && img.startsWith('data:') && !img.startsWith('data:image/svg+xml');
+
+// SVG icons — renderizado fiable en iOS y Android (emoji ✏⧉ fallan en muchas fuentes)
+const ICON_EDIT = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const ICON_COPY = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS   = 60 * 1000; // 1 minuto de bloqueo por cada 5 intentos fallidos
+
+/* ── ROLES Y PERMISOS ── */
+// Roles válidos: 'superadmin' | 'encargado' | 'operador'
+// superadmin = dueños del negocio y del sistema, control total (incluye a Ofelia — el rol
+// 'dueña' se retiró 2026-09-05: nunca se mostró en la UI y en la práctica ya corría como superadmin)
+// encargado = confianza operativa total en Caja/Inventario, sin visibilidad de Reportes/Actividad/Configuración
+// operador = punto de partida seguro para cualquier persona nueva — casi nada por default
+// Sin rol definido → 'operador' (nunca escala permisos)
+function _parseRole() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    const fromUser = s?.user?.user_metadata?.role;
+    if (fromUser) return fromUser;
+    const token = s?.access_token;
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const r = payload?.user_metadata?.role;
+      if (r) return r;
+    }
+    return 'operador';
+  } catch { return 'operador'; }
+}
+const ROLE = _parseRole();
+const _isSuperOrEncargado = ROLE === 'superadmin' || ROLE === 'encargado';
+let can = {
+  deleteProduct:   true,
+  bulkDelete:      _isSuperOrEncargado,
+  manageSettings:  ROLE === 'superadmin',
+  publishProduct:  true,
+  editProduct:     true,
+  addProduct:      true,
+  viewReports:     ROLE === 'superadmin',
+  viewActivity:    ROLE === 'superadmin',
+  useReceptionIA:  _isSuperOrEncargado,
+  receiveStock:    true,
+};
+
+function _applyUserPermsToAdmin(up) {
+  if (!up) return;
+  if ('canDeleteProduct'  in up) can.deleteProduct  = up.canDeleteProduct;
+  if ('canBulkDelete'     in up) can.bulkDelete     = up.canBulkDelete;
+  if ('canManageSettings' in up) can.manageSettings  = up.canManageSettings;
+  if ('canPublishProduct' in up) can.publishProduct  = up.canPublishProduct;
+  if ('canEditProduct'    in up) can.editProduct     = up.canEditProduct;
+  if ('canUseReceptionIA' in up) can.useReceptionIA = up.canUseReceptionIA;
+  if ('canReceiveStock'   in up) can.receiveStock   = up.canReceiveStock;
+  if ('canAddProduct'     in up) can.addProduct      = up.canAddProduct;
+  if ('canViewReports'    in up) can.viewReports     = up.canViewReports;
+  if ('canViewActivity'   in up) can.viewActivity    = up.canViewActivity;
+}
+
+const SUPABASE_URL = NEGOCIO.supabaseUrl;
+
+const SUPABASE_ANON_KEY = NEGOCIO.supabaseAnonKey;
+
+let products = [];
+let _kitItemsEdit = [];
+let _allImagesEdit = []; // array unificado: [0]=principal, [1..n]=adicionales
+// Toda URL de Drive subida durante la sesión de edición actual, se haya
+// quedado o no en _allImagesEdit al final (subir a Drive pasa en cuanto se
+// elige la foto, mucho antes de "Guardar" -- si el formulario se cancela sin
+// guardar, closeForm() borra de Drive todo lo que quede aquí).
+let _sessionUploadedUrls = [];
+let _formJustSaved = false;
+let _returnToDupReview = false;
+let _returnToKitId = null;     // ID del kit cuyo formulario se debe reabrir al cerrar un componente
+let _returnToKitQVId = null;   // ID del kit cuyo QV se debe reabrir al cerrar un componente
+let _scrollToKitOnOpen = false; // al regresar al kit, hacer scroll hasta la sección de componentes
+let _returnToRecv = false;     // true si el formulario se abrió desde "Recibir mercancía" (producto no encontrado) -- al cerrar (se guarde o se cancele), regresa ahí en vez de dejar al usuario en el catálogo general
+let deleteTargetId = null;
+let selectedIds = new Set();
+let dragSrcId = null;
+let _multiDrag = false;
+let _dragScrollRaf = null;
+
+function _dragAutoScroll(e) {
+  if (dragSrcId === null) return;
+  const ZONE = 80, SPEED = 18;
+  const y = e.clientY;
+  const h = window.innerHeight;
+  cancelAnimationFrame(_dragScrollRaf);
+  if (y < ZONE) {
+    const step = () => { window.scrollBy(0, -SPEED * (1 - y / ZONE)); if (dragSrcId !== null) _dragScrollRaf = requestAnimationFrame(step); };
+    _dragScrollRaf = requestAnimationFrame(step);
+  } else if (y > h - ZONE) {
+    const step = () => { window.scrollBy(0, SPEED * (1 - (h - y) / ZONE)); if (dragSrcId !== null) _dragScrollRaf = requestAnimationFrame(step); };
+    _dragScrollRaf = requestAnimationFrame(step);
+  }
+}
+document.addEventListener('dragover', _dragAutoScroll);
+document.addEventListener('dragend', () => { cancelAnimationFrame(_dragScrollRaf); _dragScrollRaf = null; });
+
+function _startMultiDrag(e) {
+  _multiDrag = true;
+  document.getElementById('products-card-grid')?.classList.add('multi-dragging');
+  const ghost = document.createElement('div');
+  ghost.textContent = `${selectedIds.size} productos`;
+  ghost.style.cssText = 'position:fixed;left:-9999px;top:0;background:var(--ink);color:#fff;padding:7px 16px;border-radius:50px;font-weight:700;font-size:.82rem;white-space:nowrap';
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, 70, 18);
+  requestAnimationFrame(() => ghost.remove());
+  // setTimeout = igual que single drag: aplicar DESPUÉS de que dragstart termine
+  // Si se aplica card-dragging síncronamente, pointer-events:none cancela el drag en Chrome
+  setTimeout(() => {
+    selectedIds.forEach(sid => {
+      document.querySelector(`tr[data-id="${sid}"]`)?.classList.add('dragging');
+      document.querySelector(`.admin-card[data-id="${sid}"]`)?.classList.add('card-dragging');
+    });
+  }, 0);
+}
+
+function _doMultiDrop(targetId, insertBefore) {
+  if (selectedIds.has(targetId)) return false; // soltar sobre seleccionado = no-op
+  const group = products.filter(p => selectedIds.has(p.id));
+  const rest  = products.filter(p => !selectedIds.has(p.id));
+  const tgtIdx = rest.findIndex(p => p.id === targetId);
+  if (tgtIdx === -1) return false;
+  rest.splice(insertBefore ? tgtIdx : tgtIdx + 1, 0, ...group);
+  products.splice(0, products.length, ...rest);
+  return true;
+}
+let currentSort = localStorage.getItem('te_admin_sort') || 'created-new';
+let _adminPage = 1;
+const ADMIN_PAGE_SIZE = 50;
+let _adminLoadObserver = null;
+let _realtimeChannel = null;
+let _statFilter = null; // 'sin-stock' | 'sin-publicar' | 'sin-codigo' | 'ultima-pieza' | 'apartado' | 'kits'
+let _showingArchived = false;
+
+/* Categorías — cargadas dinámicamente desde config.categories */
+let categories = []; // [{code, label, color}]
+
+const TE = null; // tracking removed — stub keeps TE?.track() calls safe
+
+const CAT_DEFAULTS = [
+  // ── BOLSOS ──────────────────────────────────────────────
+  {code:'bolsos',              label:'Bolsos',              color:'#C9A462'},
+  {code:'bolsos_dama',         label:'Bolsos Dama',         color:'#C9A462', parent:'bolsos'},
+  {code:'bolsos_casual',       label:'Bolsos Casual',       color:'#C9A462', parent:'bolsos'},
+  {code:'cosmetiqueras',       label:'Cosmetiqueras',       color:'#C9A462', parent:'bolsos'},
+  // ── MOCHILAS (incluye cangureras, lapiceras, loncheras) ─
+  {code:'mochilas',            label:'Mochilas',            color:'#60a5fa'},
+  {code:'mochilas_dama',       label:'Mochilas Dama',       color:'#60a5fa', parent:'mochilas'},
+  {code:'mochilas_personaje',  label:'Mochilas Personaje',  color:'#60a5fa', parent:'mochilas'},
+  {code:'mochilas_deportivas', label:'Mochilas Deportivas', color:'#60a5fa', parent:'mochilas'},
+  {code:'cangureras',          label:'Cangureras',          color:'#60a5fa', parent:'mochilas'},
+  {code:'lapiceras',           label:'Lapiceras',           color:'#60a5fa', parent:'mochilas'},
+  {code:'loncheras',           label:'Loncheras',           color:'#60a5fa', parent:'mochilas'},
+  // ── ACCESORIOS ──────────────────────────────────────────
+  {code:'accesorios',          label:'Accesorios',          color:'#f472b6'},
+  {code:'cabello',             label:'Cabello',             color:'#f472b6', parent:'accesorios'},
+  {code:'bisuteria',           label:'Bisutería & Joyería', color:'#f472b6', parent:'accesorios'},
+  {code:'moda',                label:'Moda',                color:'#f472b6', parent:'accesorios'},
+  // ── BELLEZA ─────────────────────────────────────────────
+  {code:'belleza',             label:'Belleza',             color:'#a78bfa'},
+  {code:'maquillaje',          label:'Maquillaje',          color:'#a78bfa', parent:'belleza'},
+  {code:'unas',                label:'Uñas & Manicure',     color:'#a78bfa', parent:'belleza'},
+  // ── NATURA ──────────────────────────────────────────────
+  {code:'natura',              label:'Natura',              color:'#34d399'},
+  {code:'natura_perfumes',     label:'Perfumería',          color:'#34d399', parent:'natura'},
+  {code:'natura_cuerpo',       label:'Cuerpo',              color:'#34d399', parent:'natura'},
+  {code:'natura_facial',       label:'Facial',              color:'#34d399', parent:'natura'},
+  {code:'natura_cabello',      label:'Cabello Natura',      color:'#34d399', parent:'natura'},
+  {code:'natura_maquillaje',   label:'Maquillaje Natura',   color:'#34d399', parent:'natura'},
+  // ── AVON ────────────────────────────────────────────────
+  {code:'avon',                label:'Avon',                color:'#e11d48'},
+  {code:'avon_perfumes',       label:'Perfumería',          color:'#e11d48', parent:'avon'},
+  {code:'avon_cuerpo',         label:'Cuerpo',              color:'#e11d48', parent:'avon'},
+  {code:'avon_facial',         label:'Facial',              color:'#e11d48', parent:'avon'},
+  {code:'avon_maquillaje',     label:'Maquillaje',          color:'#e11d48', parent:'avon'},
+];
+const CAT_PALETTE = ['#C9A462','#60a5fa','#f472b6','#34d399','#a78bfa','#fb923c','#fbbf24','#a3e635','#2dd4bf','#f87171'];
+
+function getCatLabel(code) { return categories.find(c => c.code === code)?.label || code; }
+function getCatColor(code) { return categories.find(c => c.code === code)?.color || '#9B8B78'; }
+// "Natura · Perfumería" solo cuando el nombre se repite en otra rama (Natura y
+// Avon tienen Perfumería/Cuerpo/Facial/Maquillaje): sin la rama no se sabe
+// de cuál es. Los nombres únicos se quedan solos ("Bolsos Dama").
+function _catDisplayLabel(p) {
+  const c = categories.find(x => x.code === p.category);
+  const label = c?.label || p.categoryLabel || '';
+  if (!c?.parent) return label;
+  const dup = categories.some(x => x.code !== c.code && String(x.label || '').toLowerCase() === label.toLowerCase());
+  const parent = dup && categories.find(x => x.code === c.parent);
+  return parent ? `${parent.label} · ${label}` : label;
+}
+
+async function loadCategories() {
+  const r = await supabaseApi('config?id=eq.categories&select=value');
+  if (r.ok && r.data?.length && r.data[0].value) {
+    try { categories = JSON.parse(r.data[0].value); } catch { categories = [...CAT_DEFAULTS]; }
+  } else {
+    categories = [...CAT_DEFAULTS];
+    await _saveCategories();
+  }
+  renderCategorySelects();
+}
+
+// Única vía para escribir `config` desde Inventario: la RPC valida el permiso
+// según la llave (categories → Catálogo; flagged_products/dismissed_dups →
+// canEditProduct; groq_key → Configuración completa). Un POST directo a la
+// tabla solo funciona para superadmin y falla en silencio para los demás.
+async function _saveConfigValue(id, value) {
+  const r = await supabaseApi('rpc/te_save_config_value', {
+    method: 'POST',
+    body: JSON.stringify({ p_id: id, p_value: typeof value === 'string' ? value : JSON.stringify(value) })
+  });
+  if (!r.ok) console.error(`No se pudo guardar config "${id}":`, r.data?.message || r.status);
+  return r;
+}
+
+async function _saveCategories() {
+  return _saveConfigValue('categories', JSON.stringify(categories));
+}
+
+/* Helpers para subcategorías */
+function rootCats()     { return categories.filter(c => !c.parent); }
+function subCats(code)  { return categories.filter(c => c.parent === code); }
+function renderCategorySelects() {
+  // Select del formulario de producto — sólo hojas (sin hijos)
+  const fSel = document.getElementById('f-category');
+  if (fSel) {
+    const cur = fSel.value;
+    const roots = rootCats();
+    fSel.innerHTML = `<option value="por_revisar">📋 Por revisar</option>` + roots.filter(r => r.code !== 'por_revisar').map(r => {
+      const subs = subCats(r.code);
+      if (subs.length) {
+        return `<optgroup label="${_esc(r.label)}"><option value="${r.code}">${_esc(r.label)} — General</option>${subs.map(s => `<option value="${s.code}">${_esc(s.label)}</option>`).join('')}</optgroup>`;
+      }
+      return `<option value="${r.code}">${_esc(r.label)}</option>`;
+    }).join('');
+    if (cur && categories.find(c => c.code === cur)) fSel.value = cur;
+  }
+  // Select del filtro de la tabla — raíces + hojas indentadas
+  const tSel = document.getElementById('cat-filter');
+  if (tSel) {
+    const roots = rootCats();
+    tSel.innerHTML = `<option value="all">Todas las categorías</option>` +
+      roots.map(r => {
+        const subs = subCats(r.code);
+        if (subs.length) {
+          return `<optgroup label="${_esc(r.label)}"><option value="${r.code}">${_esc(r.label)} — Todos</option>${subs.map(s => `<option value="${s.code}">${_esc(s.label)}</option>`).join('')}</optgroup>`;
+        }
+        return `<option value="${r.code}">${_esc(r.label)}</option>`;
+      }).join('');
+  }
+  _updateCatFilterBtn();
+}
+
+function _updateCatFilterBtn() {
+  const btn = document.getElementById('cat-filter-btn');
+  const lbl = document.getElementById('cat-filter-btn-label');
+  if (!btn || !lbl) return;
+  const val = document.getElementById('cat-filter')?.value || 'all';
+  if (val === 'all') {
+    lbl.innerHTML = '<span class="lbl-long">Todas las categorías</span><span class="lbl-short">Categoría</span>'; // corto en celular, completo en pantallas anchas
+    btn.classList.remove('has-filter');
+  } else {
+    const cat = categories.find(c => c.code === val);
+    lbl.textContent = cat?.label || val;
+    btn.classList.add('has-filter');
+  }
+}
+
+/* ── Ordenar por — sheet propio, en vez del <select> nativo del navegador,
+   que no se puede re-diseñar y rompe el look del resto del toolbar. El
+   <select id="sort-select"> se queda oculto en el DOM como fuente real del
+   valor (varios flujos ya existentes — drag&drop, mover al inicio — lo
+   leen/escriben directo), este sheet es solo una interfaz más bonita
+   encima del mismo estado. ── */
+const SORT_OPTIONS = [
+  { value: 'position',    label: 'Mi orden' },
+  { value: 'recent',      label: 'Editados hace poco' },
+  { value: 'name-az',     label: 'A → Z' },
+  { value: 'name-za',     label: 'Z → A' },
+  { value: 'price-desc',  label: '$ Mayor' },
+  { value: 'price-asc',   label: '$ Menor' },
+  { value: 'created-new', label: 'Agregados hace poco' },
+  { value: 'created-old', label: 'Más antiguos' }
+];
+
+function openSortSheet() {
+  _renderSortSheetOptions();
+  document.getElementById('sort-sheet-overlay').classList.add('open');
+  document.getElementById('sort-sheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _initSortSheetSwipe();
+}
+
+function _initSortSheetSwipe() {
+  const sheet = document.getElementById('sort-sheet');
+  if (!sheet || sheet._swipeInited) return;
+  sheet._swipeInited = true;
+  let sy = null, cy = 0;
+  sheet.addEventListener('touchstart', e => { sy = e.touches[0].clientY; cy = 0; }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (sy === null) return;
+    const dy = e.touches[0].clientY - sy;
+    if (dy > 0) { cy = dy; sheet.style.transform = `translateY(${dy}px)`; }
+  }, { passive: true });
+  sheet.addEventListener('touchend', () => {
+    if (cy > 80) closeSortSheet();
+    sheet.style.transform = '';
+    sy = null; cy = 0;
+  }, { passive: true });
+}
+
+function closeSortSheet() {
+  document.getElementById('sort-sheet-overlay').classList.remove('open');
+  document.getElementById('sort-sheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _renderSortSheetOptions() {
+  const list = document.getElementById('sort-sheet-list');
+  if (!list) return;
+  // En celular el selector Lista/Cuadrícula vive aquí ("Ordenar y ver") para
+  // que la fila de filtros quede limpia; la vista por defecto es Lista.
+  const viewSection = window.innerWidth <= 640
+    ? `<div class="bcp-group-label" style="padding:14px 16px 6px">Ver como</div><div style="padding:0 16px 16px"><div class="bcp-chips">${
+        [['list', 'Lista'], ['cards', 'Cuadrícula']].map(([v, l]) =>
+          `<button class="bcp-chip${currentAdminView === v ? ' selected' : ''}" onclick="setAdminView('${v}');closeSortSheet()">${l}</button>`).join('')
+      }</div></div>`
+    : '';
+  list.innerHTML = `<div style="padding:10px 16px 16px"><div class="bcp-chips">${SORT_OPTIONS.map(o =>
+    `<button class="bcp-chip${currentSort === o.value ? ' selected' : ''}" onclick="selectSortSheet('${o.value}')">${_esc(o.label)}</button>`
+  ).join('')}</div></div>` + viewSection;
+  const title = document.querySelector('#sort-sheet .cat-sheet-title');
+  if (title) title.textContent = viewSection ? 'Ordenar y ver' : 'Ordenar por';
+}
+
+function selectSortSheet(value) {
+  currentSort = value;
+  localStorage.setItem('te_admin_sort', value);
+  const sel = document.getElementById('sort-select');
+  if (sel) sel.value = value;
+  _adminPage = 1;
+  renderTable();
+  TE?.track('filter_sort', { sort: value });
+  closeSortSheet();
+}
+
+function _updateSortFilterBtn() {
+  const lbl = document.getElementById('sort-filter-btn-label');
+  if (!lbl) return;
+  lbl.textContent = SORT_OPTIONS.find(o => o.value === currentSort)?.label || 'Ordenar';
+}
+
+function openCatSheet() {
+  const searchEl = document.getElementById('cat-sheet-search');
+  if (searchEl) searchEl.value = '';
+  _renderCatSheetChips('');
+  document.getElementById('cat-sheet-overlay').classList.add('open');
+  document.getElementById('cat-sheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _initCatSheetSwipe();
+  setTimeout(() => searchEl?.focus(), 320);
+}
+
+function _renderCatSheetChips(query) {
+  const list = document.getElementById('cat-sheet-list');
+  if (!list) return;
+  const cur   = document.getElementById('cat-filter')?.value || 'all';
+  const roots = rootCats();
+  const q     = query.toLowerCase().trim();
+
+  const dot  = (color) => `<span style="width:8px;height:8px;border-radius:50%;background:${color || '#8A7564'};display:inline-block;flex-shrink:0"></span>`;
+  const chip = (code, label, color, isSelected) =>
+    `<button class="bcp-chip${isSelected ? ' selected' : ''}" onclick="selectCatSheet('${code}')">${dot(color)}${_esc(label)}</button>`;
+
+  let html = '';
+
+  // Chip "Todas" + sección "Por revisar" en una misma franja
+  const sinCategCount = products.filter(p => p.category === 'por_revisar').length;
+  const todasMatch = !q || 'todas las categorías'.includes(q);
+  const revisar    = sinCategCount > 0 && (!q || 'por revisar sin categoría'.includes(q));
+
+  if (todasMatch || revisar) {
+    const todasChip   = todasMatch ? chip('all', 'Todas las categorías', '#8A7564', cur === 'all') : '';
+    const revisarChip = revisar
+      ? `<button class="bcp-chip${cur === 'por_revisar' ? ' selected' : ''}" onclick="selectCatSheet('por_revisar')">${dot('#D97706')}<svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Sin categoría — ${sinCategCount}</button>`
+      : '';
+    html += `<div style="padding:10px 16px 10px"><div class="bcp-chips">${todasChip}${revisarChip}</div></div>`;
+  }
+
+  // Categorías agrupadas
+  roots.filter(r => r.code !== 'por_revisar').forEach(r => {
+    const subs  = subCats(r.code);
+    const color = r.color || '#8A7564';
+    const items = [
+      { code: r.code, label: subs.length ? 'Todos' : r.label, color },
+      ...subs.map(s => ({ code: s.code, label: s.label, color: s.color || color }))
+    ];
+    const filtered = q ? items.filter(i => i.label.toLowerCase().includes(q) || r.label.toLowerCase().includes(q)) : items;
+    if (!filtered.length) return;
+    html += `<div style="padding:2px 16px 10px;border-top:1px solid var(--border)">
+      <div class="bcp-group-label">${_esc(r.label.toUpperCase())}</div>
+      <div class="bcp-chips">${filtered.map(i => chip(i.code, i.label, i.color, cur === i.code)).join('')}</div>
+    </div>`;
+  });
+
+  list.innerHTML = html || `<div style="padding:28px;text-align:center;color:var(--muted);font-size:.85rem">Sin resultados</div>`;
+}
+
+function _catSheetFilter(q) { _renderCatSheetChips(q); }
+
+function closeCatSheet() {
+  document.getElementById('cat-sheet-overlay').classList.remove('open');
+  document.getElementById('cat-sheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function selectCatSheet(code) {
+  if (code !== 'all') TE?.track('filter_category', { cat: code });
+  const sel = document.getElementById('cat-filter');
+  if (sel) sel.value = code;
+  _adminPage = 1;
+  _updateCatFilterBtn();
+  renderTable();
+  closeCatSheet();
+}
+
+function _initCatSheetSwipe() {
+  const sheet = document.getElementById('cat-sheet');
+  if (!sheet || sheet._swipeInited) return;
+  sheet._swipeInited = true;
+  let sy = null, cy = 0;
+  sheet.addEventListener('touchstart', e => { sy = e.touches[0].clientY; cy = 0; }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (sy === null) return;
+    const dy = e.touches[0].clientY - sy;
+    if (dy > 0) { cy = dy; sheet.style.transform = `translateY(${dy}px)`; }
+  }, { passive: true });
+  sheet.addEventListener('touchend', () => {
+    if (cy > 80) closeCatSheet();
+    sheet.style.transform = '';
+    sy = null; cy = 0;
+  }, { passive: true });
+}
+
+const getSupabaseUrl = () => SUPABASE_URL;
+function _getAdminToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return s?.access_token || SUPABASE_ANON_KEY;
+  } catch { return SUPABASE_ANON_KEY; }
+}
+
+/* ── ACTIVITY LOG ── */
+function getCurrentUserEmail() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.access_token) return 'desconocido';
+    // Usar email guardado directamente en la sesión (más confiable que decodificar JWT)
+    if (s.email) return s.email;
+    if (s.user?.email) return s.user.email;
+    // Fallback: decodificar JWT (Base64URL → Base64 estándar antes de atob)
+    const b64 = s.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64)).email || 'desconocido';
+  } catch { return 'desconocido'; }
+}
+function logActivity(action, summary, meta = null) {
+  // Ahora devuelve la promesa -- ningún llamador existente la esperaba (todos
+  // son "fire and forget"), pero doLoginEmail() sí necesita esperar a que el
+  // POST realmente salga antes de location.reload(), o el request se corta
+  // a la mitad por la recarga.
+  return supabaseApi('activity_log', {
+    method: 'POST',
+    body: JSON.stringify({ user_email: getCurrentUserEmail(), action, summary, meta })
+  }).catch(() => {});
+}
+
+function adminCatMatches(productCat, filterCat) {
+  if (filterCat === 'all') return true;
+  if (productCat === filterCat) return true;
+  if (productCat.startsWith(filterCat + '_')) return true;
+  let cat = categories.find(c => c.code === productCat);
+  while (cat?.parent) {
+    if (cat.parent === filterCat) return true;
+    cat = categories.find(c => c.code === cat.parent);
+  }
+  return false;
+}
+
+const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Productos Natura/naturales caducan — alerta si faltan <=60 días o ya caducó
+const _EXPIRY_SOON_DAYS = 60;
+function _expiryStatus(p) {
+  if (!p.expiryDate) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const exp = new Date(p.expiryDate + 'T00:00:00');
+  const days = Math.round((exp - today) / 86400000);
+  return { days, state: days < 0 ? 'expired' : days <= _EXPIRY_SOON_DAYS ? 'soon' : 'ok' };
+}
+
+const _normCache = new Map();
+const _norm = s => {
+  const k = s || '';
+  if (_normCache.has(k)) return _normCache.get(k);
+  const v = k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  _normCache.set(k, v);
+  return v;
+};
+
+// true cuando la búsqueda exacta no encontró nada y getFilteredProducts()
+// cayó al respaldo por similitud de palabras -- renderTable() lo lee para
+// avisar que son parecidos, no coincidencias exactas.
+let _searchFuzzyFallback = false;
+
+function _productPassesNonSearchFilters(p, cat, creatorVal) {
+  if (_showingArchived ? !p.isArchived : p.isArchived) return false;
+  if (!adminCatMatches(p.category, cat)) return false;
+  if (_showOnlyFlagged && !_flagItem(p.id)) return false;
+  if (!(creatorVal === 'all' || p.createdBy === creatorVal || (!p.createdBy && creatorVal === '__none__'))) return false;
+  // Un kit siempre trae stock=0/out_of_stock=false fijos en BD (su
+  // disponibilidad real se calcula desde sus componentes) -- para "Sin
+  // stock"/"Última pieza" hay que usar ese cálculo real (_kitInfo, admin-render.js),
+  // nunca el valor crudo de la columna, o CUALQUIER kit calificaría siempre
+  // como "sin stock" sin importar cuántos se puedan armar de verdad.
+  const isKit = Array.isArray(p.kitItems);
+  const kitStockNow = isKit ? (_kitInfo(p)?.stock ?? 0) : null;
+  const matchStat = !_statFilter ||
+    (_statFilter === 'sin-stock'    && (isKit ? kitStockNow === 0 : (p.stock === 0 || p.outOfStock))) ||
+    (_statFilter === 'sin-publicar' && p.isPublished === false) ||
+    (_statFilter === 'sin-codigo'   && !p.barcode) ||
+    (_statFilter === 'sin-cod-proveedor' && !p.supplierCode) ||
+    (_statFilter === 'sin-categ'    && p.category === 'por_revisar') ||
+    (_statFilter === 'ultima-pieza' && (isKit ? kitStockNow === 1 : (p.stock === 1 && !p.outOfStock))) ||
+    (_statFilter === 'sin-precio'   && (!p.price || p.price === 0)) ||
+    (_statFilter === 'sin-costo'    && (p.cost == null || Number(p.cost) === 0)) ||
+    (_statFilter === 'imagen-base64' && _isRealBase64Image(p.image)) ||
+    (_statFilter === 'kits'         && isKit) ||
+    (_statFilter === 'por-caducar'  && ['soon','expired'].includes(_expiryStatus(p)?.state)) ||
+    (_statFilter === 'apartado'     && (p.isApartado || _apartadosMap[p.id]));
+  if (!matchStat) return false;
+  // Antes, cualquier vista que no fuera el chip "Kits" excluía los kits por
+  // completo -- incluida la búsqueda, que ni siquiera encontraba un kit por
+  // su nombre exacto. "Kits" sigue siendo un filtro más (arriba), no el
+  // único lugar donde un kit puede aparecer.
+  return true;
+}
+
+function getFilteredProducts() {
+  const qRaw        = document.getElementById('search-input')?.value || '';
+  const q           = _norm(qRaw);
+  const cat         = document.getElementById('cat-filter')?.value || 'all';
+  const creatorVal  = document.getElementById('creator-filter')?.value || 'all';
+  _searchFuzzyFallback = false;
+
+  const pool = products.filter(p => _productPassesNonSearchFilters(p, cat, creatorVal));
+  const groups = q ? q.split(',').map(g => g.trim().split(/\s+/).filter(Boolean)).filter(g => g.length) : [];
+  let filtered = !groups.length ? pool : pool.filter(p => groups.some(g => g.every(t =>
+    _norm(p.name).includes(t) ||
+    _norm(p.categoryLabel).includes(t) ||
+    (p.barcode && p.barcode.includes(t)) ||
+    (p.supplierCode && _norm(p.supplierCode).includes(t)) ||
+    t === String(Math.round(p.price || 0))
+  )));
+
+  // Búsqueda difusa -- solo entra cuando la búsqueda exacta no encontró NADA
+  // y el texto parece un nombre completo (2+ palabras), no una palabra suelta
+  // a medio escribir (ahí la búsqueda exacta ya funciona bien y no hay que
+  // tocarla). Resuelve el descontrol real de nombres -- el mismo producto
+  // escrito distinto por la IA, por un usuario, o copiado tal cual de la
+  // revista digital de un proveedor -- reutilizando _wordSim() (conteo
+  // simple de palabras compartidas, admin-scanner.js), el mismo motor ya
+  // usado en Recepción con IA y detección de duplicados. Se probaron 3
+  // variantes pesadas por rareza de palabra (2026-09-06) para el caso real
+  // "EKOS ACAI FRESCOR EAU DE TOILETTE 150 ML" → "Perfume Natura Acai" --
+  // ninguna lo resolvió de forma confiable sin poder probar contra el
+  // catálogo real, y Eduardo pidió regresar a esta versión simple en vez
+  // de seguir adivinando. Nunca autoselecciona nada -- solo ordena por
+  // parecido para que la persona elija con sus propios ojos.
+  if (groups.length && !filtered.length && qRaw.trim().split(/\s+/).filter(Boolean).length >= 2) {
+    const scored = pool
+      .map(p => ({ p, score: _wordSim(qRaw, p.name) }))
+      .filter(x => x.score >= 0.28)
+      .sort((a, b) => b.score - a.score);
+    if (scored.length) {
+      filtered = scored.map(x => x.p);
+      _searchFuzzyFallback = true;
+    }
+  }
+
+  if (_searchFuzzyFallback) return filtered; // ya viene ordenado por similitud -- no aplicar el sort normal
+
+  switch (currentSort) {
+    case 'recent': {
+      const order = _editedOrder();
+      if (!order.length) return [...filtered].sort((a, b) => b.id - a.id);
+      return [...filtered].sort((a, b) => {
+        const ia = order.indexOf(a.id), ib = order.indexOf(b.id);
+        if (ia === -1 && ib === -1) return b.id - a.id;
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+    }
+    case 'name-az':    return [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    case 'name-za':    return [...filtered].sort((a, b) => b.name.localeCompare(a.name, 'es'));
+    case 'price-asc':  return [...filtered].sort((a, b) => a.price - b.price);
+    case 'price-desc': return [...filtered].sort((a, b) => b.price - a.price);
+    case 'stock-asc':  return [...filtered].sort((a, b) => a.stock - b.stock);
+    case 'stock-desc': return [...filtered].sort((a, b) => b.stock - a.stock);
+    case 'created-new': return [...filtered].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+      return tb - ta;
+    });
+    case 'created-old': return [...filtered].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+      return ta - tb;
+    });
+    default:           return filtered; // position (orden del drag & drop)
+  }
+}
+
+function _driveSz(url, w) {
+  if (!url || !url.includes('drive.google.com')) return url;
+  return url.replace(/sz=w\d+/, `sz=w${w}`);
+}
+
+function _openKitLightbox(p, editFn) {
+  document.getElementById('kit-lightbox')?.remove();
+  const lb = document.createElement('div');
+  lb.id = 'kit-lightbox';
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;overscroll-behavior:none;touch-action:none';
+  const stockTxt = (p.outOfStock || p.stock === 0)
+    ? '<span style="color:#EF4444">Agotado</span>'
+    : `<span style="color:#6abe83">● ${p.stock} en stock</span>`;
+  const editBtnId = 'kit-lb-edit-btn';
+  lb.innerHTML = `
+    <img src="${_driveSz(p.image || DEFAULT_IMG, 900)}" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'" style="max-width:100%;max-height:58dvh;border-radius:12px;object-fit:contain;display:block">
+    <div style="width:100%;max-width:360px;margin-top:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 16px;backdrop-filter:blur(8px)">
+      <div style="font-size:.92rem;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.3">${_esc(p.name)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem;margin-bottom:4px"><span style="color:rgba(255,255,255,.5)">Stock</span>${stockTxt}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem"><span style="color:rgba(255,255,255,.5)">Precio</span><span style="color:rgba(255,255,255,.9);font-weight:600">$${(p.price||0).toLocaleString('es-MX')}</span></div>
+      ${editFn ? `<button id="${editBtnId}" style="display:block;width:100%;margin-top:10px;background:rgba(201,164,98,.2);border:1px solid rgba(201,164,98,.4);border-radius:8px;padding:9px;color:var(--gold);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">${ICON_EDIT} Editar producto →</button>` : ''}
+    </div>`;
+  lb.onclick = e => { if (e.target === lb) lb.remove(); };
+  document.body.appendChild(lb);
+  if (editFn) {
+    document.getElementById(editBtnId).addEventListener('click', e => { e.stopPropagation(); lb.remove(); editFn(); });
+  }
+  let sy = 0, cy = 0, on = false;
+  const img = lb.querySelector('img');
+  lb.addEventListener('touchstart', e => { sy = e.touches[0].clientY; cy = 0; on = false; }, { passive: true });
+  lb.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - sy;
+    if (!on && dy > 10) on = true;
+    if (!on) return;
+    e.preventDefault();
+    cy = Math.max(0, dy);
+    if (img) img.style.transform = `translateY(${cy * 0.45}px) scale(${Math.max(0.85, 1 - cy / 700)})`;
+    lb.style.background = `rgba(0,0,0,${Math.max(0, 0.88 - cy / 280)})`;
+  }, { passive: false });
+  lb.addEventListener('touchend', () => {
+    if (!on) return; on = false;
+    if (cy > 80) { lb.remove(); }
+    else { if (img) { img.style.transition = 'transform .36s cubic-bezier(.34,1.26,.64,1)'; img.style.transform = ''; setTimeout(() => img.style.transition = '', 360); } lb.style.background = ''; }
+    cy = 0;
+  });
+}
+
+// Timeout en todo fetch a Supabase (convención del proyecto): sin esto una
+// conexión colgada dejaba Inventario en "Guardando…" para siempre, y un
+// error de red lanzaba excepción en vez de devolver { ok:false }.
+function _adminFetchTimeout(url, opts = {}, ms = 20000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
+async function supabaseApi(path, opts = {}) {
+  const _call = (token) => _adminFetchTimeout(getSupabaseUrl() + '/rest/v1/' + path, {
+    ...opts,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    }
+  }).then(async r => {
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text || null; }
+    return { ok: r.ok, status: r.status, data };
+  });
+  try {
+    const r = await _call(_getAdminToken());
+    if (r.status === 401 && await refreshSessionIfNeeded()) return await _call(_getAdminToken());
+    return r;
+  } catch {
+    return { ok: false, status: 0, data: { message: 'Sin conexión o el servidor no respondió. Intenta de nuevo.' } };
+  }
+}
+
+/* ── AUTH HELPERS ── */
+
+// Helper para endpoints de Supabase Auth (usa anon key, no service role)
+function supabaseAuth(path, opts = {}) {
+  return _adminFetchTimeout(`${SUPABASE_URL}/auth/v1${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    }
+  }).then(async r => {
+    const data = await r.json().catch(() => null);
+    return { ok: r.ok, status: r.status, data };
+  });
+}
+
+function isAuthenticated() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    // Token válido si no expiró (con 60s de margen)
+    return !!(s?.access_token && s.expires_at > Math.floor(Date.now() / 1000) + 60);
+  } catch { return false; }
+}
+
+async function refreshSessionIfNeeded() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (!s?.refresh_token) return false;
+
+    const result = await supabaseAuth('/token?grant_type=refresh_token', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+
+    if (!result.ok || !result.data?.access_token) return false;
+
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      access_token:  result.data.access_token,
+      refresh_token: result.data.refresh_token,
+      expires_at:    Math.floor(Date.now() / 1000) + (result.data.expires_in || 3600),
+      email:         result.data.user?.email || s.email,
+      user:          result.data.user || s.user
+    }));
+    return true;
+  } catch { return false; }
+}
+
+async function requireAuth() {
+  if (isAuthenticated()) return true;
+  // Token expirado — intentar renovar con el refresh token
+  const refreshed = await refreshSessionIfNeeded();
+  if (refreshed) return true;
+  localStorage.removeItem(SESSION_KEY);
+  document.getElementById('app-screen').style.display = 'none';
+  showAuthScreen();
+  return false;
+}
+
+function checkLockout() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(LOCKOUT_KEY) || '{}');
+    if (d.until && Date.now() < d.until) return Math.ceil((d.until - Date.now()) / 1000);
+    if (d.until) sessionStorage.removeItem(LOCKOUT_KEY);
+  } catch {}
+  return 0;
+}
+
+function recordAttempt() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(LOCKOUT_KEY) || '{}');
+    const count = (d.count || 0) + 1;
+    sessionStorage.setItem(LOCKOUT_KEY, JSON.stringify(
+      count >= MAX_ATTEMPTS ? { count: 0, until: Date.now() + LOCKOUT_MS } : { count }
+    ));
+  } catch {}
+}
+
+function clearAttempts() { sessionStorage.removeItem(LOCKOUT_KEY); }
+
+/* ── HELPERS ── */
+function setBtn(el, loading, text) {
+  if (!el) return;
+  if (loading) {
+    el.dataset.loading = '1';
+    if (text) { el.dataset.origText = el.textContent; el.textContent = text; }
+  } else {
+    delete el.dataset.loading;
+    if (el.dataset.origText) { el.textContent = el.dataset.origText; delete el.dataset.origText; }
+  }
+}
+
+/* ── INIT ── */
+window.addEventListener('pageshow', () => {
+  closeQV();
+});
+
+// Advertir si navegan a otro módulo con cambios sin guardar
+window.addEventListener('beforeunload', e => {
+  if (_formIsDirty() || _capIsDirty()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (isAuthenticated()) {
+    await showApp();
+  } else if (localStorage.getItem(SESSION_KEY)) {
+    // Token expirado — intentar renovar silenciosamente
+    const refreshed = await refreshSessionIfNeeded();
+    if (refreshed) {
+      await showApp();
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      const err = document.getElementById('pwd-err');
+      if (err) { err.textContent = 'Tu sesión expiró. Ingresa de nuevo.'; err.classList.add('show'); }
+    }
+  }
+  document.addEventListener('keydown', e => {
+    const inInput = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+    const modalOpen = document.querySelector('.overlay.open');
+
+    // Escape — cierra cualquier modal abierto
+    if (e.key === 'Escape') {
+      if (document.getElementById('cmp-zoom')?.classList.contains('open'))        { closeCmpZoom(); return; }
+      if (document.getElementById('form-overlay')?.classList.contains('open'))    { closeForm(); return; }
+      if (document.getElementById('del-overlay')?.classList.contains('open'))     { closeDel(); return; }
+      if (document.getElementById('scanner-overlay')?.classList.contains('open')) { closeAdminScanner(); return; }
+    }
+
+    // Atajos solo cuando no hay modal abierto y no se está escribiendo
+    if (inInput || modalOpen) return;
+
+    // N — nuevo producto
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openForm(); }
+
+    // / — foco en búsqueda
+    if (e.key === '/') { e.preventDefault(); document.getElementById('search-input')?.focus(); }
+
+    // Z — deshacer última eliminación
+    if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); doUndo(); }
+  });
+
+  // Placeholder adaptativo del buscador — corto en mobile, completo en desktop
+  const _adaptSearch = () => {
+    const el = document.getElementById('search-input');
+    if (el) el.placeholder = window.innerWidth <= 640 ? 'Buscar…' : 'Buscar… varios términos separados por coma';
+  };
+  _adaptSearch();
+
+  // Re-renderizar tabla al rotar el teléfono o redimensionar ventana
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+    const focused = document.activeElement;
+    const inTable = focused && (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA') && document.querySelector('.table-wrap')?.contains(focused);
+    if (!inTable) { renderTable(); _adaptSearch(); }
+  }, 180);
+  });
+
+  // Botón scroll-to-top
+  window.addEventListener('scroll', () => {
+    const btn = document.getElementById('scroll-top-btn');
+    if (btn) btn.classList.toggle('show', window.scrollY > 300);
+  }, { passive: true });
+});
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+/* ── AUTH ── */
+function _toggleLoginPwd() {
+  const input = document.getElementById('pwd-input');
+  const icon = document.getElementById('pwd-eye-icon');
+  const btn = document.getElementById('pwd-toggle-btn');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  icon.innerHTML = show
+    ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/>';
+}
+
+async function doLoginEmail() {
+  const email    = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('pwd-input').value;
+  const err      = document.getElementById('pwd-err');
+  const btn      = document.querySelector('.btn-login');
+
+  err.classList.remove('show');
+
+  // Bloqueo por demasiados intentos
+  const wait = checkLockout();
+  if (wait) {
+    err.textContent = `Demasiados intentos. Espera ${wait} segundo${wait !== 1 ? 's' : ''}.`;
+    err.classList.add('show');
+    return;
+  }
+
+  if (!email || !password) {
+    err.textContent = 'Completa email y contraseña';
+    err.classList.add('show');
+    return;
+  }
+
+  setBtn(btn, true, 'Verificando...');
+
+  let result;
+  try {
+    result = await supabaseAuth('/token?grant_type=password', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+  } catch (e) {
+    err.textContent = 'Error de conexión: ' + e.message;
+    err.classList.add('show');
+    setBtn(btn, false);
+    return;
+  }
+
+  if (!result.ok || result.data?.error) {
+    recordAttempt();
+    const newWait = checkLockout();
+    // Solo se registra el momento en que se activa el bloqueo (5º intento
+    // seguido), no cada intento individual -- te_log_failed_login() del lado
+    // del servidor además nunca deja más de 1 fila por email cada 10 min,
+    // sin importar cuántas veces se llame. Sin sesión activa aquí (fire and
+    // forget con .catch vacío a propósito) -- un fallo de red nunca debe
+    // bloquear el mensaje de error al usuario.
+    if (newWait) {
+      supabaseApi('rpc/te_log_failed_login', {
+        method: 'POST',
+        body: JSON.stringify({ p_email: email })
+      }).catch(() => {});
+    }
+    const supabaseMsg = result.data?.error_description || result.data?.msg || result.data?.message || '';
+    console.error('Auth error:', result.status, result.data);
+
+    let errMsg;
+    if (supabaseMsg.toLowerCase().includes('not confirmed'))
+      errMsg = 'Email no verificado — desactiva "Email confirmations" en Supabase → Auth → Settings.';
+    else if (supabaseMsg.toLowerCase().includes('invalid login') || supabaseMsg.toLowerCase().includes('invalid credentials'))
+      errMsg = 'Email o contraseña incorrectos.';
+    else if (supabaseMsg)
+      errMsg = supabaseMsg; // mostrar el error real de Supabase
+    else
+      errMsg = `Error ${result.status} — abre la consola del navegador (F12) para más detalles.`;
+
+    if (newWait) errMsg += ` (bloqueado ${newWait}s)`;
+    err.textContent = errMsg;
+    err.classList.add('show');
+    setBtn(btn, false);
+    return;
+  }
+
+  clearAttempts();
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    access_token:  result.data.access_token,
+    refresh_token: result.data.refresh_token,
+    expires_at:    Math.floor(Date.now() / 1000) + (result.data.expires_in || 3600),
+    email:         result.data.user.email,
+    user:          result.data.user
+  }));
+  // Nadie tenía visibilidad de quién entró y cuándo -- Actividad solo
+  // registraba lo que cada quien hacía ya adentro. Se espera el POST antes
+  // de recargar (logActivity ahora sí devuelve su promesa) para que no se
+  // corte a la mitad por la recarga.
+  await logActivity('sesion_iniciada', 'Inició sesión', { email: result.data.user.email });
+  // Recargar para que ROLE se re-evalúe con la sesión correcta
+  location.reload();
+}
+
+async function doLogout() {
+  // Se registra ANTES de invalidar el token (Supabase Auth /logout lo revoca)
+  // y de borrar la sesión local -- después de eso logActivity() ya no podría
+  // escribir. Junto con sesión_iniciada, completa la duración real de cada
+  // sesión en Actividad.
+  await logActivity('sesion_cerrada', 'Cerró sesión');
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    if (s.access_token) {
+      await supabaseAuth('/logout', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${s.access_token}` }
+      });
+    }
+  } catch {}
+  sessionStorage.removeItem('te_user_can');
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+/* ── APP ── */
+function _applyRoleUI() {
+  // Nav links — basado en can (respeta permisos individuales del panel)
+  const _hide = href => document.querySelectorAll(`a[href="${href}"]`).forEach(a => a.style.setProperty('display','none'));
+  const _show = href => document.querySelectorAll(`a[href="${href}"]`).forEach(a => a.style.removeProperty('display'));
+  // Reportar primero limpia, luego aplica estado actual (idempotente para re-llamadas)
+  if (!can.viewReports)    _hide('stats.html');    else _show('stats.html');
+  if (!can.viewActivity)   _hide('activity.html'); else _show('activity.html');
+  if (!can.manageSettings) _hide('settings.html'); else _show('settings.html');
+  // Botones de agregar producto — solo si puede
+  if (!can.addProduct) {
+    document.querySelectorAll('[onclick="openForm()"]').forEach(b => b.style.setProperty('display', 'none'));
+    document.querySelector('.fab-add')?.style.setProperty('display', 'none');
+    document.getElementById('btn-add-main')?.style.setProperty('display', 'none');
+  }
+  // Botón "Eliminar ✕" en bulk bar — solo superadmin/encargado
+  if (!can.bulkDelete) {
+    ['bulk-delete-btn', 'bulk-delete-group'].forEach(id => document.getElementById(id)?.style.setProperty('display', 'none'));
+  }
+  if (!can.deleteProduct) document.getElementById('bulk-archive-btn')?.style.setProperty('display', 'none');
+  // Botón "Publicar / Ocultar" en bulk bar — según can.publishProduct
+  if (!can.publishProduct) {
+    document.getElementById('bulk-publish-btn')?.style.setProperty('display', 'none');
+  }
+  // Checkbox de publicar — solo superadmin
+  if (!can.publishProduct) {
+    const pubRow = document.getElementById('f-published')?.closest('label') || document.getElementById('f-published')?.parentElement;
+    if (pubRow) {
+      pubRow.title = 'Solo el administrador puede publicar en el sitio web';
+      pubRow.style.opacity = '0.45';
+      pubRow.style.pointerEvents = 'none';
+    }
+  }
+  // Botón Captura rápida — visible si puede agregar (dos copias en el DOM,
+  // una para desktop junto a Agregar/Kit y otra para mobile junto a
+  // Escanear/Recibir/Importar — el CSS decide cuál se ve según el ancho)
+  if (can.addProduct) {
+    document.querySelectorAll('.capture-mode-btn, #add-menu-capture').forEach(b => b.style.removeProperty('display'));
+  }
+  // "Recibir mercancía" / "Recepción con IA" -- solo en el menú "+ Agregar"
+  // (único punto de entrada; el botón "Recibir" suelto de la barra se quitó
+  // 2026-10-07 por duplicado). Visibles si el toggle global del negocio está
+  // activo (_showRecv/_showRecvIa, Configuración → Catálogo) Y la persona
+  // tiene el permiso. Se reevalúa aquí porque _applyRoleUI() se re-llama al
+  // cargar config y al cargar permisos, sin importar cuál termine primero.
+  const recvMenuItem = document.getElementById('add-menu-recv');
+  if (recvMenuItem) recvMenuItem.style.display = (_showRecv && can.receiveStock) ? '' : 'none';
+  const recvIaMenuItem = document.getElementById('add-menu-recv-ia');
+  if (recvIaMenuItem) recvIaMenuItem.style.display = (_showRecvIa && can.useReceptionIA) ? '' : 'none';
+  _tbActionsScroll();
+}
+
+function _refreshCreatorFilter() {
+  const sel = document.getElementById('creator-filter');
+  const wrap = document.getElementById('creator-filter-wrap');
+  if (!sel || !wrap) return;
+  if (!_showCreator || ROLE !== 'superadmin') {
+    wrap.style.display = 'none';
+    sel.value = 'all';
+    return;
+  }
+  // Poblar con creadores únicos presentes en el catálogo actual
+  const emails = [...new Set(products.map(p => p.createdBy).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = `<option value="all">Creado por: todos</option>` +
+    emails.map(e => `<option value="${_esc(e)}">${_esc(_userNames[e] || e.split('@')[0])}</option>`).join('') +
+    (products.some(p => !p.createdBy) ? `<option value="__none__">Sin registro</option>` : '');
+  wrap.style.display = '';
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+
+function _getUserDisplay() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    const meta = s?.user?.user_metadata || {};
+    const name = meta.full_name || meta.name || s?.user?.email?.split('@')[0] || 'Usuario';
+    return { name, initial: name[0].toUpperCase() };
+  } catch { return { name: '', initial: '?' }; }
+}
+
+async function showApp() {
+  if (!await requireAuth()) return;
+  // Cambiar de pantalla de inmediato -- requireAuth() ya resolvió sin red
+  // (sesión válida en localStorage). Antes esto esperaba _loadMyPerms()
+  // (llamada de red) para hacer el swap, dejando el login visible 1-2s de
+  // más en cada carga aunque la sesión ya fuera válida.
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  const userPerms = await _loadMyPerms();
+  try {
+    const { name, initial } = _getUserDisplay();
+    const avatarEl = document.getElementById('user-avatar');
+    const nameEl   = document.getElementById('user-name');
+    if (avatarEl) avatarEl.textContent = initial;
+    if (nameEl)   nameEl.textContent   = name;
+  } catch {}
+  // Aplicar la respuesta autoritativa antes de mostrar acciones restringidas.
+  _applyUserPermsToAdmin(userPerms || _getMyPermsCached());
+  _applyRoleUI();
+
+  // Mostrar skeleton mientras cargan datos
+  const tbody = document.getElementById('products-table');
+  if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:48px;color:var(--muted)">
+    <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px"></div>
+    <br>Cargando catálogo…
+  </td></tr>`;
+
+  await loadCategories();
+  await Promise.all([loadAppConfig(), loadFlagged(), loadRecentlyEdited(), loadApartadosMap()]);
+  await loadProductsFromSupabase();
+  _syncFlagFilter();
+  renderStats();
+  _refreshCreatorFilter();
+  // Restaurar sort guardado
+  const sortSel = document.getElementById('sort-select');
+  if (sortSel) sortSel.value = currentSort;
+  setAdminView(currentAdminView);
+  initRealtime();
+  localStorage.setItem('te_dup_last_count', _findDuplicatePairs().length);
+  if (location.hash === '#dup-review') {
+    history.replaceState(null, '', location.pathname);
+    setTimeout(openDupReview, 500);
+  }
+  // Enlaces desde otros módulos: admin.html#pendiente=sin-costo abre
+  // Inventario con ese pendiente aplicado (p. ej. desde Reportes → Rentabilidad).
+  const pendHash = location.hash.match(/^#pendiente=([a-z0-9-]+)$/);
+  if (pendHash && _PEND_ITEMS.some(([k]) => k === pendHash[1])) {
+    history.replaceState(null, '', location.pathname);
+    toggleStatFilter(pendHash[1]);
+  }
+}
+
+/* ── LOAD PRODUCTS ── */
+function mapProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    category: p.category,
+    categoryLabel: p.category_label,
+    price: p.price,
+    description: p.description,
+    image: p.image,
+    badge: p.badge,
+    badgeType: p.badge_type,
+    featured: p.featured,
+    outOfStock: p.out_of_stock,
+    originalPrice: p.original_price,
+    barcode: p.barcode || null,
+    stock: p.stock ?? 0,
+    cost: p.cost ?? null,
+    isPublished: p.is_published ?? true,
+    kitItems: p.kit_items || null,
+    images: p.images || null,
+    isApartado: p.is_apartado || false,
+    createdBy: p.created_by || null,
+    createdAt: p.created_at || null,
+    isArchived: p.is_archived || false,
+    expiryDate: p.expiry_date || null,
+    supplierCode: p.supplier_code || null
+  };
+}
+
+async function loadProductsFromSupabase() {
+  const result = await supabaseApi('products?select=*&order=position.asc');
+  const data = result.data;
+  if (result.ok && Array.isArray(data) && data.length) {
+    products = data.map(mapProduct);
+    try {
+      localStorage.setItem('te_products_cache', JSON.stringify(data));
+      localStorage.setItem('te_products_cache_ts', Date.now());
+    } catch {}
+    return;
+  }
+  // Fallback: cargar desde caché local si no hay conexión
+  try {
+    const cached = localStorage.getItem('te_products_cache');
+    if (cached) {
+      products = JSON.parse(cached).map(mapProduct);
+      const ts = parseInt(localStorage.getItem('te_products_cache_ts') || '0');
+      const mins = Math.round((Date.now() - ts) / 60000);
+      const age = mins < 60 ? `${mins} min` : `${Math.round(mins/60)} h`;
+      toast(`Sin conexión — mostrando catálogo de hace ${age}`, 'error');
+      return;
+    }
+  } catch {}
+  products = [];
+}
+
+/* ── SUPABASE REALTIME ── */
+function initRealtime() {
+  const load = new Promise((res, rej) => {
+    if (window.supabase) { res(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  load.then(() => {
+    try {
+      const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${_getAdminToken()}` } }
+      });
+      _realtimeChannel = client
+        .channel('admin-products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, _handleRealtimeProduct)
+        .subscribe();
+    } catch(err) {
+      console.warn('Realtime no disponible:', err);
+    }
+  }).catch(() => console.warn('No se pudo cargar supabase.js para Realtime'));
+}
+
+function _handleRealtimeProduct({ eventType, new: row, old }) {
+  // Ignorar si hay un input activo en el QV (usuario editando inline)
+  if (document.querySelector('#qv-info input, #qv-info textarea')) return;
+
+  if (eventType === 'UPDATE') {
+    const idx = products.findIndex(x => x.id === row.id);
+    if (idx >= 0) {
+      products[idx] = { ...products[idx], ...mapProduct(row) };
+      renderTable(); renderStats(); _qvRefresh(row.id);
+    }
+  } else if (eventType === 'INSERT') {
+    if (!products.find(x => x.id === row.id)) {
+      products.push(mapProduct(row));
+      renderTable(); renderStats();
+    }
+  } else if (eventType === 'DELETE') {
+    const idx = products.findIndex(x => x.id === old.id);
+    if (idx >= 0) {
+      products.splice(idx, 1);
+      if (_qvCurrentId === old.id) closeQV();
+      renderTable(); renderStats();
+    }
+  }
+}

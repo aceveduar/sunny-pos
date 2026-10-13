@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es" data-theme-ready="1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="img/icono-192.png">
+<title>Configuración — Tres Encantos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="settings.css">
+<script>
+/* Aplica el modo oscuro guardado ANTES del primer paint, para que no haya
+   flash claro→oscuro. Mismo script que Inventario/Caja/Reportes/Actividad,
+   ver shared.js _initThemeToggle(). */
+(function(){try{if(localStorage.getItem('te_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+</script>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left"></div>
+  <div class="topbar-right">
+    <nav class="topbar-nav-mobile" aria-label="Módulos">
+      <a href="pos.html" class="tbn-icon" title="Caja">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span class="tbn-label">Caja</span>
+      </a>
+      <a href="admin.html" class="tbn-icon" title="Inventario">
+        <svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="tbn-label">Inventario</span>
+      </a>
+      <a href="stats.html" class="tbn-icon" title="Reportes">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span class="tbn-label">Reportes</span>
+      </a>
+      <span class="tbn-sep"></span>
+      <a href="index.html" class="tbn-icon" title="Tienda">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="tbn-label">Tienda</span>
+      </a>
+      
+    </nav>
+    <span class="tbn-sep"></span>
+    <span class="user-avatar" id="user-avatar" style="cursor:pointer" title="Mi cuenta">?</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ─── USUARIOS Y PERMISOS ─────────────────────────────── -->
+  <div id="section-users">
+  <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <span>Usuarios y permisos</span>
+    <div class="up-view-switch">
+      <button type="button" class="up-view-btn up-view-active" id="up-view-btn-list" onclick="_upSetView('list')">☰ Lista</button>
+      <button type="button" class="up-view-btn" id="up-view-btn-matrix" onclick="_upSetView('matrix')"><svg aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Matriz</button>
+    </div>
+  </div>
+  <div class="settings-card" style="padding:0;overflow:hidden" id="up-list-card">
+    <div id="up-list"><div class="up-loading">Cargando usuarios…</div></div>
+    <div class="up-mode-toggle" style="margin:12px 16px 0">
+      <button type="button" class="up-mode-btn active" id="up-mode-invite" onclick="_upSetAddMode('invite')"><svg aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>Invitar por correo</button>
+      <button type="button" class="up-mode-btn" id="up-mode-password" onclick="_upSetAddMode('password')"><svg aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>Fijar contraseña</button>
+    </div>
+    <div class="up-add-row">
+      <input type="email" class="field-input" id="up-new-email" placeholder="correo@ejemplo.com" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')_upAddUser()">
+      <input type="password" class="field-input" id="up-new-password" placeholder="Contraseña (10+, letras y números)" autocomplete="new-password" style="flex:1;min-width:0;display:none" onkeydown="if(event.key==='Enter')_upAddUser()">
+      <select class="up-role-sel" id="up-new-role" onclick="event.stopPropagation()">
+        <option value="operador">Operador</option>
+        <option value="encargado">Encargada</option>
+        <option value="superadmin">Superadmin</option>
+      </select>
+      <button class="btn btn-outline btn-sm" id="up-add-btn" onclick="_upAddUser()">+ Agregar</button>
+    </div>
+    <p class="field-hint" id="up-add-hint" style="padding:0 16px 12px">Se crea la cuenta y se le envía un correo de invitación para que fije su propia contraseña — no hace falta entrar a Supabase.</p>
+  </div>
+  <div class="settings-card" style="padding:12px;display:none" id="up-matrix-card">
+    <input type="text" class="field-input" id="up-matrix-search" placeholder="Buscar un permiso…" oninput="_renderUpMatrix()" style="margin-bottom:10px">
+    <div class="up-mx-legend">
+      <span class="up-mx-legend-item"><i class="up-mx-legend-dot up-mx-legend-on"></i>Activo</span>
+      <span class="up-mx-legend-item"><i class="up-mx-legend-dot"></i>Inactivo</span>
+      <span class="up-mx-legend-item"><i class="up-mx-legend-dot up-mx-legend-override"></i>Distinto del rol</span>
+      <span class="up-mx-legend-item"><i class="up-mx-legend-dot up-mx-legend-on up-mx-legend-override"></i>Activo y distinto del rol</span>
+    </div>
+    <div id="up-matrix"></div>
+    <p class="field-hint" style="padding:8px 2px 0">Toca un punto para activar o desactivar ese permiso solo para esa persona.</p>
+  </div>
+  <p class="field-hint" style="padding:4px 2px 0">Los permisos se aplican al siguiente inicio de sesión de cada usuario.</p>
+  </div>
+
+  <!-- ─── CATÁLOGO ─────────────────────────────────────────── -->
+  <div id="section-catalog">
+  <div class="section-label">Catálogo</div>
+
+  <div class="settings-card">
+    <div class="scard-row">
+      <div class="scard-icon"><svg width="20" height="20" fill="#25D366" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.374 0 0 5.373 0 12c0 2.124.553 4.118 1.522 5.85L.057 23.499l5.772-1.513A11.94 11.94 0 0012 24c6.626 0 12-5.373 12-12S18.626 0 12 0z"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">WhatsApp flotante en Tienda</div>
+        <div class="scard-desc">Botón verde visible para clientes al hacer scroll — solo en mobile y tablet chico (≤768px); en desktop el menú ya tiene su propio botón de WhatsApp siempre visible</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar botón flotante de WhatsApp">
+          <input type="checkbox" id="wa-float-toggle" checked onchange="toggleWaFloat(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Captura rápida en Inventario</div>
+        <div class="scard-desc">Botón para cargar productos con foto e IA</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar Captura rápida">
+          <input type="checkbox" id="captura-rapida-toggle" checked onchange="toggleCapturaRapida(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Ver creador de productos</div>
+        <div class="scard-desc">Muestra quién agregó el producto en su Quick View (tap en la imagen)</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar vista de creador">
+          <input type="checkbox" id="show-creator-toggle" onchange="toggleShowCreator(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Reabastecimiento en Caja</div>
+        <div class="scard-desc">Permite reabastecer stock directamente desde la Caja al tocar un producto agotado</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar reabastecimiento en Caja">
+          <input type="checkbox" id="show-restock-toggle" onchange="toggleShowRestock(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M9 7h6"/><path d="M9 11h4"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Apartados de libreta</div>
+        <div class="scard-desc">Muestra "Pasar de la libreta" en Apartados de Caja, para registrar apartados que se llevaban en papel</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar apartados de libreta">
+          <input type="checkbox" id="show-libreta-toggle" onchange="toggleShowLibreta(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11"/><path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Recibir mercancía</div>
+        <div class="scard-desc">Muestra el botón <svg style="width:12px;height:12px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11"/><path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg> en el Inventario para registrar mercancía recibida</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar recepción de mercancía">
+          <input type="checkbox" id="show-recv-toggle" onchange="toggleShowRecv(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Recepción con IA</div>
+        <div class="scard-desc">Muestra el botón "Importar" en Inventario para subir el PDF de una orden de pedido (ej. Natura) y prellenar costo/precio/stock</div>
+      </div>
+      <div class="scard-action">
+        <label class="te-switch" title="Activar/desactivar recepción con IA">
+          <input type="checkbox" id="show-recv-ia-toggle" onchange="toggleShowRecvIa(this.checked)">
+          <span class="te-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="scard-divider-label">Contenido</div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Categorías del catálogo</div>
+        <div class="scard-desc">Agregar, editar o eliminar categorías y subcategorías</div>
+      </div>
+      <div class="scard-action">
+        <button class="btn btn-outline btn-sm" onclick="openCatManager()">Gestionar</button>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Revista Digital Natura</div>
+        <div class="scard-desc">URL o PDF de la revista para clientes en el sitio web</div>
+      </div>
+      <div class="scard-action">
+        <button class="btn btn-outline btn-sm" onclick="openRevista()">Editar</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ─── DATOS ─────────────────────────────────────────────── -->
+  <div id="section-data">
+  <div class="section-label">Datos</div>
+
+  <div class="settings-card">
+    <div class="scard-row" id="scard-backup">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Catálogo de productos</div>
+        <div class="scard-desc">Exporta o importa los productos en JSON para pasarlos o restaurarlos. Al importar, los que ya existen con el mismo ID se actualizan.</div>
+      </div>
+      <div class="scard-action">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-outline btn-sm" onclick="exportProducts()">Exportar</button>
+          <label class="btn btn-outline btn-sm" style="cursor:pointer">
+            Importar
+            <input type="file" accept=".json" style="display:none" onchange="importProducts(this)">
+          </label>
+        </div>
+      </div>
+    </div>
+    <!-- Oculta por default: solo se muestra con canViewReports (contiene nombres,
+         teléfonos y saldos de clientes) — ver DOMContentLoaded en settings.js. -->
+    <div class="scard-row" id="scard-export-apartados" style="display:none">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Apartados y pagos (CSV)</div>
+        <div class="scard-desc">Para abrir en Google Sheets o Excel. Incluye nombres y teléfonos de clientas: guárdalo con cuidado. Es una copia del momento.</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="field-input" id="csv-apt-scope" style="flex:0 1 260px;min-width:150px;width:auto" aria-label="Qué apartados incluir">
+            <option value="activos" selected>Solo apartados activos</option>
+            <option value="todos">Todos (activos, liquidados y cancelados)</option>
+          </select>
+          <button class="btn btn-outline btn-sm" id="csv-apt-btn" onclick="exportApartadosCsv()">Descargar apartados</button>
+          <button class="btn btn-outline btn-sm" id="csv-pay-btn" onclick="exportPagosCsv()">Descargar pagos</button>
+        </div>
+        <div class="scard-desc" style="margin-top:8px"><strong>Apartados:</strong> una fila por apartado, con lo que debe. <strong>Pagos:</strong> una fila por cada abono.</div>
+      </div>
+    </div>
+    <div class="scard-row" id="scard-client-errors" style="display:none">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Errores de la app</div>
+        <div class="scard-desc">Fallas que la app tuvo en los dispositivos del equipo (últimos 30 días)<span id="client-errors-tag"></span></div>
+      </div>
+      <div class="scard-action">
+        <button class="btn btn-outline btn-sm" onclick="openClientErrors()">Ver</button>
+      </div>
+    </div>
+    <div class="scard-row" id="scard-auto-backup" style="display:none">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Respaldo automático</div>
+        <div class="scard-desc" id="auto-backup-desc">Consultando…</div>
+      </div>
+    </div>
+    <div class="scard-row" id="scard-backup-full">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Respaldo completo del sistema</div>
+        <div class="scard-desc">Descarga productos, ventas, apartados, clientes, actividad y configuración en un solo JSON — incluye claves (Groq/Drive), guárdalo en un lugar seguro. Es solo copia: no restaura — para recuperar todo ante un incidente usa el respaldo automático de Supabase.</div>
+      </div>
+      <div class="scard-action">
+        <button class="btn btn-outline btn-sm" id="backup-full-btn" onclick="exportFullBackup()">Exportar todo</button>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Revisión de duplicados</div>
+        <div class="scard-desc">Detecta productos con nombre, precio o stock similares<span id="dup-count-tag"></span></div>
+      </div>
+      <div class="scard-action">
+        <a href="admin.html#dup-review" class="btn btn-outline btn-sm">Revisar</a>
+      </div>
+    </div>
+    <div class="scard-row">
+      <div class="scard-icon"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Auditoría de imágenes de Drive</div>
+        <div class="scard-desc">Encuentra archivos en la carpeta de Drive que ningún producto usa</div>
+      </div>
+      <div class="scard-action">
+        <button class="btn btn-outline btn-sm" onclick="openDriveAudit()">Auditar</button>
+      </div>
+    </div>
+    <div class="scard-row" id="clear-log-row" style="display:none;flex-wrap:wrap;gap:10px;align-items:flex-start">
+      <div class="scard-icon" style="margin-top:2px"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></div>
+      <div class="scard-body">
+        <div class="scard-title">Limpiar historial de actividad</div>
+        <div class="scard-desc">Elimina registros del log según antigüedad. No se puede deshacer.</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="field-input" id="log-range-select" style="flex:1;min-width:180px">
+            <option value="1w">Registros de más de 1 semana</option>
+            <option value="1m" selected>Registros de más de 1 mes</option>
+            <option value="3m">Registros de más de 3 meses</option>
+            <option value="6m">Registros de más de 6 meses</option>
+            <option value="all">Todo el historial</option>
+          </select>
+          <button class="btn btn-red-outline btn-sm" onclick="clearActivityLog()">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ─── INTEGRACIONES ─────────────────────────────────────── -->
+  <div id="section-integrations">
+  <div class="section-label">Integraciones</div>
+
+  <div class="settings-card">
+    <!-- Groq -->
+    <div class="scard-row" style="flex-wrap:wrap;gap:10px;align-items:flex-start">
+      <div class="scard-icon" style="margin-top:2px"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg></div>
+      <div class="scard-body">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="scard-title">Inteligencia Artificial (Groq)</div>
+          <span class="status-tag" id="groq-key-status">(no configurado)</span>
+        </div>
+        <div class="scard-desc">Para análisis automático de imágenes al agregar productos en Inventario</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <input type="password" class="field-input" id="groq-key-input" placeholder="gsk_..." autocomplete="off" style="flex:2;min-width:160px">
+          <button class="btn btn-gold btn-sm" onclick="saveGroqKey()">Guardar</button>
+        </div>
+        <p class="field-hint" style="margin-top:8px">Key gratis en <strong>console.groq.com</strong> → API Keys → Create. Se guarda en la nube y funciona en todos los dispositivos.</p>
+      </div>
+    </div>
+
+    <!-- Google Drive -->
+    <div class="scard-row" style="flex-wrap:wrap;gap:10px;align-items:flex-start;border-top:1px solid var(--border)">
+      <div class="scard-icon" style="margin-top:2px"><svg style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>
+      <div class="scard-body">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="scard-title">Google Drive</div>
+          <span class="status-tag" id="drive-status-txt">(no configurado)</span>
+        </div>
+        <div class="scard-desc">Almacenamiento de imágenes vía Apps Script proxy</div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <input type="url" class="field-input" id="drive-endpoint-input" placeholder="URL del Apps Script (exec)" style="flex:2;min-width:160px">
+          <div style="flex:1;min-width:140px;position:relative">
+            <input type="text" class="field-input" id="drive-secret-input" readonly
+                   placeholder="Secreto (se genera al guardar)"
+                   style="padding-right:36px;background:var(--surface-soft);cursor:pointer"
+                   onclick="copyDriveSecret()" title="Toca para copiar">
+            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted-light);pointer-events:none;display:flex"><svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-outline btn-sm" onclick="saveDriveEndpoint()">Guardar</button>
+          <button class="btn btn-outline btn-sm" onclick="testDriveEndpoint()" id="drive-test-btn" style="display:none">Probar conexión</button>
+          <button class="btn btn-red-outline btn-sm" onclick="clearDrive()" id="drive-clear-btn" style="display:none">Desconectar</button>
+        </div>
+        <p class="field-hint" style="margin-top:8px">Pega el secreto en tu Apps Script donde dice <code>const SECRET = '...'</code></p>
+        <details class="scard-help">
+          <summary>Instrucciones para conectar o reconectar Drive</summary>
+          <ol>
+            <li>Abre tu proyecto de Apps Script en <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a> (el que ya tenías configurado, ligado a la carpeta de Drive de Tres Encantos) — no crees uno nuevo.</li>
+            <li>Ahí, ve a <strong>Implementar → Administrar implementaciones</strong> y copia la URL que termina en <code>/exec</code>.</li>
+            <li>Pega esa URL arriba, en "URL del Apps Script (exec)", y toca <strong>Guardar</strong> — se genera un secreto nuevo solo.</li>
+            <li>Toca el campo gris para copiar ese secreto nuevo.</li>
+            <li>Regresa al código del Apps Script, busca la línea <code>const SECRET = '...'</code> y reemplázala con el secreto que copiaste.</li>
+            <li>En Apps Script: <strong>Implementar → Administrar implementaciones → ✏️ (editar) → Nueva versión → Implementar</strong>. Este paso es obligatorio — si se salta, sigue usando el secreto viejo y da error de "no autorizado".</li>
+            <li>Regresa aquí y toca <strong>"Probar conexión"</strong> para confirmar que ya quedó.</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ── MODAL: CATEGORÍAS ── -->
+<div class="overlay" id="cat-overlay">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-head">
+      <h3><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>Gestionar categorías</h3>
+      <button class="modal-close" onclick="closeCatManager()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="cat-list"></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <span class="field-label">Agregar categoría o subcategoría</span>
+        <div class="add-cat-row">
+          <input type="text" id="new-cat-label" placeholder="Nombre (ej: Perfumes)" onkeydown="if(event.key==='Enter')addCategory()">
+          <select id="new-cat-parent" class="cat-parent-sel" style="flex-shrink:0;max-width:180px">
+            <option value="">Raíz</option>
+          </select>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="addCategory()" style="width:100%">+ Agregar</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeCatManager()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: AUDITORÍA DE IMÁGENES DE DRIVE ── -->
+<div class="overlay" id="drive-audit-overlay">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <h3>Auditoría de imágenes de Drive</h3>
+      <button class="modal-close" onclick="closeDriveAudit()">✕</button>
+    </div>
+    <div class="modal-body" id="drive-audit-body">
+      <p class="field-hint">Buscando archivos sin usar…</p>
+    </div>
+    <div class="modal-foot" id="drive-audit-foot" style="display:none">
+      <button class="btn btn-outline" onclick="closeDriveAudit()">Cancelar</button>
+      <button class="btn btn-red-outline" id="drive-audit-delete-btn" onclick="_driveAuditDeleteSelected()">Eliminar seleccionadas</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: ERRORES DE LA APP ── -->
+<div class="overlay" id="client-errors-overlay">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <h3>Errores de la app</h3>
+      <button class="modal-close" onclick="closeClientErrors()">✕</button>
+    </div>
+    <div class="modal-body" id="client-errors-body">
+      <p class="field-hint">Cargando…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: REVISTA ── -->
+<div class="overlay" id="revista-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Revista Digital Natura</h3>
+      <button class="modal-close" onclick="closeRevista()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Actualiza el enlace y portada que se muestran en el sitio.</p>
+      <span class="field-label">URL de la revista</span>
+      <input type="url" class="field-input" id="revista-url-input" placeholder="https://mx.natura.digital-catalogue.com/...">
+      <p class="field-hint" style="margin-top:6px">Enlace de tu revista interactiva Natura (cambia cada ciclo).</p>
+      <span class="field-label" style="margin-top:16px">Portada del ciclo (URL de imagen)</span>
+      <input type="url" class="field-input" id="revista-cover-input" placeholder="https://...jpg o .png">
+      <p class="field-hint" style="margin-top:6px">Imagen que se muestra en el banner del sitio. Captura la portada de la revista o sube una foto a Drive.</p>
+      <div style="text-align:center;font-size:.75rem;color:var(--muted-light);margin:14px 0;font-weight:600">— o sube un archivo PDF —</div>
+      <div class="upload-zone" id="revista-upload-zone">
+        <input type="file" id="revista-file" accept="application/pdf" style="display:none" onchange="handleRevistaFile(this)">
+        <div class="uz-icon"><svg style="width:29px;height:29px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="uz-text">Arrastra un PDF aquí o toca para elegir</div>
+        <button type="button" class="btn btn-outline btn-sm">Elegir archivo</button>
+      </div>
+      <div id="revista-preview" style="display:none;margin-top:12px;padding:12px;background:var(--surface-soft);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px">
+          <span><svg style="width:14px;height:14px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span id="revista-filename">PDF cargado</span>
+          <button onclick="clearRevistaFile()" style="margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;font-size:1rem">✕</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeRevista()">Cancelar</button>
+      <button class="btn btn-gold" id="revista-save-btn" onclick="saveRevista()">Guardar revista</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="negocio.js"></script>
+<script src="settings.js"></script>
+<script src="shared.js"></script>
+</body>
+</html>

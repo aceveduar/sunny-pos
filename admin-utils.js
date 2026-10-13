@@ -1,0 +1,421 @@
+/* ── VOICE DICTATION ──────────────────────────────────────────────────── */
+let _activeRec = null;
+
+function dictate(fieldId) {
+  if (!_activeRec) TE?.track('dictate_start', { field: fieldId });
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('Dictado no disponible. Usa Chrome o Safari.', 'error');
+    return;
+  }
+
+  const btn   = document.getElementById(`dictate-${fieldId}`);
+  const field = document.getElementById(fieldId);
+  const origLabel = btn.innerHTML;
+  const stopLabel = '<svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Detener';
+
+  // Detener grabación activa: nullear ANTES de stop() para que onend sepa que fue el usuario
+  if (_activeRec) {
+    const rec = _activeRec;
+    _activeRec = null;
+    rec.stop();
+    // Limpiar visual del campo activo (puede ser distinto al fieldId actual)
+    document.querySelectorAll('.field-recording').forEach(el => el.classList.remove('field-recording'));
+    return;
+  }
+
+  // Android no mantiene continuous confiablemente — usamos false y reiniciamos en onend
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const sr = new SR();
+  sr.lang           = 'es-MX';
+  sr.interimResults = true;
+  sr.continuous     = !isAndroid;
+
+  _activeRec = sr;
+
+  const startValue  = field.value.trimEnd();
+  let committedText = '';
+  let nextFinalIdx  = 0;
+  let _silenceTimer = null;
+
+  const SILENCE_MS = 5000;
+
+  const resetSilenceTimer = () => {
+    if (_silenceTimer) clearTimeout(_silenceTimer);
+    _silenceTimer = setTimeout(() => stopDictation(), SILENCE_MS);
+  };
+
+  const stopDictation = () => {
+    if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+    if (_activeRec === sr) { _activeRec = null; sr.stop(); }
+  };
+
+  if (!btn.dataset.iconOnly) btn.innerHTML = stopLabel;
+  btn.classList.add('recording');
+  field.classList.add('field-recording');
+  toast('🎤 Grabando… toca el botón para detener', '');
+
+  // FIX Android: blur cierra el teclado del sistema → su micrófono deja de escuchar
+  field.blur();
+
+  // Arrancar timer de silencio desde el inicio — se resetea en cada onresult
+  resetSilenceTimer();
+
+  sr.onresult = e => {
+    resetSilenceTimer(); // cualquier resultado de voz reinicia el contador
+    // Solo agregar finales NUEVOS desde nextFinalIdx — nunca releer los ya procesados
+    for (let i = nextFinalIdx; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        const t = e.results[i][0].transcript.trim();
+        if (t) committedText += (committedText ? ' ' : '') + t;
+        nextFinalIdx = i + 1;
+      }
+    }
+    // Interim del resultado actual (solo si no es final)
+    const cur     = e.results[e.resultIndex];
+    const interim = cur.isFinal ? '' : cur[0].transcript.trim();
+    const all     = committedText + (interim ? (committedText ? ' ' : '') + interim : '');
+    const sep     = startValue && all ? ' ' : '';
+    field.value   = startValue + sep + all;
+    if (!cur.isFinal && btn.dataset.iconOnly) return; // búsqueda: solo disparar en finales
+    field.dispatchEvent(new Event('input'));
+  };
+
+  sr.onend = () => {
+    if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+    if (_activeRec === sr) {
+      // Android cerró la sub-sesión pero el usuario no detuvo — reiniciar
+      nextFinalIdx = 0;
+      try { sr.start(); } catch (_) {}
+    } else {
+      // Grabación terminada — limpiar estado visual
+      const sep   = startValue && committedText ? ' ' : '';
+      let finalVal = (startValue + sep + committedText).trim();
+      // Aplicar formato de oraciones solo en el campo descripción
+      if (field.id === 'f-description') finalVal = formatDescription(finalVal);
+      field.value = finalVal;
+      field.dispatchEvent(new Event('input'));
+      if (!btn.dataset.iconOnly) btn.innerHTML = origLabel;
+      btn.classList.remove('recording');
+      field.classList.remove('field-recording');
+      toast('✓ Dictado finalizado', 'success');
+    }
+  };
+
+  sr.onerror = e => {
+    if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+    _activeRec = null;
+    if (!btn.dataset.iconOnly) btn.innerHTML = origLabel;
+    btn.classList.remove('recording');
+    field.classList.remove('field-recording');
+    const sep   = startValue && committedText ? ' ' : '';
+    field.value = (startValue + sep + committedText).trim();
+    field.dispatchEvent(new Event('input'));
+    if (e.error === 'not-allowed')
+      toast('Permiso de micrófono denegado. Actívalo en los ajustes del navegador.', 'error');
+    else if (e.error !== 'aborted')
+      toast('Error de micrófono: ' + e.error, 'error');
+  };
+
+  sr.start();
+}
+
+/* ── PRODUCTOS EN APARTADOS ACTIVOS ──
+ * edit_apartado_atomic Y cancel_sale_atomic exigen que TODOS los productos
+ * de un apartado -- incluyendo los COMPONENTES de cualquier kit dentro de
+ * él, no solo el kit mismo -- sigan existiendo en products antes de guardar
+ * un cambio o cancelarlo. Si uno se elimina del catálogo mientras el
+ * apartado sigue activo, ese apartado queda bloqueado (para editarse Y para
+ * cancelarse) hasta quitar esa línea a mano. Real en producción
+ * (2026-09-04): 8 apartados activos con un producto ya eliminado. Este
+ * chequeo se corre ANTES de borrar, para no seguir generando el mismo
+ * problema -- y revisa dentro de item.kit_items, no solo item.id, porque
+ * borrar un ingrediente de un kit (sin tocar el kit en sí) cae en el mismo
+ * bloqueo por una puerta distinta. */
+async function _productsInActiveApartados(ids) {
+  // Filtra el contenido de items (jsonb) del lado del cliente en vez de un
+  // operador cs./@> en la URL -- mismo patrón ya probado que usa
+  // loadApartados() en pos-apartados.js (fetch de todos los activos, hasta
+  // 100, con su columna items completa). El volumen de apartados activos es
+  // chico y esto solo corre al intentar borrar, no en un flujo caliente.
+  const idSet = new Set(ids);
+  const r = await supabaseApi(
+    'sales?origin_type=eq.apartado&status=eq.activo&select=id,customer,items&limit=200'
+  );
+  if (!r.ok || !Array.isArray(r.data)) return {};
+  const hits = {};
+  const addHit = (rawId, saleId, customer) => {
+    const id = parseInt(rawId, 10);
+    if (!idSet.has(id)) return;
+    (hits[id] ||= []).push({ id: saleId, customer });
+  };
+  r.data.forEach(s => {
+    const customer = (s.customer || '').split(' · ')[0] || 'Cliente';
+    (Array.isArray(s.items) ? s.items : []).forEach(item => {
+      addHit(item?.id, s.id, customer);
+      (Array.isArray(item?.kit_items) ? item.kit_items : []).forEach(comp => addHit(comp?.id, s.id, customer));
+    });
+  });
+  return hits;
+}
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(el._t);
+  const duration = type === 'error' ? 5000 : type === '' ? 1500 : 3000;
+  el._t = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+const truncName = (s, n = 28) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
+
+function toastUndo(msg, onUndo, onExpire) {
+  const el = document.getElementById('undo-bar');
+  const msgEl = document.getElementById('undo-msg');
+  if (!el) return toast(msg, 'success');
+  if (el._t) { clearTimeout(el._t); if (el._expire) el._expire(); el._undo = null; el._expire = null; }
+  msgEl.textContent = msg;
+  el.classList.add('show');
+  el._undo = onUndo;
+  el._expire = onExpire || null;
+  el._t = setTimeout(() => {
+    el.classList.remove('show');
+    if (el._expire) el._expire();
+    el._undo = null; el._expire = null;
+  }, 7000);
+}
+
+// Si la app se cierra o pasa a segundo plano con un "Deshacer" pendiente, se
+// confirma ya: antes el onExpire (p. ej. borrar las fotos de Drive de un
+// producto eliminado) nunca corría y las fotos quedaban huérfanas.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  const el = document.getElementById('undo-bar');
+  if (!el?._t) return;
+  clearTimeout(el._t); el._t = null;
+  el.classList.remove('show');
+  const expire = el._expire;
+  el._undo = null; el._expire = null;
+  if (expire) expire();
+});
+
+function toastAction(msg, btnLabel, onAction, duration = 5000) {
+  const el    = document.getElementById('action-bar');
+  const msgEl = document.getElementById('action-msg');
+  const btn   = document.getElementById('action-btn');
+  if (!el) return toast(msg, 'success');
+  if (el._t) { clearTimeout(el._t); el._action = null; }
+  msgEl.textContent = msg;
+  btn.textContent   = btnLabel;
+  el.classList.add('show');
+  el._action = onAction;
+  el._t = setTimeout(() => { el.classList.remove('show'); el._action = null; }, duration);
+}
+
+function doAction() {
+  const el = document.getElementById('action-bar');
+  if (!el?._action) return;
+  clearTimeout(el._t);
+  el.classList.remove('show');
+  el._action();
+  el._action = null;
+}
+
+function doUndo() {
+  const el = document.getElementById('undo-bar');
+  if (!el?._undo) return;
+  clearTimeout(el._t);
+  const fn = el._undo;
+  el._undo = null;
+  el._expire = null;
+  el.classList.remove('show');
+  fn();
+}
+
+/* ── FLAG PARA REVISIÓN — guardado en config Supabase, compartido entre dispositivos ── */
+let _flagged = []; // [{id, note, ts}]
+let _showOnlyFlagged = localStorage.getItem('te_flag_filter') === '1';
+
+async function loadFlagged() {
+  const r = await supabaseApi('config?id=eq.flagged_products&select=value');
+  if (r.ok && r.data?.[0]?.value) {
+    try { _flagged = JSON.parse(r.data[0].value) || []; } catch { _flagged = []; }
+  }
+}
+
+async function _saveFlagged() {
+  const r = await _saveConfigValue('flagged_products', JSON.stringify(_flagged));
+  if (!r.ok) toast(r.data?.message || 'No se pudo guardar la marca de revisión', 'error');
+  return r;
+}
+
+function _flagItem(id) { return _flagged.find(x => x.id === id); }
+
+async function flagProduct(id, note) {
+  _flagged = _flagged.filter(x => x.id !== id);
+  _flagged.unshift({ id, note: (note || '').trim(), ts: new Date().toISOString() });
+  await _saveFlagged();
+  _flagAndRender(id);
+  toast('🚩 Marcado para revisar', 'success');
+}
+
+async function unflagProduct(id) {
+  _flagged = _flagged.filter(x => x.id !== id);
+  await _saveFlagged();
+  if (_flagged.length === 0) _showOnlyFlagged = false;
+  _flagAndRender(id);
+  toast('✓ Revisión completada');
+}
+
+function _flagAndRender(id) {
+  // Actualiza chips/stats pero preserva la página y el scroll para no perder el lugar
+  localStorage.setItem('te_flag_filter', _showOnlyFlagged ? '1' : '0');
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  const savedPage = _adminPage;
+  renderStats();
+  renderTable();
+  _adminPage = savedPage;        // re-renderizar no cambia el estado de página
+  requestAnimationFrame(() => { window.scrollTo({ top: scrollTop, behavior: 'instant' }); });
+  const p = products.find(x => x.id === id);
+  if (p && _qvCurrentId === id) _renderQV(p);
+}
+
+function toggleFlagFilter() {
+  _showOnlyFlagged = !_showOnlyFlagged;
+  _syncFlagFilter();
+  renderTable();
+}
+
+// Pestañas de Inventario (Todos · Kits · Apartados · Archivados).
+function _setInvView(view) {
+  TE?.track('filter_chip', { chip: 'view-' + view });
+  _showingArchived = view === 'archivados';
+  _statFilter = (view === 'kits' || view === 'apartado') ? view : null;
+  if (_showOnlyFlagged) { _showOnlyFlagged = false; localStorage.setItem('te_flag_filter','0'); }
+  _adminPage = 1;
+  renderStats();
+  renderTable();
+}
+
+function toggleStatFilter(key) {
+  if (key !== 'todos') TE?.track('filter_chip', { chip: key });
+  if (key === 'todos') {
+    _statFilter = null;
+    if (_showOnlyFlagged) { _showOnlyFlagged = false; localStorage.setItem('te_flag_filter','0'); }
+  } else if (key === 'revisar') {
+    _statFilter = null;
+    _showOnlyFlagged = !_showOnlyFlagged;
+    localStorage.setItem('te_flag_filter', _showOnlyFlagged ? '1' : '0');
+  } else {
+    if (_showOnlyFlagged) { _showOnlyFlagged = false; localStorage.setItem('te_flag_filter','0'); }
+    _statFilter = _statFilter === key ? null : key;
+  }
+  // Un pendiente se busca en el inventario activo, no en Archivados.
+  if (key !== 'todos') _showingArchived = false;
+  _adminPage = 1;
+  renderStats();
+  renderTable();
+}
+
+function _syncFlagFilter() {
+  localStorage.setItem('te_flag_filter', _showOnlyFlagged ? '1' : '0');
+  _adminPage = 1;
+  renderStats();
+  renderTable();
+}
+
+function _qvShowFlagForm(id) {
+  // Mostrar el formulario en el área de acciones (siempre visible, sin scroll)
+  const actions = document.getElementById('qv-actions');
+  if (!actions) return;
+  actions.style.cssText = 'display:block;padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--surface)';
+  actions.innerHTML = `
+    <div style="font-size:.72rem;font-weight:600;color:var(--charcoal);margin-bottom:5px">Nota para recordar qué revisar:</div>
+    <textarea class="qv-flag-textarea" id="qv-flag-ta" rows="2"
+      placeholder="Ej: imagen dice 6 piezas, descripción dice 4…" style="margin-bottom:7px"></textarea>
+    <div style="display:flex;gap:7px">
+      <button class="qv-btn qv-btn-flag" style="flex:1" onclick="flagProduct(${id},document.getElementById('qv-flag-ta').value)"><svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Marcar para revisión</button>
+      <button class="qv-btn qv-btn-dup" onclick="(p=>p?_renderQV(p):closeQV())(products.find(x=>x.id===${id}))">Cancelar</button>
+    </div>`;
+  const zone = document.getElementById('qv-flag-zone');
+  if (zone) zone.innerHTML = '';
+  document.getElementById('qv-flag-ta')?.focus();
+}
+
+/* ── MENÚ UNIFICADO "AGREGAR" (FAB, mobile/tablet chico ≤768px) ──────────
+   Un solo punto de entrada para las 5 formas de meter/reponer stock
+   (Producto nuevo, Captura rápida, Kit, Recibir, Recepción con IA) --
+   reemplaza el FAB de Kit y la fila Captura/Escanear/Recibir/Importar.
+   Escanear queda fuera a propósito: es una forma de buscar, no de
+   agregar, y vive junto al buscador (#search-scan-btn). */
+// En el celular es una hoja desde abajo (FAB); en escritorio, con `anchor`,
+// el mismo menú se abre como lista desplegable debajo del botón "Agregar".
+function openAddMenu(anchor) {
+  const overlay = document.getElementById('add-menu-overlay');
+  const sheet = document.getElementById('add-menu-sheet');
+  if (!overlay || !sheet) return;
+  const asPopover = !!anchor && window.innerWidth > 768;
+  overlay.classList.toggle('as-popover', asPopover);
+  if (asPopover) {
+    const r = anchor.getBoundingClientRect();
+    sheet.style.top = `${Math.round(r.bottom + 6)}px`;
+    sheet.style.left = `${Math.round(r.left)}px`;
+  } else {
+    sheet.style.top = sheet.style.left = '';
+  }
+  overlay.classList.add('open');
+  if (!asPopover) document.body.style.overflow = 'hidden';
+  sheet.querySelector('.bmo-item:not([style*="display: none"]):not([style*="display:none"])')?.focus({ preventScroll: true });
+}
+// "Pendientes" vive junto a las pestañas en pantallas anchas y en la fila de
+// filtros en celular (ahí las pestañas necesitan todo el ancho para caber).
+(function _placePendWrap() {
+  const mq = window.matchMedia('(max-width:640px)');
+  const place = () => {
+    const wrap = document.getElementById('pend-wrap');
+    const tabsRow = document.querySelector('.inv-tabs-row');
+    const catBtn = document.getElementById('cat-filter-btn');
+    if (!wrap || !tabsRow || !catBtn) return;
+    if (mq.matches) catBtn.after(wrap);
+    else tabsRow.appendChild(wrap);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', place);
+  else place();
+  mq.addEventListener?.('change', place);
+})();
+
+// Menú "Pendientes" -- mismo comportamiento que openAddMenu: popover bajo el
+// botón en pantallas anchas, hoja inferior en celular.
+function openPendMenu(anchor) {
+  const overlay = document.getElementById('pend-menu-overlay');
+  const sheet = document.getElementById('pend-menu-sheet');
+  if (!overlay || !sheet) return;
+  const asPopover = !!anchor && window.innerWidth > 768;
+  overlay.classList.toggle('as-popover', asPopover);
+  if (asPopover) {
+    const r = anchor.getBoundingClientRect();
+    const w = 300;
+    sheet.style.top = `${Math.round(r.bottom + 6)}px`;
+    sheet.style.left = `${Math.round(Math.max(16, Math.min(r.left, window.innerWidth - w - 16)))}px`;
+  } else {
+    sheet.style.top = sheet.style.left = '';
+  }
+  overlay.classList.add('open');
+  if (!asPopover) document.body.style.overflow = 'hidden';
+  sheet.querySelector('.bmo-item')?.focus({ preventScroll: true });
+}
+function closePendMenu() {
+  document.getElementById('pend-menu-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('pend-menu-overlay')?.classList.contains('open')) closePendMenu();
+});
+
+function closeAddMenu() {
+  document.getElementById('add-menu-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('add-menu-overlay')?.classList.contains('open')) closeAddMenu();
+});
