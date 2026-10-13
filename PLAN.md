@@ -15,7 +15,11 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] **(Eduardo)** Crear proyecto nuevo en Supabase para pruebas (`Sunny POS Pruebas`, org Sunname Technologies, ref `aduahsqbmborplojhubw`)
 
 ## 2. Base de datos instalable
-- [ ] Sacar de Tres Encantos un solo SQL con toda la estructura (sin datos)
+- [x] Sacar de Tres Encantos un solo SQL con toda la estructura (sin datos): `supabase/instalar/01_estructura.sql`, generado con `scripts/instalar/` (instalado en Pruebas 2026-10-13)
+- [ ] Mejoras al modelo de datos (ahora que está vacía):
+  - [ ] A. Sin tocar la app: índices faltantes, código de barras único, precios/stock no negativos, fechas obligatorias
+  - [ ] B. Con cambios chicos en la app: tabla de categorías (adiós productos huérfanos), quitar columnas viejas (`sales.type`, `abonos`, `legacy_key`, `is_estimated`, `category_label`), método Tarjeta
+  - [ ] C. Grandes, decidir después: personas por id y no por correo; renglones de venta en su propia tabla (`sale_items`) para reportes rápidos; reportes calculados en el servidor
 - [ ] Datos iniciales: categorías genéricas, configuración por defecto
 - [ ] Probarlo en el proyecto nuevo y crear la primera cuenta (dueña)
 - [ ] Desplegar las Edge Functions (`create-user`, `groq-proxy`, `drive-proxy`)
@@ -27,6 +31,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Quitar foto/historia de Ofelia, Facebook, Maquixco, textos de Natura en `index.html`
 - [ ] "Ya lo cobró Ofelia" → "Ya lo cobró [dueña]" configurable (`pos-core.js`)
 - [ ] Correos y horarios fijos en `activity.js`
+- [ ] Ubicación de la tienda (aviso GPS al cerrar turno) fija en `_te_distance_to_store_m` → configurable
 - [ ] Natura/Avon/revista → opcional ("marca por catálogo")
 - [ ] `manifest.json`, íconos, títulos de páginas, `og:*`
 - [ ] `MANUAL.md` genérico
@@ -34,8 +39,10 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
-- [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Libreta, Fiado, Recepción con IA, Marca por catálogo
+- [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Fiado, Recepción con IA, Marca por catálogo
 - [ ] Tienda apagada: sin ícono, la dirección principal lleva al inicio de sesión, sin "Publicar en web"
+
+- [ ] Quitar la Libreta (apartados de papel) del código: no se usará
 
 ## 5. Orden en el código (sin framework)
 - [ ] Juntar en `shared.js` lo repetido: `_esc`, `api`, `_driveSz`, `toast`
