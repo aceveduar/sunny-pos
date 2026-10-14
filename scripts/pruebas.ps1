@@ -8,7 +8,7 @@
 $env:PYTHONIOENCODING = 'utf-8'
 $sql = Join-Path $PSScriptRoot 'instalar\sql.py'
 $falla = $false
-foreach ($f in @('caja.sql', 'kits_y_apartados.sql')) {
+foreach ($f in @('caja.sql', 'kits_y_apartados.sql', 'avisos.sql')) {
   Write-Host "== $f"
   $out = (& python $sql (Join-Path $PSScriptRoot "pruebas\$f") 2>&1 | Out-String)
   if ($out -match 'PRUEBA FALL[^"\\]*') {
