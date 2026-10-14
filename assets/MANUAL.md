@@ -105,6 +105,8 @@ Un solo buscador encuentra por nombre, categoría, código de barras, precio o c
 ### Agregar un producto
 Pulsa **+ Agregar**, llena nombre, categoría, precio y fotos (cámara, galería o pegar). **Completar con IA** sugiere nombre, descripción y categoría a partir de la foto. **+ Otro** guarda y deja el formulario listo para el siguiente.
 
+**Fotos:** de preferencia tómalas en formato cuadrado (en la cámara del celular: opción 1:1), con el producto al centro, fondo liso y buena luz. Si sale vertical u horizontal, el sistema la hace cuadrada al subirla: no recorta el producto, solo rellena los lados con el color del fondo.
+
 ### Recibir mercancía
 Botón **Recibir**. Modo **Con factura** (también corrige costo, precio y código de proveedor) o **Rápido** (solo suma stock). Escanea o busca cada producto; si no existe, primero búscalo por nombre antes de crearlo. Al terminar pulsa **Finalizar recepción**.
 

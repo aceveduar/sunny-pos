@@ -381,6 +381,7 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
 .modal-gallery::-webkit-scrollbar{display:none}
 .modal-gallery-img{flex:0 0 100%;width:100%;object-fit:contain;background:#fff;scroll-snap-align:start;cursor:zoom-in}
 /* Mientras la foto descarga: brillo de carga en vez de un hueco blanco */
+@keyframes sk-shine{from{background-position:100% 0}to{background-position:-100% 0}}
 .modal-gallery-img:not(.is-loaded){background:linear-gradient(90deg,var(--surface-soft) 0%,var(--border) 50%,var(--surface-soft) 100%);background-size:200% 100%;animation:sk-shine 1.3s ease-in-out infinite}
 /* Flechas de la galería: solo con mouse (en pantallas táctiles se desliza) */
 .mg-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);
@@ -391,7 +392,7 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
 .mg-prev{left:12px}.mg-next{right:12px}
 @media (hover:none){.mg-arrow{display:none}}
 .modal-gallery-dots{display:flex;justify-content:center;gap:6px;padding:6px 0 2px;background:#fff;flex-shrink:0}
-.mgd{width:7px;height:7px;border-radius:50%;background:var(--muted-light);cursor:pointer;transition:.2s;flex-shrink:0;padding:8px;background-clip:content-box}
+.mgd{box-sizing:content-box;width:7px;height:7px;border-radius:50%;background:var(--muted-light);cursor:pointer;transition:.2s;flex-shrink:0;padding:8px;background-clip:content-box}
 .mgd-active{background-color:var(--brand);transform:scale(1.25)}
 .modal-close{position:absolute;top:8px;right:8px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.92);color:var(--charcoal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;transition:var(--ease);z-index:10;box-shadow:var(--sombra-2)}
 .modal-close:hover{background:#fff;box-shadow:var(--sombra-2)}

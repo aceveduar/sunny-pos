@@ -23,7 +23,61 @@ const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace
 // inyectaría HTML en la Tienda pública. Solo se aceptan http(s)/data:image
 // sin esos caracteres; lo demás cae al placeholder.
 const _safeImg = url => (typeof url === 'string' && /^(https?:\/\/|data:image\/)/i.test(url) && !/["'<>\s]/.test(url)) ? url : '';
-const _driveSz = (url, w) => (url && url.includes('drive.google.com')) ? url.replace(/sz=w\d+/, `sz=w${w}`) : url;
+// Fotos de Drive directo a su dirección final (lh3): drive.google.com/thumbnail
+// solo redirige ahí (un viaje de más por foto) y esa redirección no trae CORS,
+// que _fitPhoto necesita para leer el color del borde.
+const _driveSz = (url, w) => {
+  if (!url || !url.includes('drive.google.com')) return url;
+  const id = (url.match(/[?&]id=([\w-]+)/) || [])[1];
+  return id ? `https://lh3.googleusercontent.com/d/${id}=w${w}` : url.replace(/sz=w\d+/, `sz=w${w}`);
+};
+// crossorigin solo donde el servidor manda CORS (lh3); en otro sitio la foto ya no cargaría
+const _co = url => (url && url.startsWith('https://lh3.googleusercontent.com/')) ? ' crossorigin="anonymous"' : '';
+// Foto que no llena su espacio (vertical en un cuadro, cuadrada en la ficha 4:3):
+// el hueco se pinta con el color del borde de la propia foto en vez de blanco,
+// así no se ven bandas. Las fotos nuevas ya se suben cuadradas (Inventario).
+function _fitPhoto(img) {
+  try {
+    const iw = img.naturalWidth, ih = img.naturalHeight, bw = img.clientWidth, bh = img.clientHeight;
+    if (!iw || !ih || !bw || !bh) return;
+    const ir = iw / ih, br = bw / bh;
+    if (Math.abs(ir - br) / br < 0.03) return;
+    const c = document.createElement('canvas'); c.width = c.height = 48;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(img, 0, 0, 48, 48);
+    const d = x.getImageData(0, 0, 48, 48).data;
+    const sides = ir < br; // sobra espacio a los lados → columnas; si no, renglones
+    // Un degradado por lado que sigue el borde de la foto tramo por tramo
+    // (pared arriba, piso abajo): un solo color promedio dejaba la orilla visible.
+    const strip = (k0, k1) => {
+      const cols = []; let texture = 0;
+      for (let t = 0; t < 8; t++) {
+        let r = 0, g = 0, b = 0, n = 0; const lum = [];
+        for (let i = t * 6; i < t * 6 + 6; i++) for (let k = k0; k <= k1; k++) {
+          const px = sides ? (i * 48 + k) : (k * 48 + i);
+          r += d[px * 4]; g += d[px * 4 + 1]; b += d[px * 4 + 2]; n++;
+          lum.push(d[px * 4] * .3 + d[px * 4 + 1] * .59 + d[px * 4 + 2] * .11);
+        }
+        const m = lum.reduce((s, v) => s + v, 0) / lum.length;
+        texture += Math.sqrt(lum.reduce((s, v) => s + (v - m) ** 2, 0) / lum.length);
+        cols.push([r / n, g / n, b / n]);
+      }
+      // Borde con textura (flores, telas): el degradado se veía como rayas, ahí va
+      // un solo color promedio. Borde liso o con degradado suave (pared→piso):
+      // se sigue tramo por tramo. Se mide la textura dentro de cada tramo.
+      const rgb = c => `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+      if (texture / 8 > 8) { // medido: liso/degradado ≤ 4, recargado ≥ 13
+        const avg = [0, 1, 2].map(k => cols.reduce((s, c) => s + c[k], 0) / 8);
+        return `linear-gradient(${rgb(avg)},${rgb(avg)})`;
+      }
+      return `linear-gradient(${sides ? 'to bottom' : 'to right'},${cols.map((c, t) => `${rgb(c)} ${Math.round((t + .5) * 12.5)}%`).join(',')})`;
+    };
+    const [a, z] = [strip(0, 1), strip(46, 47)];
+    img.style.background = sides
+      ? `${a} left/50% 100% no-repeat, ${z} right/50% 100% no-repeat`
+      : `${a} top/100% 50% no-repeat, ${z} bottom/100% 50% no-repeat`;
+  } catch {}
+}
 const PROD_PLACEHOLDER = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22400%22%20height%3D%22400%22%20viewBox%3D%220%200%20400%20400%22%3E%3Crect%20width%3D%22400%22%20height%3D%22400%22%20fill%3D%22%23F7F2EB%22%2F%3E%3Crect%20x%3D%22130%22%20y%3D%22100%22%20width%3D%22140%22%20height%3D%22140%22%20rx%3D%2210%22%20fill%3D%22none%22%20stroke%3D%22%23D4BC94%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%22158%22%20cy%3D%22127%22%20r%3D%2214%22%20fill%3D%22%23D4BC94%22%2F%3E%3Cpath%20d%3D%22M130%20210%20L175%20165%20L210%20195%20L255%20150%20L280%20180%20L280%20240%20L130%20240Z%22%20fill%3D%22%23D4BC94%22%20fill-opacity%3D%22.4%22%2F%3E%3C%2Fsvg%3E';
 
 let products = [];
@@ -326,7 +380,7 @@ async function _fetchProductsList() {
   // Publicados con stock O apartados activos
   const result = await _fetchAllPages('products?select=id,name,category,category_label,price,original_price,description,image,badge,badge_type,featured,out_of_stock,is_apartado,stock,images,kit_items&is_published=eq.true&category=neq.por_revisar&or=(out_of_stock.eq.false,is_apartado.eq.true)&order=position.asc,id.asc');
   if (result.ok && Array.isArray(result.data) && result.data.length) {
-    return result.data.map(p => ({
+    const list = result.data.map(p => ({
       id: p.id,
       name: p.name,
       category: p.category,
@@ -344,6 +398,13 @@ async function _fetchProductsList() {
       images: Array.isArray(p.images) ? p.images.map(_safeImg).filter(Boolean) : null,
       kitItems: p.kit_items || null
     }));
+    // Un kit siempre trae out_of_stock=false en BD; su disponibilidad son sus
+    // componentes. Si alguno está agotado (o no se publica) no viene en esta
+    // lista y kitStock() no lo puede calcular: antes el kit se mostraba como
+    // disponible y se podía pedir. Solo se ofrecen kits que se pueden armar.
+    const byId = new Map(list.map(p => [p.id, p]));
+    return list.filter(p => !Array.isArray(p.kitItems) || (p.kitItems.length > 0 &&
+      p.kitItems.every(c => { const comp = byId.get(c.id); return comp && Math.floor(comp.stock / (c.qty || 1)) > 0; })));
   }
   return result.ok ? [] : null; // null = fetch falló (distinto de "catálogo vacío")
 }
@@ -691,7 +752,9 @@ function isLastPiece(p) {
   return p.stock === 1 && !p.isApartado;
 }
 
-function cardHTML(p) {
+// i = lugar en la cuadrícula: las primeras 4 fotos se ven sin bajar, así que se
+// piden de inmediato; las demás esperan a acercarse a la pantalla.
+function cardHTML(p, i = 99) {
   const oos = isOos(p);
   const apt = p.isApartado && p.stock <= 1;
   const pct = discountPct(p);
@@ -724,7 +787,7 @@ function cardHTML(p) {
   return `
 <article class="product-card reveal${oos ? ' card-oos' : ''}" onclick="openModal(${p.id})">
   <div class="product-img-wrap">
-    <img src="${_driveSz(p.image,400)}" alt="${_esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
+    <img src="${_driveSz(p.image,400)}"${_co(_driveSz(p.image,400))} onload="_fitPhoto(this)" alt="${_esc(p.name)}" ${i < 4 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
     ${oosTag}${badgeArea}
   </div>
   <div class="product-body">
@@ -746,7 +809,7 @@ function renderHeroMobileStrip() {
   if (!items.length) return;
   const cardHTML = p => `
 <div class="hms-card" onclick="openModal(${p.id})">
-  <img src="${_driveSz(p.image,300)}" alt="${_esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
+  <img src="${_driveSz(p.image,300)}"${_co(_driveSz(p.image,300))} onload="_fitPhoto(this)" alt="${_esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
   <div class="hms-info">
     <div class="hms-name">${_esc(p.name)}</div>
     <div class="hms-price">$${p.price.toLocaleString('es-MX')}</div>
@@ -763,7 +826,7 @@ function renderHeroVisual() {
   if (!items.length) return;
   container.innerHTML = items.map(p => `
 <div class="hc" onclick="openModal(${p.id})">
-  <img src="${_driveSz(p.image,300)}" alt="${_esc(p.name)}" loading="lazy" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
+  <img src="${_driveSz(p.image,300)}"${_co(_driveSz(p.image,300))} alt="${_esc(p.name)}" fetchpriority="high" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'">
   <div class="hc-info">
     <div class="hc-name">${_esc(p.name)}</div>
     <div class="hc-price">$${p.price.toLocaleString('es-MX')}</div>
@@ -1225,14 +1288,14 @@ function openModal(id) {
   const hasGallery = allImgs.length > 1;
   const galleryHTML = hasGallery
     ? `<div class="modal-gallery" id="modal-gallery" onscroll="_updateGalleryDots(this)">
-        ${allImgs.map((src, i) => `<img class="modal-gallery-img" src="${src}" alt="${_esc(p.name)} ${i+1}" onload="this.classList.add('is-loaded')" onerror="this.onerror=null;this.classList.add('is-loaded');this.src='${PROD_PLACEHOLDER}'" onclick="_openModalZoom(this)"${oos && i===0 ? ' style="filter:grayscale(.4)"' : ''}>`).join('')}
+        ${allImgs.map((src, i) => `<img class="modal-gallery-img" src="${_driveSz(src,900)}"${_co(_driveSz(src,900))} alt="${_esc(p.name)} ${i+1}" onload="this.classList.add('is-loaded');_fitPhoto(this)" onerror="this.onerror=null;this.classList.add('is-loaded');this.src='${PROD_PLACEHOLDER}'" onclick="_openModalZoom(this)"${oos && i===0 ? ' style="filter:grayscale(.4)"' : ''}>`).join('')}
        </div>
        <button type="button" class="mg-arrow mg-prev" onclick="_stepGallery(-1)" aria-label="Foto anterior" hidden>‹</button>
        <button type="button" class="mg-arrow mg-next" onclick="_stepGallery(1)" aria-label="Foto siguiente">›</button>
        <div class="modal-gallery-dots" id="modal-gallery-dots">
          ${allImgs.map((_,i) => `<span class="mgd${i===0?' mgd-active':''}" onclick="_goToGalleryImg(${i})"></span>`).join('')}
        </div>`
-    : `<img class="modal-img" src="${p.image}" alt="${_esc(p.name)}" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'" onclick="_openModalZoom(this)"${oos ? ' style="filter:grayscale(.4)"' : ''}>`;
+    : `<img class="modal-img" src="${_driveSz(p.image,900)}"${_co(_driveSz(p.image,900))} onload="_fitPhoto(this)" alt="${_esc(p.name)}" onerror="this.onerror=null;this.src='${PROD_PLACEHOLDER}'" onclick="_openModalZoom(this)"${oos ? ' style="filter:grayscale(.4)"' : ''}>`;
 
   const overlay = document.getElementById('modal-overlay');
   overlay.innerHTML = `
