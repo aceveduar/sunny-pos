@@ -261,16 +261,24 @@ function _findDuplicatePairs() {
   const dismissed  = _getDismissedDups();
   const productMap = new Map(products.map(p => [p.id, p]));
 
-  // Pre-computar palabras significativas de cada producto (una sola vez)
+  // Pre-computar palabras y nombre limpio de cada producto (una sola vez)
   const wordSets = new Map(products.map(p => [p.id, _productWords(p.name)]));
+  const normNames = new Map(products.map(p => [p.id, _normStr(p.name)]));
 
-  // Índice: palabra → lista de IDs (solo pares que comparten al menos 1 palabra)
+  // Candidatos: cada producto se indexa solo por sus 2 palabras más raras. Dos
+  // productos casi iguales comparten sus palabras raras; indexar las comunes
+  // ("negro", "talla", "perfume") comparaba cientos de miles de pares y tardaba
+  // segundos con miles de productos. El nombre idéntico va en su propio índice.
+  const freq = Object.create(null);
+  wordSets.forEach(ws => ws.forEach(w => { freq[w] = (freq[w] || 0) + 1; }));
   const wordIndex = Object.create(null);
+  const nameIndex = Object.create(null);
   products.forEach(p => {
-    wordSets.get(p.id).forEach(w => {
-      if (!wordIndex[w]) wordIndex[w] = [];
-      wordIndex[w].push(p.id);
+    [...wordSets.get(p.id)].sort((x, y) => freq[x] - freq[y]).slice(0, 2).forEach(w => {
+      (wordIndex[w] = wordIndex[w] || []).push(p.id);
     });
+    const n = normNames.get(p.id);
+    if (n) (nameIndex[n] = nameIndex[n] || []).push(p.id);
   });
 
   // Índice de barcodes para detectar coincidencias exactas
@@ -309,7 +317,7 @@ function _findDuplicatePairs() {
     const wa = wordSets.get(a.id), wb = wordSets.get(b.id);
     const inter = wa && wb ? [...wa].filter(w => wb.has(w)).length : 0;
     const nameSim = (wa?.size && wb?.size) ? inter / Math.max(wa.size, wb.size) : 0;
-    const exact = nameSim === 1 || _normStr(a.name) === _normStr(b.name);
+    const exact = nameSim === 1 || normNames.get(a.id) === normNames.get(b.id);
     const priceMatch = a.price > 0 && a.price === b.price;
     const stockMatch = a.stock >= 2 && a.stock === b.stock;
     const catMatch   = !!(a.category && a.category === b.category);
@@ -329,6 +337,16 @@ function _findDuplicatePairs() {
 
   // Solo comparar productos que comparten palabras
   Object.values(wordIndex).forEach(ids => {
+    if (ids.length < 2) return;
+    for (let i = 0; i < ids.length; i++)
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = productMap.get(ids[i]), b = productMap.get(ids[j]);
+        if (a && b) evalPair(a, b);
+      }
+  });
+
+  // Nombre idéntico (aunque todas sus palabras sean comunes)
+  Object.values(nameIndex).forEach(ids => {
     if (ids.length < 2) return;
     for (let i = 0; i < ids.length; i++)
       for (let j = i + 1; j < ids.length; j++) {

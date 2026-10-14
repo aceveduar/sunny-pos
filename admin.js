@@ -711,7 +711,8 @@ async function supabaseApi(path, opts = {}) {
     const text = await r.text();
     let data;
     try { data = JSON.parse(text); } catch { data = text || null; }
-    return { ok: r.ok, status: r.status, data };
+    const total = parseInt((r.headers.get('content-range') || '').split('/')[1], 10);
+    return { ok: r.ok, status: r.status, data, total: Number.isFinite(total) ? total : null };
   });
   try {
     const r = await _call(_getAdminToken());
@@ -1120,9 +1121,8 @@ async function showApp() {
 
   _showAdminSkeleton();
 
-  await loadCategories();
-  await Promise.all([loadAppConfig(), loadFlagged(), loadRecentlyEdited(), loadApartadosMap()]);
-  await loadProductsFromSupabase();
+  // Todo a la vez: nada de esto depende de lo demás para descargarse
+  await Promise.all([loadCategories(), loadAppConfig(), loadFlagged(), loadRecentlyEdited(), loadApartadosMap(), loadProductsFromSupabase()]);
   _syncFlagFilter();
   renderStats();
   _refreshCreatorFilter();
@@ -1131,7 +1131,10 @@ async function showApp() {
   if (sortSel) sortSel.value = currentSort;
   setAdminView(currentAdminView);
   initRealtime();
-  localStorage.setItem('te_dup_last_count', _findDuplicatePairs().length);
+  // Conteo de duplicados para Configuración: después de pintar, con el celular libre
+  (window.requestIdleCallback || (fn => setTimeout(fn, 1500)))(() => {
+    try { localStorage.setItem('te_dup_last_count', _findDuplicatePairs().length); } catch {}
+  });
   if (location.hash === '#dup-review') {
     history.replaceState(null, '', location.pathname);
     setTimeout(openDupReview, 500);
@@ -1179,13 +1182,24 @@ function mapProduct(p) {
 // catálogo más grande, pedirlo de un jalón dejaba fuera productos sin avisar.
 // Se pide por páginas; si una página falla, falla todo (nunca un catálogo a medias).
 async function _fetchAllPages(path, pageSize = 1000) {
-  const rows = [];
-  for (let offset = 0; ; offset += pageSize) {
-    const r = await supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
-    if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
-    rows.push(...r.data);
-    if (r.data.length < pageSize) return { ...r, data: rows };
+  const first = await supabaseApi(`${path}&limit=${pageSize}&offset=0`, { headers: { Prefer: 'count=exact' } });
+  if (!first.ok || !Array.isArray(first.data)) return { ...first, ok: false };
+  if (first.data.length < pageSize) return first;
+  const total = first.total;
+  if (!total) {  // sin total: una tras otra, como antes
+    const rows = [...first.data];
+    for (let offset = pageSize; ; offset += pageSize) {
+      const r = await supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
+      if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
+      rows.push(...r.data);
+      if (r.data.length < pageSize) return { ...r, data: rows };
+    }
   }
+  const offsets = [];
+  for (let o = pageSize; o < total; o += pageSize) offsets.push(o);
+  const pages = await Promise.all(offsets.map(o => supabaseApi(`${path}&limit=${pageSize}&offset=${o}`)));
+  if (pages.some(r => !r.ok || !Array.isArray(r.data))) return { ...(pages.find(r => !r.ok) || first), ok: false };
+  return { ...first, data: first.data.concat(...pages.map(r => r.data)) };
 }
 
 // Esqueleto mientras carga el catálogo: misma forma que los renglones/tarjetas
