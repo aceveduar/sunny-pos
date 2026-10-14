@@ -59,7 +59,7 @@ Usar siempre estos nombres en UI y conversación (nunca "Admin", "POS", "Stats")
 | `pos.html` `pos.css` `pos-*.js` | **Caja** | Punto de venta |
 | `stats.html` `stats.css` `stats.js` | **Reportes** | Estadísticas |
 | `activity.html` `activity.css` `activity.js` | **Actividad** | Log de auditoría |
-| `settings.html` `settings.css` `settings.js` `settings-avisos.js` | **Configuración** | Ajustes globales |
+| `settings.html` `settings.css` `settings.js` `settings-avisos.js` `settings-nav.js` | **Configuración** | Ajustes globales |
 | `shared.js` `shared.css` | — | Común a los 5 módulos admin (menú avatar, PIN, campana, offline, permisos de nav, tema) |
 
 Inventario: `admin.js` (core, auth, carga) · `admin-render.js` (cards/tabla/inline edits) · `admin-form.js` (formulario, kits, fotos) · `admin-images.js` (Drive, Groq) · `admin-bulk.js` · `admin-scanner.js` (escáner, duplicados, archivar) · `admin-utils.js` · `admin-recv.js` (Recibir mercancía) · `admin-recv-ia.js` (Recepción con IA) · `admin-capture.js` (Captura rápida) · `admin-qv.js` (Quick View) · `admin-kit-builder.js`.
@@ -224,6 +224,7 @@ Supabase no tiene respaldos en el plan gratis. `python scripts/respaldo.py` guar
   - Usuarios y Permisos: crear usuario, rol, permisos (lista/matriz), copiar permisos de otra persona, revertir uno o todos.
   - Datos: catálogo JSON (exportar/importar; importar nunca publica sin `isPublished:true` explícito), apartados y pagos en CSV (con `canViewReports`), **Exportar todo** (incluye secretos; solo `canManageSettings`; no es restauración — la recuperación real es el backup de Supabase), nombres de usuarios, duplicados, auditoría de Drive, limpiar historial (solo superadmin).
   - Integraciones: Groq key, Google Drive.
+  - **Navegación** (`settings-nav.js`, traído de Tres Encantos 2026-10-14): celular = índice de secciones y cada una se abre sola con "‹ Configuración"; escritorio (≥900px) = menú fijo a la izquierda. Direcciones `#usuarios #avisos #catalogo #datos #integraciones`. Con una sola sección permitida abre directo.
   - **Avisos al equipo** (`settings-avisos.js`, solo `canManageSettings`): publicar/editar/quitar avisos de la campana con vista previa, y ver quién los leyó y a quién le falta.
 - **Campana** (`shared.js`): muestra los avisos de `team_notices` (por módulo: `pos*` = caja, `admin*` = inventario; `SYS_NOTICES` vacío, no agregar ahí). **Reglas:** lo ve toda cuenta con sesión desde que se publica hasta `until` inclusive (hora CDMX) o hasta que se quita; **leído = desplegado**; leído y descartado (✕) son **por persona en el servidor**, no por dispositivo (dispositivo compartido en tienda); la copia local va marcada con el correo; a la autora su aviso no le cuenta como pendiente. Avisos cortos: los pasos van en Ayuda ("Ver cómo en Ayuda" → `openHelp(help_query)`).
 - **Avisarme al vender**: sondeo cada 25 s solo con la app abierta; más de 3 movimientos juntos llegan como un resumen; ícono en `img/icono-192.png`.
