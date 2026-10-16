@@ -25,7 +25,7 @@ EXCEPTION WHEN OTHERS THEN INSERT INTO _r VALUES ('1 publicar', 'ERROR ' || SQLE
 
 -- 2. Fecha pasada se rechaza
 DO $$ BEGIN
-  PERFORM public.te_save_notice(null, 'x', '', null, 'todos', current_date - 1);
+  PERFORM public.te_save_notice(null, 'x', '', null, 'todos', (now() AT TIME ZONE 'America/Mexico_City')::date - 1);
   INSERT INTO _r VALUES ('2 fecha pasada', 'ACEPTADO');
 EXCEPTION WHEN OTHERS THEN INSERT INTO _r VALUES ('2 fecha pasada', 'rechazado'); END $$;
 
