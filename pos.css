@@ -1258,4 +1258,13 @@ button,a{touch-action:manipulation}
   .pos-prod-right{flex-direction:row;align-items:center;gap:10px}
   .pos-prod{padding:6px 8px}
 }
+/* Etiquetas de apartado ("En tienda", "Se lo llevó", "A favor"): neutras, separadas del texto */
+.lib-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;margin-right:6px;border:1px solid var(--border);border-radius:var(--radio-pill);font-size:.72rem;font-weight:600;color:var(--muted);white-space:nowrap;vertical-align:1px}
+/* Apartados (página, con ancho): "Recordar a vencidas" en la fila de los filtros, no en un renglón propio */
+@media(min-width:900px){
+  .apt-page-body{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-content:start}
+  .apt-page-body > .apt-due-filters-wrap{grid-column:1;grid-row:1;min-width:0}
+  .apt-page-body > .apt-cobranza-btn{grid-column:2;grid-row:1;width:auto;max-width:none;padding:0 18px;margin:0 0 10px;align-self:start}
+  .apt-page-body > .apt-page-grid{grid-column:1 / -1}
+}
 

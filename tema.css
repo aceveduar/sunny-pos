@@ -77,3 +77,9 @@
   /* Controles nativos (checkbox, selector de fecha, scrollbars) siguen color-scheme */
   color-scheme:dark;
 }
+
+/* Enfoque con teclado: anillo del color de marca en todo el sistema (antes el
+   del navegador, naranja o azul según la computadora). Las reglas propias de
+   cada botón siguen mandando. */
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
