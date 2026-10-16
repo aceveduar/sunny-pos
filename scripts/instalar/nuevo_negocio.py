@@ -123,10 +123,22 @@ def main():
     destino = os.path.join(carpeta, 'negocio.js')
     open(destino, 'w', encoding='utf-8', newline='\n').write(src)
     print(f'   ✓ {os.path.relpath(destino, RAIZ)}')
+    # Vista previa al compartir la Tienda por WhatsApp: va escrita en el HTML (WhatsApp no ejecuta JS)
+    if d.get('tienda', True):
+        import html
+        idx = open(os.path.join(RAIZ, 'index.html'), encoding='utf-8').read()
+        titulo = html.escape(d['nombre'], quote=True)
+        desc = html.escape(d.get('descripcion') or f"Catálogo de {d['nombre']} con pedidos por WhatsApp.", quote=True)
+        idx = re.sub(r'<title>[^<]*</title>', f'<title>{titulo}</title>', idx, count=1)
+        idx = re.sub(r'(<meta property="og:title" content=")[^"]*', lambda m: m.group(1) + titulo, idx, count=1)
+        for patron in (r'(<meta name="description" content=")[^"]*', r'(<meta property="og:description" content=")[^"]*'):
+            idx = re.sub(patron, lambda m: m.group(1) + desc, idx, count=1)
+        open(os.path.join(carpeta, 'index.html'), 'w', encoding='utf-8', newline='\n').write(idx)
+        print(f'   ✓ {os.path.relpath(os.path.join(carpeta, "index.html"), RAIZ)} (vista previa al compartir con su nombre)')
 
     paso(6, 'Lo que sigue (a mano)')
-    print(f'''   1. Publicar la app con ESE negocio.js en lugar del de pruebas.
-   2. En index.html, la vista previa al compartir (og:title, og:description, og:image) con los datos del negocio.
+    print(f'''   1. Publicar la app con los archivos de {os.path.relpath(carpeta, RAIZ)} en lugar de los de pruebas.
+   2. Si quiere foto en la vista previa de WhatsApp: agregar og:image en ese index.html.
    3. Fotos en Drive: Configuración → Integraciones → Google Drive (instrucciones ahí mismo).
    4. IA (opcional): Configuración → Integraciones → clave de Groq.
    5. Respaldo diario: programar  python scripts/respaldo.py  con SUPABASE_REF={ref}.
