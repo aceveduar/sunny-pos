@@ -1,0 +1,11 @@
+# Finales de línea LF en el repo y en la copia de trabajo, en cualquier máquina
+# (sin esto, Windows convertía a CRLF y cada commit avisaba "LF will be replaced").
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.pyc binary
