@@ -1131,6 +1131,12 @@ function initRealtime() {
       const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: `Bearer ${_getPosToken()}` } }
       });
+      // Sin setAuth, Realtime entra como anon: los cambios llegan sin código de
+      // barras/costo (el escáner dejaba de encontrar el producto tras venderlo)
+      // y nunca llegan los de productos ocultos.
+      let tok = _getPosToken();
+      client.realtime.setAuth(tok);
+      setInterval(() => { const t = _getPosToken(); if (t && t !== tok) { tok = t; client.realtime.setAuth(t); } }, 60000);
       client
         .channel('pos-products')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, _handleRealtimeProduct)
@@ -1146,7 +1152,15 @@ function _driveSz(url, w) {
   return url.replace(/sz=w\d+/, `sz=w${w}`);
 }
 
-function _handleRealtimeProduct({ eventType, new: row, old }) {
+async function _handleRealtimeProduct({ eventType, new: row, old }) {
+  // Aviso sin las columnas internas (llegó como anon): pedir el renglón completo
+  if (eventType !== 'DELETE' && row && !('barcode' in row)) {
+    try {
+      const r = await api(`products?id=eq.${row.id}&select=*`);
+      if (!r.ok || !r.data?.[0]) return;
+      row = r.data[0];
+    } catch { return; }
+  }
   if (eventType === 'INSERT') {
     if (!row.is_archived && !products.find(x => x.id === row.id)) products.push(_mapPosProduct(row));
   } else if (eventType === 'UPDATE') {

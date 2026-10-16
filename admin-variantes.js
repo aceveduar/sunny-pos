@@ -203,6 +203,9 @@ async function saveVariantes() {
   await closeVariantBuilder(true);
   renderTable(); renderStats();
   toast(`"${base}": ${combos.length} variantes creadas`, 'success');
+  // Abrir su ficha: ahí se ponen fotos por color y códigos de barras
+  _varModo = 'piezas';
+  openQV(r.data[0].id);
 }
 
 /* ── Ficha (Quick View): existencias de todo el grupo ── */
@@ -244,8 +247,14 @@ function variantGridHTML(p) {
     return `<button type="button" class="var-fotocol" onclick="_varFotoColor(${p.id}, '${_jsq(nombres[i])}', '${_jsq(val)}')" aria-label="Cambiar foto de ${_esc(val)}" title="Foto de ${_esc(val)}">
       <img src="${_driveSz(v?.image || DEFAULT_IMG, 80)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'"></button>`;
   };
+  const codigos = _varModo === 'codigos' && can.editProduct;
+  const sinCodigo = hs.filter(x => !x.barcode).length;
   return `<div class="var-qv">
     <div class="var-qv-head"><span>${_esc(nombres.join(' y '))}</span><span class="var-qv-total">${total} pza${total !== 1 ? 's' : ''} en ${hs.length} variantes</span></div>
+    ${can.editProduct ? `<div class="var-modo" role="group" aria-label="Qué ver en la cuadrícula">
+      <button type="button" class="${codigos ? '' : 'on'}" aria-pressed="${!codigos}" onclick="_varCambiarModo('piezas')">Piezas</button>
+      <button type="button" class="${codigos ? 'on' : ''}" aria-pressed="${codigos}" onclick="_varCambiarModo('codigos')">Códigos${sinCodigo ? ` <span class="var-modo-n">· ${sinCodigo} sin código</span>` : ''}</button>
+    </div>` : ''}
     <div class="var-grid-wrap"><table class="var-tabla">
       <thead><tr><th scope="col">${_esc(n1)}</th>${cols.map(c => `<th scope="col">${c === null ? 'Piezas' : foto(1, c) + _esc(c)}</th>`).join('')}</tr></thead>
       <tbody>${filas.map(f => `<tr><th scope="row"><span class="var-fila">${foto(0, f)}${_esc(f)}</span></th>${cols.map(c => {
@@ -253,11 +262,18 @@ function variantGridHTML(p) {
         if (!v) return can.addProduct
           ? `<td><button type="button" class="var-falta" onclick="_varCrearCombos(${p.id}, [[['${_jsq(n1)}', '${_jsq(f)}']${c === null ? '' : `, ['${_jsq(n2)}', '${_jsq(c)}']`}]])" aria-label="Agregar ${_esc(f)}${c === null ? '' : ' ' + _esc(c)}" title="Agregar esta combinación">+</button></td>`
           : '<td class="var-na">—</td>';
+        if (codigos) return `<td class="${v.id === p.id ? 'var-actual' : ''}"><input type="text" inputmode="numeric" autocomplete="off" maxlength="40" class="var-celda var-codigo"
+          value="${_esc(v.barcode || '')}" placeholder="—" data-id="${v.id}" aria-label="Código de ${_esc(v.name)}" onfocus="this.select()" onchange="_varGuardarCodigo(this)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();_varSiguienteCelda(this)}"></td>`;
         return `<td class="${v.id === p.id ? 'var-actual' : ''}"><input type="number" min="0" step="1" inputmode="numeric" class="var-celda${v.stock === 0 ? ' var-cero' : ''}"
-          value="${v.stock || 0}" data-id="${v.id}" aria-label="${_esc(v.name)}" onfocus="this.select()" onchange="_varGuardarStock(this)"></td>`;
+          value="${v.stock || 0}" data-id="${v.id}" aria-label="${_esc(v.name)}" onfocus="this.select()" onchange="_varGuardarStock(this)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();_varSiguienteCelda(this)}"></td>`;
       }).join('')}</tr>`).join('')}</tbody>
     </table></div>
-    <p class="var-qv-hint">Toca un número para cambiar las piezas.${fi >= 0 ? ` Toca la foto de un ${_esc(nombres[fi].toLowerCase())} para cambiarla.` : ''}</p>
+    ${codigos
+      ? `<p class="var-qv-hint">Escanea o escribe el código de cada una; con Enter pasas a la siguiente.</p>
+         ${sinCodigo ? `<button type="button" class="var-mas-btn var-generar" onclick="_varGenerarCodigos(${p.id})">Crear códigos para las ${sinCodigo} que no tienen</button>` : ''}`
+      : `<p class="var-qv-hint">Toca un número para cambiar las piezas.${fi >= 0 ? ` Toca la foto de un ${_esc(nombres[fi].toLowerCase())} para cambiarla.` : ''}</p>`}
     ${can.addProduct ? `<div class="var-mas" id="var-mas">
       <button type="button" class="var-mas-btn" onclick="_varMostrarAgregar(true)">+ ${_esc(nombres.join(' o ').toLowerCase().replace(/^./, x => x.toUpperCase()))}</button>
       <div class="var-mas-form" hidden>
@@ -269,6 +285,84 @@ function variantGridHTML(p) {
       </div>
     </div>` : ''}
   </div>`;
+}
+
+/* ── Códigos de barras por talla/color ── */
+let _varModo = 'piezas';
+function _varCambiarModo(m) {
+  _varModo = m;
+  const p = products.find(x => x.id === _qvCurrentId);
+  const zona = document.getElementById('qv-var-zone');
+  if (p && zona) zona.innerHTML = variantGridHTML(p);
+  if (m === 'codigos') setTimeout(() => (zona?.querySelector('.var-codigo:placeholder-shown') || zona?.querySelector('.var-codigo'))?.focus(), 30);
+}
+// Enter = siguiente casilla (como en una hoja de cálculo; el lector de códigos manda Enter)
+function _varSiguienteCelda(input) {
+  const todas = [...input.closest('table').querySelectorAll('input.var-celda')];
+  const sig = todas[todas.indexOf(input) + 1];
+  if (sig) sig.focus(); else input.blur();
+}
+
+async function _varGuardarCodigo(input) {
+  const id = +input.dataset.id;
+  const p = products.find(x => x.id === id);
+  const nuevo = input.value.trim().replace(/\s+/g, '') || null;
+  if (!p || nuevo === (p.barcode || null)) { input.value = p?.barcode || ''; return; }
+  if (!can.editProduct) { toast('Sin permiso para editar productos', 'error'); input.value = p.barcode || ''; return; }
+  const otro = nuevo && products.find(x => x.id !== id && x.barcode === nuevo);
+  if (otro) {
+    toast(`Ese código ya lo usa "${otro.name}"`, 'error');
+    input.value = p.barcode || ''; input.classList.add('var-error');
+    setTimeout(() => { input.focus(); }, 60);
+    setTimeout(() => input.classList.remove('var-error'), 2500);
+    return;
+  }
+  input.disabled = true;
+  const r = await supabaseApi(`products?id=eq.${id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ barcode: nuevo }) });
+  input.disabled = false;
+  if (!r.ok || !r.data?.[0]) {
+    toast(/duplicate|unique/i.test(r.data?.message || '') ? 'Ese código ya lo usa otro producto' : 'No se pudo guardar el código', 'error');
+    input.value = p.barcode || ''; return;
+  }
+  const antes = p.barcode;
+  Object.assign(p, mapProduct(r.data[0]));
+  logActivity('producto_editado', `${antes ? 'Cambió' : 'Puso'} el código de barras de "${p.name}"`, { id, name: p.name, changes: ['Código de barras'] });
+  const n = document.querySelector('.var-modo-n');
+  const faltan = _varHermanas(p).filter(x => !x.barcode).length;
+  if (n) { if (faltan) n.textContent = `· ${faltan} sin código`; else n.remove(); }
+}
+
+// Código interno EAN-13 (empieza con 2: rango de uso interno de la tienda, no
+// choca con códigos de fábrica). Para la ropa que no trae código: se imprime en
+// etiqueta y se escanea en Caja.
+function _varEan13() {
+  const usados = new Set(products.map(x => x.barcode).filter(Boolean));
+  for (;;) {
+    let d = '2' + String(Math.floor(Math.random() * 1e11)).padStart(11, '0');
+    const suma = [...d].reduce((s, c, i) => s + (+c) * (i % 2 ? 3 : 1), 0);
+    d += (10 - suma % 10) % 10;
+    if (!usados.has(d)) return d;
+  }
+}
+async function _varGenerarCodigos(pId) {
+  const p = products.find(x => x.id === pId); if (!p) return;
+  const faltan = _varHermanas(p).filter(x => !x.barcode);
+  if (!faltan.length) return;
+  const ok = await teConfirm({
+    title: 'Crear códigos',
+    message: `Se crea un código de barras de la tienda para cada una de las ${faltan.length} que no tienen. Sirve si la ropa no trae código: se imprime en etiqueta y se escanea en Caja.\n\nSi la mercancía ya trae su código, mejor escanéalo en cada casilla.`,
+    confirmText: 'Crear códigos',
+  });
+  if (!ok) return;
+  let fallas = 0;
+  for (const v of faltan) {
+    const r = await supabaseApi(`products?id=eq.${v.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ barcode: _varEan13() }) });
+    if (r.ok && r.data?.[0]) Object.assign(v, mapProduct(r.data[0])); else fallas++;
+  }
+  const base = p.variantBase || p.name;
+  logActivity('producto_editado', `Creó códigos de barras para ${faltan.length - fallas} variantes de "${base}"`, { ids: faltan.map(x => x.id), name: base, changes: ['Código de barras'] });
+  _varRefrescarFicha();
+  toast(fallas ? `No se pudieron crear ${fallas} códigos` : 'Códigos creados', fallas ? 'error' : 'success');
 }
 
 function _varRefrescarFicha() {

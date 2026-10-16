@@ -1286,6 +1286,13 @@ function initRealtime() {
       const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: `Bearer ${_getAdminToken()}` } }
       });
+      // Realtime NO usa el header global: sin setAuth entra como anon y los
+      // cambios llegan sin costo/código/cód. proveedor (columnas que anon no
+      // ve) y nunca llegan los de productos ocultos. Se renueva el token al
+      // refrescarse la sesión.
+      let tok = _getAdminToken();
+      client.realtime.setAuth(tok);
+      setInterval(() => { const t = _getAdminToken(); if (t && t !== tok) { tok = t; client.realtime.setAuth(t); } }, 60000);
       _realtimeChannel = client
         .channel('admin-products')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, _handleRealtimeProduct)
@@ -1296,15 +1303,28 @@ function initRealtime() {
   }).catch(() => console.warn('No se pudo cargar supabase.js para Realtime'));
 }
 
-function _handleRealtimeProduct({ eventType, new: row, old }) {
-  // Ignorar si hay un input activo en el QV (usuario editando inline)
-  if (document.querySelector('#qv-info input, #qv-info textarea')) return;
+async function _handleRealtimeProduct({ eventType, new: row, old }) {
+  // Aviso sin las columnas internas (llegó como anon): pedir el renglón completo
+  // en vez de vaciar costo/código en pantalla (y luego guardarlos vacíos).
+  if (eventType !== 'DELETE' && row && !('cost' in row)) {
+    const r = await supabaseApi(`products?id=eq.${row.id}&select=*`);
+    if (!r.ok || !r.data?.[0]) return;
+    row = r.data[0];
+  }
+  // Escribiendo en la ficha (nombre, precio, cuadrícula de tallas): solo
+  // actualizar los datos, sin redibujar (se perdería lo que se escribe)
+  const escribiendo = document.querySelector('#qv-info input, #qv-info textarea')
+    || document.activeElement?.closest?.('#qv-var-zone');
 
   if (eventType === 'UPDATE') {
     const idx = products.findIndex(x => x.id === row.id);
     if (idx >= 0) {
       products[idx] = { ...products[idx], ...mapProduct(row) };
-      renderTable(); renderStats(); _qvRefresh(row.id);
+      if (escribiendo) return;
+      renderTable(); renderStats();
+      // Redibujar la ficha solo si es la que está abierta (o una talla/color de ella)
+      const actual = products.find(x => x.id === _qvCurrentId);
+      if (actual && (actual.id === row.id || (actual.variantGroup && actual.variantGroup === products[idx].variantGroup))) _qvRefresh(actual.id);
     }
   } else if (eventType === 'INSERT') {
     if (!products.find(x => x.id === row.id)) {

@@ -80,7 +80,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color); las tallas de una prenda salen juntas y en orden.
 - [x] 3) Tienda: una tarjeta por prenda ("4 tallas · 2 colores", "Desde $X", "Elegir talla"); en la ficha, botones por opción con las agotadas tachadas; carrito y WhatsApp con la variante exacta.
 - [x] 3b) Después del alta (2026-10-15): "+ Talla o color" y "+" en casillas faltantes (nacen con 0 pzas), foto por color desde la cuadrícula, y editar una variante (formulario, precio/nombre/categoría rápidos, Ocultar/Publicar) pregunta si aplicar a toda la prenda (la foto solo al mismo color). Tallas ordenadas (CH<M<G, números). Drive no borra una foto que otra variante sigue usando. Duplicados ignora hermanas.
-- [ ] Pendientes de variantes: código de barras por combinación en el alta y en Recibir mercancía; juntar productos sueltos en una prenda; etiquetas.
+- [x] 3c) Códigos de barras por talla/color (2026-10-16): la cuadrícula de la ficha cambia a "Códigos" (escanear o escribir, Enter = siguiente, rechaza repetidos) y "Crear códigos" genera EAN-13 internos (empiezan con 2) para la ropa sin código. Recibir mercancía y Caja ya los encuentran porque cada variante es un producto. Tras crear una prenda se abre su ficha.
+- [ ] Pendientes de variantes: Reportes por talla y color (fase 4); juntar productos sueltos en una prenda; etiquetas para imprimir.
 - [ ] 4) Reportes por talla.
 
 ## 8. Rapidez (máxima velocidad de carga)
@@ -97,4 +98,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Reportes con años de historia: que el servidor sume (RPC) Turnos de caja y Clientes frecuentes, que hoy bajan toda la historia (ya no frenan la pantalla, pero crecen sin límite). Hacerlo cuando un negocio pase de ~1 año de datos.
 - [ ] Cargar Chart.js y librerías pesadas solo cuando se necesitan; revisar el orden de scripts.
 - [x] Copia sin conexión que no se rompa arriba de ~6,000 productos (IndexedDB en vez de localStorage).
+
+## Para corregir también en Tres Encantos (anotado desde Sunny POS)
+- **Realtime entra como anon** (`initRealtime()` en `admin.js` y `pos-core.js`): el header `Authorization` de `createClient` no aplica a Realtime; sin `client.realtime.setAuth(token)` los cambios llegan con los permisos de anon. En Sunny (anon sin columnas internas) llegaban sin costo/código y los borraban en pantalla: en Caja el escáner dejaba de encontrar un producto después de venderlo, y guardar desde Inventario podía dejar el costo vacío. En Tres Encantos revisar si anon ve `cost`/`barcode` por Realtime (fuga de costo a la Tienda) y aplicar el mismo arreglo (Sunny, 2026-10-16).
 

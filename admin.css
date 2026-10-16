@@ -1866,3 +1866,14 @@ label:has(> #f-is-kit){min-height:44px}
 .var-mas-form[hidden]{display:none}
 .var-mas-form select,.var-mas-form input{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radio-sm);background:var(--surface);color:var(--charcoal);font-size:.95rem;font-family:inherit}
 .var-mas-form input{flex:1;min-width:120px}
+
+.var-modo{display:inline-flex;gap:4px;padding:3px;margin:0 0 10px;border:1px solid var(--border);border-radius:var(--radio-pill);background:var(--surface-soft);max-width:100%}
+.var-modo button{min-height:38px;padding:0 14px;border:none;border-radius:var(--radio-pill);background:transparent;color:var(--muted);font-weight:600;font-size:.85rem;font-family:inherit;cursor:pointer;white-space:nowrap;position:relative}
+.var-modo button::after{content:"";position:absolute;inset:-3px 0}
+.var-modo button.on{background:var(--ink);color:#fff}
+:root[data-theme="dark"] .var-modo button.on{background:var(--charcoal);color:var(--ink)}
+.var-modo-n{font-weight:500;opacity:.8}
+.var-codigo{width:136px;font-size:.88rem;font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.var-codigo:placeholder-shown{border-style:dashed}
+.var-celda.var-error{border-color:var(--tint-red-strong);outline:2px solid var(--tint-red-strong)}
+.var-generar{margin-top:8px}
