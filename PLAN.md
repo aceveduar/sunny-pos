@@ -37,7 +37,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] `manifest.json`, íconos genéricos, títulos y mensajes de WhatsApp. Pendiente por negocio: `og:*` de `index.html` y sus íconos (WhatsApp no ejecuta JS)
 - [x] `MANUAL.md` genérico (sin libreta; corte actualizado)
 - [x] Scripts: respaldo (`scripts/respaldo.py`, cualquier negocio vía negocio.js) y pruebas sin cuentas de Tres Encantos
-- [ ] **(Eduardo)** Tarea programada diaria del respaldo
+- [ ] **(Eduardo)** Tarea programada diaria del respaldo — ya es un solo comando: `powershell -ExecutionPolicy Bypass -File scripts\programar_respaldo.ps1`
 - [x] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
