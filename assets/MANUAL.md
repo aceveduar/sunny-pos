@@ -194,6 +194,13 @@ Cada variante es un producto con su propio stock y su nombre completo ("Blusa de
 
 **Cambiar precio, nombre, descripción o categoría de toda la prenda:** edita cualquiera de sus tallas y guarda. El sistema pregunta **¿Aplicar también a las demás tallas y colores?**: toca **Aplicar a todas**, o **Solo a esta** si de verdad es distinto (por ejemplo, la talla EG más cara). Lo mismo al ocultar o publicar. La foto que cambies en el formulario se aplica solo a las del mismo color. Las piezas y el código de barras son siempre de cada talla.
 
+### Imprimir etiquetas
+Abre un producto y toca **Más → Etiquetas** (en una prenda salen todas sus tallas y colores), o selecciona varios en la lista y toca **Más acciones → Imprimir etiquetas**. Cada etiqueta lleva el nombre, la talla y el color, el precio y el código de barras.
+- **Cuántas:** una por pieza en existencia (para etiquetar lo que llegó) o una de cada producto.
+- **Papel:** hoja carta con 30 etiquetas (3 × 10, tamaño 66.7 × 25.4 mm, las que venden en papelerías para impresora normal) o rollo térmico de 50 × 25 mm.
+- Si algún producto no tiene código, la ventana lo avisa y ofrece **Crear sus códigos**.
+- Al tocar **Imprimir** se abre el cuadro de impresión: elige tu impresora y deja la escala en 100 %.
+
 ### Qué sale primero en la Tienda
 - **Al inicio** (vista rápida → Más) pone el producto primero en la Tienda.
 - La **estrella** (destacado) lo pone en la portada: en computadora salen los 3 primeros y en el celular todos, así que conviene tener pocos (unos 10) y con buena foto.

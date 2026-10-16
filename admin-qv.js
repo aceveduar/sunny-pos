@@ -688,6 +688,9 @@ function _renderQV(p) {
   const btnAddKit = can.editProduct && !Array.isArray(p.kitItems)
     ? `<button class="qv-btn qv-btn-dup" onclick="_openAddToKit([${p.id}])">${QV_ICO_GIFT()}A un kit</button>`
     : '';
+  const btnLabels = !Array.isArray(p.kitItems)
+    ? `<button class="qv-btn qv-btn-dup" onclick="openLabelsFor(${p.id})"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Etiquetas</button>`
+    : '';
   const btnSeparar = can.editProduct && p.variantGroup
     ? `<button class="qv-btn qv-btn-dup" onclick="_varSeparar(${p.id})">${QV_ICO_UNDO()}Quitar de la prenda</button>`
     : '';
@@ -701,7 +704,7 @@ function _renderQV(p) {
   // Antes: 9 botones del mismo tamaño. Ahora lo de todos los días a la vista
   // (Editar, Compartir, Ocultar/Publicar) y el resto en "Más acciones",
   // con Eliminar al final y separado -- patrón de Shopify Admin.
-  const moreItems = btnDup + btnTop + btnAddKit + btnSeparar + btnFlag + btnArchive + btnDel;
+  const moreItems = btnDup + btnTop + btnAddKit + btnLabels + btnSeparar + btnFlag + btnArchive + btnDel;
   const btnMore = moreItems
     ? `<button class="qv-btn qv-btn-dup qv-btn-more" onclick="_qvToggleMore(this)" aria-expanded="false">${QV_ICO_MORE()}Más</button>`
     : '';

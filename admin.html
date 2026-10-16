@@ -543,6 +543,7 @@
           <button class="bmo-item" id="bulk-publish-btn" onclick="closeBulkMoreActions();bulkTogglePublish()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Visibilidad</button>
           <button class="bmo-item" onclick="closeBulkMoreActions();bulkToggleOOS()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Disponibilidad</button>
           <button class="bmo-item" onclick="closeBulkMoreActions();openVariantJoin()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Juntar en una prenda (tallas o colores)</button>
+          <button class="bmo-item" onclick="closeBulkMoreActions();openLabels()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir etiquetas</button>
           <button class="bmo-item" onclick="closeBulkMoreActions();bulkFlag()"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Marcar para revisión</button>
           <div class="bcp-group-label">Vitrina</div>
           <button class="bmo-item" onclick="closeBulkMoreActions();bulkToggleFeatured()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Destacar</button>
@@ -962,6 +963,7 @@
 <script src="admin-qv.js"></script>
 <script src="admin-kit-builder.js"></script>
 <script src="admin-variantes.js"></script>
+<script src="admin-etiquetas.js"></script>
 <!-- COMPARE ZOOM: split fullscreen -->
 <div id="cmp-zoom" onclick="closeCmpZoom()">
   <button id="cmp-zoom-close" onclick="event.stopPropagation();closeCmpZoom()">✕</button>

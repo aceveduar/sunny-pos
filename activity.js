@@ -253,6 +253,7 @@ const ACTION_CFG = {
   comprobante_omitido: { type:'apartado',  badge:'eliminado', icon:_actIcoWarn(),     label:'Sin comprobante' },
   producto_creado:       { type:'inventario', badge:'creado',    icon:_actIcoPlus(),  label:'Creado'    },
   producto_editado:      { type:'inventario', badge:'editado',   icon:_actIcoEdit(),  label:'Editado'   },
+  etiquetas_impresas:    { type:'inventario', badge:'editado',   icon:_actIco('<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'), label:'Etiquetas' },
   producto_eliminado:    { type:'inventario', badge:'eliminado', icon:_actIcoTrash(), label:'Eliminado' },
   duplicado_descartado:  { type:'inventario', badge:'revisado',  icon:_actIcoEye(),   label:'Revisado'  },
   recepcion_ia_aplicada: { type:'inventario', badge:'editado',   icon:_actIcoCheck(), label:'Recepción con IA' },
