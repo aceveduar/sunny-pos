@@ -184,6 +184,12 @@ Para sacar un producto de circulación usa **Archivar** (vista rápida → Más)
 
 Cada variante es un producto con su propio stock y su nombre completo ("Blusa de lino · M · Negro"), así que en Caja se busca, se escanea y se vende como cualquier otro. Para ver o cambiar las piezas de todas las tallas y colores, abre cualquiera de ellas: en su ficha está la cuadrícula; toca un número para cambiarlo.
 
+**Agregar una talla o un color después:** abre la prenda y, debajo de la cuadrícula, toca **+ Talla o color**. Escribe la nueva (por ejemplo "Rojo") y toca **Agregar**: se crea en todas las tallas con 0 piezas; luego escribe cuántas llegaron. Si solo falta una combinación, toca el **+** de su casilla.
+
+**Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color, y en la Tienda la clienta ve la foto del color que elige.
+
+**Cambiar precio, nombre, descripción o categoría de toda la prenda:** edita cualquiera de sus tallas y guarda. El sistema pregunta **¿Aplicar también a las demás tallas y colores?**: toca **Aplicar a todas**, o **Solo a esta** si de verdad es distinto (por ejemplo, la talla EG más cara). Lo mismo al ocultar o publicar. La foto que cambies en el formulario se aplica solo a las del mismo color. Las piezas y el código de barras son siempre de cada talla.
+
 ### Qué sale primero en la Tienda
 - **Al inicio** (vista rápida → Más) pone el producto primero en la Tienda.
 - La **estrella** (destacado) lo pone en la portada: en computadora salen los 3 primeros y en el celular todos, así que conviene tener pocos (unos 10) y con buena foto.

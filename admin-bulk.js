@@ -358,10 +358,12 @@ async function _bcpSelect(code) {
     supabaseApi(`products?id=eq.${inlineId}`, {
       method: 'PATCH',
       body: JSON.stringify({ category: cat.code, category_label: cat.label })
-    }).then(r => {
+    }).then(async r => {
       if (r.ok) {
+        const prev = { ...p };
         p.category = cat.code; p.categoryLabel = cat.label;
         toast(`Categoría → ${cat.label}`);
+        if (p.variantGroup) await _varPropagarEdicion(prev, p);
       } else toast('Error al actualizar categoría', 'error');
       renderTable(); renderStats(); _qvRefresh(inlineId);
     });

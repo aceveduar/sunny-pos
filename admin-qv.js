@@ -99,7 +99,7 @@ async function _qvEditPrice(e, id) {
     const result = await supabaseApi(`products?id=eq.${id}`, {
       method: 'PATCH', body: JSON.stringify({ price: newPrice })
     });
-    if (result.ok) { p.price = newPrice; toast(`Precio → $${newPrice.toLocaleString('es-MX')}`); TE?.track('inline_price'); }
+    if (result.ok) { const prev = { ...p }; p.price = newPrice; toast(`Precio → $${newPrice.toLocaleString('es-MX')}`); TE?.track('inline_price'); if (p.variantGroup) await _varPropagarEdicion(prev, p); }
     else toast('Error al actualizar precio', 'error');
     _qvRefresh(id); renderTable();
   };
@@ -142,10 +142,15 @@ async function _qvEditName(e, id) {
   let saved = false;
   const doSave = async () => {
     if (saved) return; saved = true;
-    const newName = ta.value.trim();
+    const vn = _varNombre(p, ta.value.trim());
+    const newName = vn ? vn.name : ta.value.trim();
     if (!newName || newName === p.name) { _qvRefresh(id); renderTable(); return; }
-    const result = await supabaseApi(`products?id=eq.${id}`, { method:'PATCH', body:JSON.stringify({ name: newName }) });
-    if (result.ok) { p.name = newName; toast('Nombre actualizado'); TE?.track('inline_name'); }
+    const result = await supabaseApi(`products?id=eq.${id}`, { method:'PATCH', body:JSON.stringify(vn ? { name: newName, variant_base: vn.base } : { name: newName }) });
+    if (result.ok) {
+      const prev = { ...p }; p.name = newName; if (vn) p.variantBase = vn.base;
+      toast('Nombre actualizado'); TE?.track('inline_name');
+      if (vn) await _varPropagarEdicion(prev, p);
+    }
     else { toast('Error', 'error'); saved = false; }
     _qvRefresh(id); renderTable();
   };

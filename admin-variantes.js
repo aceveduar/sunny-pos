@@ -211,6 +211,19 @@ const _varValor = (p, nombre) => (Array.isArray(p?.variant) ? p.variant : []).fi
 function _varHermanas(p) {
   return p?.variantGroup ? products.filter(x => x.variantGroup === p.variantGroup && !x.isArchived) : [];
 }
+// Tallas en su orden natural (CH antes que G) y números de menor a mayor;
+// cualquier otra lista se queda en el orden en que se capturó.
+const _VAR_TALLAS = ['XXCH', 'XCH', 'XS', 'CH', 'S', 'M', 'G', 'L', 'EG', 'XL', 'XG', 'XXL', 'XXG', 'UNITALLA'];
+function _varOrden(vals) {
+  const t = v => String(v).toUpperCase().replace(/\s+/g, '');
+  if (vals.length > 1 && vals.every(v => _VAR_TALLAS.includes(t(v)))) return [...vals].sort((a, b) => _VAR_TALLAS.indexOf(t(a)) - _VAR_TALLAS.indexOf(t(b)));
+  const n = v => parseFloat(String(v).replace(',', '.'));
+  if (vals.length > 1 && vals.every(v => !isNaN(n(v)))) return [...vals].sort((a, b) => n(a) - n(b));
+  return vals;
+}
+// La opción que lleva foto propia (Color/Tono); -1 si la prenda no tiene
+const _varOpcionFoto = nombres => nombres.findIndex(n => /color|tono/i.test(n || ''));
+const _jsq = v => _esc(v).replace(/'/g, "\\'");
 
 // Cuadrícula de existencias del grupo, con las celdas editables
 function variantGridHTML(p) {
@@ -218,24 +231,215 @@ function variantGridHTML(p) {
   if (hs.length < 2 && !p?.variantGroup) return '';
   const nombres = (Array.isArray(hs[0]?.variant) ? hs[0].variant : []).map(e => e[0]);
   const [n1, n2] = nombres;
-  const uniq = arr => [...new Set(arr)];
+  const uniq = arr => _varOrden([...new Set(arr)]);
   const filas = uniq(hs.map(x => _varValor(x, n1)));
   const cols = n2 ? uniq(hs.map(x => _varValor(x, n2))) : [null];
   const celda = (f, c) => hs.find(x => _varValor(x, n1) === f && (c === null || _varValor(x, n2) === c));
   const total = hs.reduce((s, x) => s + (x.stock || 0), 0);
+  // Foto por color: en el encabezado de cada color (columna, o renglón si es la única opción)
+  const fi = can.editProduct && new Set(hs.map(x => _varValor(x, nombres[_varOpcionFoto(nombres)]))).size > 1 ? _varOpcionFoto(nombres) : -1;
+  const foto = (i, val) => {
+    if (fi !== i) return '';
+    const v = hs.find(x => _varValor(x, nombres[i]) === val);
+    return `<button type="button" class="var-fotocol" onclick="_varFotoColor(${p.id}, '${_jsq(nombres[i])}', '${_jsq(val)}')" aria-label="Cambiar foto de ${_esc(val)}" title="Foto de ${_esc(val)}">
+      <img src="${_driveSz(v?.image || DEFAULT_IMG, 80)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'"></button>`;
+  };
   return `<div class="var-qv">
     <div class="var-qv-head"><span>${_esc(nombres.join(' y '))}</span><span class="var-qv-total">${total} pza${total !== 1 ? 's' : ''} en ${hs.length} variantes</span></div>
     <div class="var-grid-wrap"><table class="var-tabla">
-      <thead><tr><th scope="col">${_esc(n1)}</th>${cols.map(c => `<th scope="col">${c === null ? 'Piezas' : _esc(c)}</th>`).join('')}</tr></thead>
-      <tbody>${filas.map(f => `<tr><th scope="row">${_esc(f)}</th>${cols.map(c => {
+      <thead><tr><th scope="col">${_esc(n1)}</th>${cols.map(c => `<th scope="col">${c === null ? 'Piezas' : foto(1, c) + _esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${filas.map(f => `<tr><th scope="row"><span class="var-fila">${foto(0, f)}${_esc(f)}</span></th>${cols.map(c => {
         const v = celda(f, c);
-        if (!v) return '<td class="var-na">—</td>';
+        if (!v) return can.addProduct
+          ? `<td><button type="button" class="var-falta" onclick="_varCrearCombos(${p.id}, [[['${_jsq(n1)}', '${_jsq(f)}']${c === null ? '' : `, ['${_jsq(n2)}', '${_jsq(c)}']`}]])" aria-label="Agregar ${_esc(f)}${c === null ? '' : ' ' + _esc(c)}" title="Agregar esta combinación">+</button></td>`
+          : '<td class="var-na">—</td>';
         return `<td class="${v.id === p.id ? 'var-actual' : ''}"><input type="number" min="0" step="1" inputmode="numeric" class="var-celda${v.stock === 0 ? ' var-cero' : ''}"
           value="${v.stock || 0}" data-id="${v.id}" aria-label="${_esc(v.name)}" onfocus="this.select()" onchange="_varGuardarStock(this)"></td>`;
       }).join('')}</tr>`).join('')}</tbody>
     </table></div>
-    <p class="var-qv-hint">Toca un número para cambiar las piezas.</p>
+    <p class="var-qv-hint">Toca un número para cambiar las piezas.${fi >= 0 ? ` Toca la foto de un ${_esc(nombres[fi].toLowerCase())} para cambiarla.` : ''}</p>
+    ${can.addProduct ? `<div class="var-mas" id="var-mas">
+      <button type="button" class="var-mas-btn" onclick="_varMostrarAgregar(true)">+ ${_esc(nombres.join(' o ').toLowerCase().replace(/^./, x => x.toUpperCase()))}</button>
+      <div class="var-mas-form" hidden>
+        ${nombres.length > 1 ? `<select id="var-mas-opcion" aria-label="Qué agregar">${nombres.map((n, i) => `<option value="${i}">${_esc(n)}</option>`).join('')}</select>` : ''}
+        <input type="text" id="var-mas-valor" maxlength="20" placeholder="Ej: ${_esc(nombres.length > 1 ? 'Rojo' : (filas[0] || ''))}" aria-label="Nueva opción"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();_varAgregarOpcion(${p.id})}else if(event.key==='Escape'){_varMostrarAgregar(false)}">
+        <button type="button" class="btn btn-gold" onclick="_varAgregarOpcion(${p.id})">Agregar</button>
+        <button type="button" class="btn btn-outline" onclick="_varMostrarAgregar(false)">Cancelar</button>
+      </div>
+    </div>` : ''}
   </div>`;
+}
+
+function _varRefrescarFicha() {
+  const p = products.find(x => x.id === _qvCurrentId);
+  if (p) _renderQV(p);
+  renderTable(); renderStats();
+}
+
+function _varMostrarAgregar(abrir) {
+  const box = document.getElementById('var-mas'); if (!box) return;
+  box.querySelector('.var-mas-btn').hidden = abrir;
+  box.querySelector('.var-mas-form').hidden = !abrir;
+  if (abrir) document.getElementById('var-mas-valor')?.focus();
+}
+
+// "+ Talla o color": una talla nueva se crea en todos los colores (y al revés), con 0 piezas
+function _varAgregarOpcion(pId) {
+  const p = products.find(x => x.id === pId); if (!p) return;
+  const hs = _varHermanas(p);
+  const nombres = p.variant.map(e => e[0]);
+  const i = +(document.getElementById('var-mas-opcion')?.value || 0);
+  const raw = (document.getElementById('var-mas-valor')?.value || '').trim().replace(/\s+/g, ' ');
+  if (!raw) { document.getElementById('var-mas-valor')?.focus(); return; }
+  const valor = /^[a-zA-Z]{1,4}$/.test(raw) && i === 0 && !/color|tono/i.test(nombres[0]) ? raw.toUpperCase() : raw.charAt(0).toUpperCase() + raw.slice(1);
+  const existentes = [...new Set(hs.map(x => _varValor(x, nombres[i])))];
+  if (existentes.some(v => String(v).toLowerCase() === valor.toLowerCase())) { toast(`"${valor}" ya existe`, ''); return; }
+  const otra = nombres.length > 1 ? 1 - i : -1;
+  const combos = otra < 0 ? [[[nombres[0], valor]]]
+    : _varOrden([...new Set(hs.map(x => _varValor(x, nombres[otra])))]).map(o => {
+        const v = []; v[i] = [nombres[i], valor]; v[otra] = [nombres[otra], o]; return v;
+      });
+  _varCrearCombos(pId, combos);
+}
+
+// Crea variantes nuevas de la prenda copiando lo común de la que está abierta
+async function _varCrearCombos(pId, combos) {
+  if (!can.addProduct) { toast('Sin permiso para agregar productos', 'error'); return; }
+  const p = products.find(x => x.id === pId); if (!p || !combos.length) return;
+  const base = p.variantBase || p.name;
+  const hs = _varHermanas(p);
+  const fi = _varOpcionFoto(p.variant.map(e => e[0]));
+  const filas = combos.map((variant, k) => {
+    // Un color que ya existe usa su foto; uno nuevo, la de la variante abierta
+    const mismoColor = fi >= 0 && hs.find(x => _varValor(x, variant[fi][0]) === variant[fi][1]);
+    const fuente = mismoColor || p;
+    return {
+      name: `${base} · ${variant.map(e => e[1]).join(' · ')}`, variant_base: base, variant, variant_group: p.variantGroup,
+      category: p.category, category_label: p.categoryLabel || p.category, price: p.price || 0, cost: p.cost ?? null,
+      original_price: p.originalPrice || null, description: p.description || '',
+      image: fuente.image || DEFAULT_IMG, images: fuente.images?.length ? fuente.images : null,
+      badge: p.badge || null, badge_type: p.badgeType || null,
+      stock: 0, is_published: can.publishProduct ? p.isPublished !== false : false, featured: false,
+      position: products.length + k, created_by: getCurrentUserEmail(),
+    };
+  });
+  const r = await supabaseApi('products', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(filas) });
+  if (!r.ok || !Array.isArray(r.data)) { toast(`No se pudo agregar: ${r.data?.message || 'HTTP ' + r.status}`, 'error'); return; }
+  r.data.forEach(row => { products.push(mapProduct(row)); _trackEdit(row.id); });
+  const etiquetas = combos.map(v => v.map(e => e[1]).join(' ')).join(', ');
+  logActivity('producto_creado', `Agregó a "${base}": ${etiquetas}`, { ids: r.data.map(x => x.id), name: base, variant_group: p.variantGroup });
+  _varRefrescarFicha();
+  toast(combos.length === 1 ? `Agregada: ${etiquetas}. Escribe sus piezas.` : `${combos.length} variantes agregadas. Escribe sus piezas.`, 'success');
+  setTimeout(() => document.querySelector(`.var-celda[data-id="${r.data[0].id}"]`)?.focus(), 80);
+}
+
+// Foto por color: cambia la foto principal de todas las variantes de ese color
+function _varFotoColor(pId, opcion, valor) {
+  if (!can.editProduct) { toast('Sin permiso para editar productos', 'error'); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const f = input.files?.[0]; if (!f) return;
+    const p = products.find(x => x.id === pId); if (!p) return;
+    const ids = _varHermanas(p).filter(x => _varValor(x, opcion) === valor).map(x => x.id);
+    const viejas = [...new Set(ids.map(id => products.find(x => x.id === id)?.image).filter(Boolean))];
+    toast(`Subiendo foto de ${valor}…`, '');
+    let url;
+    try { const b64 = await _fileToBase64Resized(f); url = (await uploadToDrive(b64)) || b64; }
+    catch { toast('No se pudo leer la foto', 'error'); return; }
+    for (let k = 0; k < ids.length; k += 10) {
+      const lote = ids.slice(k, k + 10);
+      const r = await supabaseApi(`products?id=in.(${lote.join(',')})`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ image: url }) });
+      if (!r.ok || !Array.isArray(r.data)) { toast('No se pudo guardar la foto', 'error'); return; }
+      r.data.forEach(row => { const i = products.findIndex(x => x.id === row.id); if (i > -1) products[i] = { ...products[i], ...mapProduct(row) }; });
+    }
+    _varBorrarFotosSinUso(viejas);
+    const base = p.variantBase || p.name;
+    logActivity('producto_editado', `Cambió la foto de "${base}" en ${valor} (${ids.length} variante${ids.length !== 1 ? 's' : ''})`, { ids, name: base, changes: ['Imagen'] });
+    _varRefrescarFicha();
+    toast(`Foto de ${valor} actualizada`, 'success');
+  };
+  input.click();
+}
+
+// Borra de Drive las fotos que ya no usa ningún producto (las variantes comparten fotos)
+function _varBorrarFotosSinUso(urls) {
+  urls.forEach(url => {
+    if (products.some(o => o.image === url || (o.images || []).includes(url))) return;
+    const fid = _driveFileId(url);
+    if (fid) _deleteDriveFile(fid);
+  });
+}
+
+// Nombre escrito para una variante → { base, name } con su talla/color al final
+// ("Blusa de lino" o "Blusa de lino · M · Negro" → base "Blusa de lino"). null si no es variante.
+function _varNombre(p, escrito) {
+  if (!p?.variantGroup || !Array.isArray(p.variant) || !p.variant.length || !escrito) return null;
+  const suf = ' · ' + p.variant.map(e => e[1]).join(' · ');
+  // Sin distinguir mayúsculas: el formulario pone mayúscula a cada palabra ("Ch · Azul Marino")
+  const base = (escrito.toLowerCase().endsWith(suf.toLowerCase()) ? escrito.slice(0, -suf.length) : escrito).trim() || p.variantBase || escrito;
+  return { base, name: base + suf };
+}
+
+// Al guardar una variante desde el formulario: ofrecer lo común a toda la prenda.
+// Precio, costo, descripción, categoría, etiqueta, publicar y nombre van a todas;
+// la foto solo a las del mismo color (así cada color conserva la suya).
+// Piezas, código de barras, cód. proveedor y caducidad son de cada variante.
+async function _varPropagarEdicion(prev, data) {
+  const otras = _varHermanas(prev).filter(x => x.id !== prev.id);
+  if (!otras.length) return;
+  const comun = {}, cambios = [];
+  const dif = (a, b) => JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
+  if (dif(prev.price, data.price)) { comun.price = data.price; cambios.push('precio'); }
+  if (dif(prev.originalPrice, data.originalPrice)) { comun.original_price = data.originalPrice; cambios.push('precio antes'); }
+  if (dif(prev.cost, data.cost)) { comun.cost = data.cost; cambios.push('costo'); }
+  if (dif(prev.description || '', data.description || '')) { comun.description = data.description; cambios.push('descripción'); }
+  if (dif(prev.category, data.category)) { comun.category = data.category; comun.category_label = data.categoryLabel; cambios.push('categoría'); }
+  if (dif(prev.badge, data.badge) || dif(prev.badgeType, data.badgeType)) { comun.badge = data.badge; comun.badge_type = data.badgeType; cambios.push('etiqueta'); }
+  if ((prev.isPublished !== false) !== (data.isPublished !== false)) { comun.is_published = data.isPublished; cambios.push(data.isPublished ? 'publicar' : 'ocultar'); }
+  const baseNueva = data.variantBase && dif(prev.variantBase, data.variantBase) ? data.variantBase : null;
+  if (baseNueva) cambios.push('nombre');
+  const fotoCambio = dif(prev.image, data.image) || dif(prev.images, data.images);
+  const fi = _varOpcionFoto((prev.variant || []).map(e => e[0]));
+  const colorOp = fi >= 0 ? prev.variant[fi] : null;
+  const mismasFoto = fotoCambio ? otras.filter(x => !colorOp || _varValor(x, colorOp[0]) === colorOp[1]) : [];
+  if (!cambios.length && !mismasFoto.length) return;
+
+  const base = data.variantBase || prev.variantBase || prev.name;
+  const lineas = [];
+  const lista = cambios.length > 1 ? `${cambios.slice(0, -1).join(', ')} y ${cambios.at(-1)}` : cambios[0];
+  if (cambios.length) lineas.push(`• ${lista.replace(/^./, x => x.toUpperCase())}: a las ${otras.length} variantes`);
+  if (mismasFoto.length) lineas.push(`• Foto: ${colorOp ? `a las ${colorOp[1]} (${mismasFoto.length})` : `a las ${mismasFoto.length} variantes`}`);
+  const ok = await teConfirm({
+    title: 'Toda la prenda',
+    message: `¿Aplicar también a las demás tallas y colores de "${base}"?\n${lineas.join('\n')}`,
+    confirmText: 'Aplicar a todas', cancelText: 'Solo a esta',
+  });
+  if (!ok) return;
+
+  const viejas = mismasFoto.flatMap(x => [x.image, ...(x.images || [])]).filter(Boolean);
+  const porFila = otras.map(x => {
+    const body = { ...comun };
+    if (baseNueva) { body.variant_base = baseNueva; body.name = `${baseNueva} · ${(x.variant || []).map(e => e[1]).join(' · ')}`; }
+    if (mismasFoto.includes(x)) { body.image = data.image; body.images = data.images; }
+    return [x, body];
+  }).filter(([, b]) => Object.keys(b).length);
+  let fallas = 0;
+  for (let k = 0; k < porFila.length; k += 8) {
+    await Promise.all(porFila.slice(k, k + 8).map(async ([x, body]) => {
+      const r = await supabaseApi(`products?id=eq.${x.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
+      if (!r.ok || !r.data?.[0]) { fallas++; return; }
+      const i = products.findIndex(o => o.id === x.id);
+      if (i > -1) products[i] = { ...products[i], ...mapProduct(r.data[0]) };
+      if (body.price !== undefined) _trackEdit(x.id);
+    }));
+  }
+  _varBorrarFotosSinUso(viejas);
+  const hechos = [...cambios, ...(mismasFoto.length ? ['foto'] : [])];
+  logActivity('producto_editado', `Aplicó a ${porFila.length - fallas} variantes de "${base}": ${hechos.join(', ')}`,
+    { ids: porFila.map(([x]) => x.id), name: base, variant_group: prev.variantGroup, changes: hechos });
+  if (fallas) toast(`No se pudo actualizar ${fallas} variante${fallas !== 1 ? 's' : ''}; revisa tu conexión`, 'error');
 }
 
 async function _varGuardarStock(input) {

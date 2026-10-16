@@ -79,6 +79,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 1b) Lista de Inventario agrupada por prenda (un renglón: variantes, piezas totales, Web; la casilla selecciona la prenda completa; si el filtro deja una sola variante, se ve esa).
 - [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color); las tallas de una prenda salen juntas y en orden.
 - [x] 3) Tienda: una tarjeta por prenda ("4 tallas · 2 colores", "Desde $X", "Elegir talla"); en la ficha, botones por opción con las agotadas tachadas; carrito y WhatsApp con la variante exacta.
+- [x] 3b) Después del alta (2026-10-15): "+ Talla o color" y "+" en casillas faltantes (nacen con 0 pzas), foto por color desde la cuadrícula, y editar una variante (formulario, precio/nombre/categoría rápidos, Ocultar/Publicar) pregunta si aplicar a toda la prenda (la foto solo al mismo color). Tallas ordenadas (CH<M<G, números). Drive no borra una foto que otra variante sigue usando. Duplicados ignora hermanas.
+- [ ] Pendientes de variantes: código de barras por combinación en el alta y en Recibir mercancía; juntar productos sueltos en una prenda; etiquetas.
 - [ ] 4) Reportes por talla.
 
 ## 8. Rapidez (máxima velocidad de carga)

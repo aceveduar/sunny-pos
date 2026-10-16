@@ -191,6 +191,7 @@ function checkNameSimilarity() {
   const warn = document.getElementById('f-name-warn');
   const name = document.getElementById('f-name').value.trim();
   const editingId = parseInt(document.getElementById('f-id').value) || null;
+  const editingGroup = editingId ? products.find(p => p.id === editingId)?.variantGroup : null;
   warn.style.display = 'none';
   if (name.length < 4) return;
   const normName = _normStr(name);
@@ -200,6 +201,8 @@ function checkNameSimilarity() {
   const formBarcode = document.getElementById('f-barcode')?.value.trim();
   const scored = products.filter(p => {
     if (p.id === editingId) return false;
+    // Otra talla/color de la misma prenda no es un duplicado
+    if (editingGroup && p.variantGroup === editingGroup) return false;
     // Códigos de barras distintos → productos claramente diferentes
     if (formBarcode && p.barcode && formBarcode !== p.barcode) return false;
     return true;
@@ -310,6 +313,7 @@ function _findDuplicatePairs() {
     const pairKey = `${Math.min(a.id, b.id)}_${Math.max(a.id, b.id)}`;
     if (seen.has(pairKey) || dismissed.has(pairKey)) return;
     seen.add(pairKey);
+    if (a.variantGroup && a.variantGroup === b.variantGroup) return;  // tallas/colores de una prenda
     if (a.barcode && b.barcode && a.barcode !== b.barcode) return;
 
     const barcodeMatch = !!(a.barcode && b.barcode && a.barcode === b.barcode);

@@ -693,7 +693,9 @@ async function togglePublished(id) {
     body: JSON.stringify({ is_published: newVal })
   });
   if (!result.ok) { toast('Error al actualizar visibilidad', 'error'); return; }
+  const prev = { ...p };
   p.isPublished = newVal;
+  if (p.variantGroup) await _varPropagarEdicion(prev, p);
   renderTable();
   renderStats();
   toast(newVal ? 'Publicado en la Tienda' : 'Oculto de la Tienda', 'success');

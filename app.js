@@ -439,6 +439,15 @@ async function loadProducts() {
 let _catalogo = [];
 const _varValor = (p, nombre) => (p?.variant || []).find(e => e[0] === nombre)?.[1];
 const _varHermanas = p => p?.variantGroup ? products.filter(x => x.variantGroup === p.variantGroup) : [];
+// Tallas en su orden natural (CH antes que G) y números de menor a mayor (igual que en Inventario)
+const _VAR_TALLAS = ['XXCH', 'XCH', 'XS', 'CH', 'S', 'M', 'G', 'L', 'EG', 'XL', 'XG', 'XXL', 'XXG', 'UNITALLA'];
+function _varOrden(vals) {
+  const t = v => String(v).toUpperCase().replace(/\s+/g, '');
+  if (vals.length > 1 && vals.every(v => _VAR_TALLAS.includes(t(v)))) return [...vals].sort((a, b) => _VAR_TALLAS.indexOf(t(a)) - _VAR_TALLAS.indexOf(t(b)));
+  const n = v => parseFloat(String(v).replace(',', '.'));
+  if (vals.length > 1 && vals.every(v => !isNaN(n(v)))) return [...vals].sort((a, b) => n(a) - n(b));
+  return vals;
+}
 function _armarCatalogo(list) {
   const grupos = new Map();
   list.forEach(p => { if (p.variantGroup) (grupos.get(p.variantGroup) || grupos.set(p.variantGroup, []).get(p.variantGroup)).push(p); });
@@ -1280,7 +1289,7 @@ function _openModalZoom(imgEl) {
 function _varSelectorHTML(p, hs) {
   const nombres = (p.variant || []).map(e => e[0]);
   return `<div class="modal-variantes">${nombres.map(n => {
-    const valores = [...new Set(hs.map(v => _varValor(v, n)))];
+    const valores = _varOrden([...new Set(hs.map(v => _varValor(v, n)))]);
     const actual = _varValor(p, n);
     return `<div class="mv-opcion"><p class="mv-label">${_esc(n)}: <strong>${_esc(actual || '')}</strong></p><div class="mv-botones">${valores.map(val => {
       const exacta = hs.find(v => _varValor(v, n) === val && nombres.every(m => m === n || _varValor(v, m) === _varValor(p, m)));

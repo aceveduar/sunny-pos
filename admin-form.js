@@ -482,6 +482,11 @@ function toTitleCase(str) {
 function applyTitleCase(fieldId) {
   const el = document.getElementById(fieldId);
   if (el && el.value.trim()) el.value = toTitleCase(el.value);
+  // Variante de una prenda: la talla/color se queda como está ("CH", no "Ch")
+  if (fieldId === 'f-name' && el?.value) {
+    const vn = _varNombre(products.find(x => x.id === parseInt(document.getElementById('f-id')?.value)), el.value);
+    if (vn) el.value = vn.name;
+  }
 }
 
 // Limpia siglas técnicas de concentración de perfumes que confunden al cliente
@@ -690,7 +695,13 @@ async function saveProduct(addAnother = false) {
     if (!(await teConfirm({ title: 'Código de proveedor repetido', message: 'Este código de proveedor ya lo usa otro producto.\n¿Confirmas que quieres repetirlo de todos modos?', confirmText: 'Repetirlo' }))) return;
   }
 
-  const name = document.getElementById('f-name').value.trim();
+  let name = document.getElementById('f-name').value.trim();
+  // Variante de una prenda: el nombre siempre termina en su talla/color
+  // ("Blusa de lino · M · Negro"); lo de antes es el nombre de la prenda.
+  const _editVar = document.getElementById('f-id').value ? products.find(p => p.id === parseInt(document.getElementById('f-id').value)) : null;
+  const _vn = _varNombre(_editVar, name);
+  const _varBase = _vn ? _vn.base : null;
+  if (_vn) name = _vn.name;
   const price = parseFloat(document.getElementById('f-price').value) || 0;
   const image = _allImagesEdit[0] || document.getElementById('f-image').value.trim();
   const description = document.getElementById('f-description').value.trim();
@@ -736,7 +747,8 @@ async function saveProduct(addAnother = false) {
           return { ...item, name: prod?.name || item.name, image: prod?.image || item.image || null };
         })
       : null,
-    images: _allImagesEdit.length > 1 ? _allImagesEdit.slice(1) : null
+    images: _allImagesEdit.length > 1 ? _allImagesEdit.slice(1) : null,
+    ...(_varBase ? { variantBase: _varBase } : {})
   };
 
   // Auto-sincronizar out_of_stock con stock — el checkbox oculto puede quedar
@@ -767,6 +779,7 @@ async function saveProduct(addAnother = false) {
     kit_items: data.kitItems,
     images: data.images,
     is_archived: data.isArchived || false,
+    ...(_varBase ? { variant_base: _varBase } : {}),
     ...(!idVal ? { created_by: getCurrentUserEmail() } : {})
   };
 
@@ -803,10 +816,15 @@ async function saveProduct(addAnother = false) {
       // la principal -- una adicional reemplazada o quitada en el
       // formulario nunca se borraba de Drive, quedando huérfana ahí para
       // siempre.
+      // Tallas/colores: ofrecer lo común a toda la prenda antes de limpiar
+      // Drive (la foto vieja puede seguir en otras variantes).
+      if (_prev?.variantGroup) await _varPropagarEdicion(_prev, data);
       const oldImgs = [_prevImage, ...(_prev?.images || [])].filter(Boolean);
       const newImgs = [data.image, ...(data.images || [])].filter(Boolean);
       oldImgs.forEach(url => {
         if (newImgs.includes(url)) return;
+        // Otra variante (u otro producto) sigue usando esta foto
+        if (products.some(o => o.image === url || (o.images || []).includes(url))) return;
         const fid = _driveFileId(url);
         if (fid) _deleteDriveFile(fid);
       });
