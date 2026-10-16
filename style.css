@@ -933,3 +933,17 @@ body{font-feature-settings:"lnum" 1}
   .cart-sheet-handle{display:none}
 }
 
+/* ── Tallas y colores ── */
+.card-variantes{font-size:.78rem;color:var(--muted);margin:-2px 0 6px}
+.price-desde{font-family:'Inter',sans-serif;font-size:.72rem;font-weight:600;color:var(--muted)}
+.modal-variantes{display:flex;flex-direction:column;gap:14px;margin:12px 0 4px}
+.mv-label{font-size:.82rem;color:var(--muted);margin-bottom:8px}
+.mv-label strong{color:var(--charcoal);font-weight:700}
+.mv-botones{display:flex;flex-wrap:wrap;gap:8px}
+.mv-btn{min-width:48px;min-height:44px;padding:0 14px;border-radius:var(--radio-md);border:1.5px solid var(--border);background:var(--surface);
+  color:var(--charcoal);font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s}
+.mv-btn:hover{border-color:var(--charcoal)}
+.mv-btn.on{border-color:var(--charcoal);background:var(--ink);color:#fff}
+.mv-btn.agotada{color:var(--muted-light);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.035) 6px 7px);text-decoration:line-through}
+.mv-btn.agotada.on{background:var(--surface-soft);color:var(--muted);border-color:var(--muted-light)}
+.mv-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}

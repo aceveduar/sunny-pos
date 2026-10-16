@@ -44,6 +44,9 @@ function _fitPhoto(img) {
     if (Math.abs(ir - br) / br < 0.03) return;
     const c = document.createElement('canvas'); c.width = c.height = 48;
     const x = c.getContext('2d', { willReadFrequently: true });
+    // Fondo blanco primero: lo transparente (PNG/SVG, la imagen de "sin foto")
+    // se leía como negro y la ficha quedaba con el fondo negro.
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 48, 48);
     x.drawImage(img, 0, 0, 48, 48);
     const d = x.getImageData(0, 0, 48, 48).data;
     const sides = ir < br; // sobra espacio a los lados → columnas; si no, renglones
@@ -385,7 +388,7 @@ function showSkeleton() {
 // "cargando" para siempre sin un render() posterior).
 async function _fetchProductsList() {
   // Publicados con stock O apartados activos
-  const result = await _fetchAllPages('products?select=id,name,category,category_label,price,original_price,description,image,badge,badge_type,featured,out_of_stock,is_apartado,stock,images,kit_items&is_published=eq.true&category=neq.por_revisar&or=(out_of_stock.eq.false,is_apartado.eq.true)&order=position.asc,id.asc');
+  const result = await _fetchAllPages('products?select=id,name,category,category_label,price,original_price,description,image,badge,badge_type,featured,out_of_stock,is_apartado,stock,images,kit_items,variant_group,variant,variant_base&is_published=eq.true&category=neq.por_revisar&or=(out_of_stock.eq.false,is_apartado.eq.true,variant_group.not.is.null)&order=position.asc,id.asc');
   if (result.ok && Array.isArray(result.data) && result.data.length) {
     const list = result.data.map(p => ({
       id: p.id,
@@ -403,7 +406,10 @@ async function _fetchProductsList() {
       originalPrice: p.original_price,
       stock: p.stock,
       images: Array.isArray(p.images) ? p.images.map(_safeImg).filter(Boolean) : null,
-      kitItems: p.kit_items || null
+      kitItems: p.kit_items || null,
+      variantGroup: p.variant_group || null,
+      variant: Array.isArray(p.variant) ? p.variant : null,
+      variantBase: p.variant_base || null
     }));
     // Un kit siempre trae out_of_stock=false en BD; su disponibilidad son sus
     // componentes. Si alguno está agotado (o no se publica) no viene en esta
@@ -420,8 +426,51 @@ async function loadProducts() {
   showSkeleton();
   let list = null;
   try { list = await _fetchProductsList(); } catch { list = null; }
-  if (list === null) { products = []; _showCatalogError(); return; }
+  if (list === null) { products = []; _catalogo = []; _showCatalogError(); return; }
   products = list;
+  _catalogo = _armarCatalogo(products);
+}
+
+/* ── TALLAS Y COLORES ──
+   `products` tiene cada variante (el carrito, los kits y los pedidos usan la
+   variante exacta). `_catalogo` es lo que se MUESTRA: una tarjeta por prenda
+   (nombre sin talla, precio "desde", piezas sumadas) en el lugar de su primera
+   variante; las prendas sin ninguna variante disponible no se muestran. */
+let _catalogo = [];
+const _varValor = (p, nombre) => (p?.variant || []).find(e => e[0] === nombre)?.[1];
+const _varHermanas = p => p?.variantGroup ? products.filter(x => x.variantGroup === p.variantGroup) : [];
+function _armarCatalogo(list) {
+  const grupos = new Map();
+  list.forEach(p => { if (p.variantGroup) (grupos.get(p.variantGroup) || grupos.set(p.variantGroup, []).get(p.variantGroup)).push(p); });
+  const vistos = new Set(), out = [];
+  list.forEach(p => {
+    if (!p.variantGroup) { out.push(p); return; }
+    if (vistos.has(p.variantGroup)) return;
+    vistos.add(p.variantGroup);
+    const todas = grupos.get(p.variantGroup);
+    const libres = todas.filter(v => !isOos(v));
+    if (!libres.length) return;
+    const precios = libres.map(v => v.price);
+    const pMin = Math.min(...precios);
+    const rep = libres.find(v => v.price === pMin) || libres[0];
+    const mismoPrecio = precios.every(x => x === pMin);
+    out.push({
+      ...rep, name: rep.variantBase || rep.name, price: pMin,
+      originalPrice: mismoPrecio ? rep.originalPrice : null,
+      stock: libres.reduce((s, v) => s + (v.stock || 0), 0),
+      _variantes: todas, _desde: !mismoPrecio,
+    });
+  });
+  return out;
+}
+// "4 tallas · 2 colores"
+function _varResumen(vs) {
+  const nombres = (vs[0]?.variant || []).map(e => e[0]);
+  return nombres.map(n => {
+    const k = new Set(vs.map(v => _varValor(v, n))).size;
+    const nom = n.toLowerCase();
+    return `${k} ${k === 1 ? nom : (/[aeiou]$/.test(nom) ? nom + 's' : nom + 'es')}`;
+  }).join(' · ');
 }
 
 function _showCatalogError() {
@@ -676,13 +725,14 @@ function setSortOption(val) {
 function render() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
-  let list = products.filter(p => {
+  let list = _catalogo.filter(p => {
     const matchCat = catMatchesFilter(p.category, currentFilter);
     const groups = searchQuery ? searchQuery.split(',').map(g => g.trim().split(/\s+/).filter(Boolean)).filter(g => g.length) : [];
     const matchQ = !groups.length || groups.some(g => g.every(t =>
       _norm(p.name).includes(t) ||
       _norm(p.description).includes(t) ||
-      _norm(p.categoryLabel).includes(t)
+      _norm(p.categoryLabel).includes(t) ||
+      (p._variantes || []).some(v => _norm(v.name).includes(t))
     ));
     return matchCat && matchQ;
   });
@@ -784,12 +834,14 @@ function cardHTML(p, i = 99) {
 
   const priceHTML = pct > 0
     ? `<div class="product-price"><s class="price-before">$${p.originalPrice.toLocaleString('es-MX')}</s> $${p.price.toLocaleString('es-MX')}</div>`
-    : `<div class="product-price">$${p.price.toLocaleString('es-MX')}</div>`;
-  const lastPieceChip = (!oos && !apt && isLastPiece(p))
+    : `<div class="product-price">${p._desde ? '<span class="price-desde">Desde</span> ' : ''}$${p.price.toLocaleString('es-MX')}</div>`;
+  const variantesHTML = p._variantes ? `<p class="card-variantes">${_esc(_varResumen(p._variantes))}</p>` : '';
+  const lastPieceChip = (!oos && !apt && !p._variantes && isLastPiece(p))
     ? `<p class="card-last-piece">⚡ Última pieza</p>` : '';
   const buyBtn = apt
     ? `<button class="btn-buy btn-buy-oos" onclick="event.stopPropagation();whatsapp(${p.id},this)" style="background:var(--tint-amber-strong)">${WA_SVG} Consultar</button>`
     : oos ? `<button class="btn-buy btn-buy-oos" disabled>Agotado</button>`
+    : p._variantes ? `<button class="btn-buy btn-cart-add" onclick="event.stopPropagation();openModal(${p.id})">Elegir ${_esc(((p.variant || [])[0]?.[0] || 'opción').toLowerCase())}</button>`
     : `<button class="btn-buy btn-cart-add" onclick="event.stopPropagation();addToCartFromCard(${p.id},this)"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Agregar</button>`;
   return `
 <article class="product-card reveal${oos ? ' card-oos' : ''}" onclick="openModal(${p.id})">
@@ -799,7 +851,7 @@ function cardHTML(p, i = 99) {
   </div>
   <div class="product-body">
     <h3>${_esc(p.name)}</h3>
-    ${lastPieceChip}
+    ${variantesHTML}${lastPieceChip}
     <div class="product-footer">
       ${priceHTML}
       ${buyBtn}
@@ -812,7 +864,7 @@ function cardHTML(p, i = 99) {
 function renderHeroMobileStrip() {
   const container = document.getElementById('hero-mobile-strip');
   if (!container) return;
-  const items = products.filter(p => p.featured);
+  const items = _catalogo.filter(p => p.featured);
   if (!items.length) return;
   const cardHTML = p => `
 <div class="hms-card" onclick="openModal(${p.id})">
@@ -829,7 +881,7 @@ function renderHeroMobileStrip() {
 function renderHeroVisual() {
   const container = document.getElementById('hero-visual');
   if (!container) return;
-  const items = products.filter(p => p.featured).slice(0, 3);
+  const items = _catalogo.filter(p => p.featured).slice(0, 3);
   if (!items.length) return;
   container.innerHTML = items.map(p => `
 <div class="hc" onclick="openModal(${p.id})">
@@ -849,7 +901,7 @@ function renderNatura() {
   const wrap = document.getElementById('nc-wrap');
   if (!wrap) return;
   const cat = String(_T.catalogo?.categoria || '').trim();
-  const list = cat ? products.filter(p => catMatchesFilter(p.category || '', cat)).slice(0, 8) : [];
+  const list = cat ? _catalogo.filter(p => catMatchesFilter(p.category || '', cat)).slice(0, 8) : [];
   if (!list.length) {
     document.querySelector('.natura-carousel')?.style.setProperty('display','none');
     return;
@@ -925,12 +977,12 @@ function initFilters() {
 
   const roots = publicCategories.filter(c => !c.parent);
   const activeCats = roots.length
-    ? roots.filter(r => products.some(p => catMatchesFilter(p.category, r.code)))
-    : [...new Map(products.map(p => [p.category, { code: p.category, label: p.categoryLabel }])).values()];
+    ? roots.filter(r => _catalogo.some(p => catMatchesFilter(p.category, r.code)))
+    : [...new Map(_catalogo.map(p => [p.category, { code: p.category, label: p.categoryLabel }])).values()];
 
   container.innerHTML = `<button class="filter-btn active" data-filter="all">Todo</button>` +
     activeCats.map(r => {
-      const n = products.filter(p => catMatchesFilter(p.category, r.code)).length;
+      const n = _catalogo.filter(p => catMatchesFilter(p.category, r.code)).length;
       return `<button class="filter-btn" data-filter="${r.code}">${_esc(r.label)} <span class="filter-count">${n}</span></button>`;
     }).join('');
 
@@ -1115,9 +1167,11 @@ function initModal() {
 }
 
 function _modalNavigate(dir) {
-  const idx = products.findIndex(p => p.id === activeProduct?.id);
+  // Recorre prendas (una tarjeta por prenda), no cada talla/color
+  const g = activeProduct?.variantGroup;
+  const idx = _catalogo.findIndex(p => p.id === activeProduct?.id || (g && p.variantGroup === g));
   if (idx === -1) return;
-  const next = products[idx + dir];
+  const next = _catalogo[idx + dir];
   if (!next) return;
   const modal = document.querySelector('#modal-overlay .modal');
   if (modal) {
@@ -1219,9 +1273,39 @@ function _openModalZoom(imgEl) {
   requestAnimationFrame(() => fs.classList.add('open'));
 }
 
+// Botones de talla/color en la ficha. La ficha siempre muestra una variante
+// real (precio, piezas, carrito y WhatsApp de esa variante); tocar otra opción
+// abre la variante que corresponde. Tachadas = agotadas con las demás opciones
+// elegidas; si se tocan, se abre la más parecida que sí haya.
+function _varSelectorHTML(p, hs) {
+  const nombres = (p.variant || []).map(e => e[0]);
+  return `<div class="modal-variantes">${nombres.map(n => {
+    const valores = [...new Set(hs.map(v => _varValor(v, n)))];
+    const actual = _varValor(p, n);
+    return `<div class="mv-opcion"><p class="mv-label">${_esc(n)}: <strong>${_esc(actual || '')}</strong></p><div class="mv-botones">${valores.map(val => {
+      const exacta = hs.find(v => _varValor(v, n) === val && nombres.every(m => m === n || _varValor(v, m) === _varValor(p, m)));
+      const libre = !!exacta && !isOos(exacta);
+      const destino = libre ? exacta : (hs.find(v => _varValor(v, n) === val && !isOos(v)) || exacta);
+      const sel = val === actual;
+      return `<button type="button" class="mv-btn${sel ? ' on' : ''}${libre ? '' : ' agotada'}"${destino ? ` onclick="_varElegir(${destino.id})"` : ' disabled'} aria-pressed="${sel}"${libre ? '' : ` title="Agotada" aria-label="${_esc(val)}, agotada"`}>${_esc(val)}</button>`;
+    }).join('')}</div></div>`;
+  }).join('')}</div>`;
+}
+function _varElegir(id) {
+  if (id === activeProduct?.id) return;
+  const body = document.querySelector('#modal-overlay .modal-body');
+  const y = body ? body.scrollTop : 0;
+  openModal(id);
+  const nb = document.querySelector('#modal-overlay .modal-body');
+  if (nb) nb.scrollTop = y;
+}
+
 function openModal(id) {
   const p = products.find(x => x.id === id);
   if (!p) return;
+  const _hs = _varHermanas(p);
+  const _titulo = _hs.length ? (p.variantBase || p.name) : p.name;
+  const _selectorVar = _hs.length ? _varSelectorHTML(p, _hs) : '';
   activeProduct = p;
   _modalQty = 1;
   const oos = isOos(p);
@@ -1306,7 +1390,7 @@ function openModal(id) {
 
   const overlay = document.getElementById('modal-overlay');
   overlay.innerHTML = `
-<div class="modal" role="dialog" aria-modal="true" aria-label="${_esc(p.name)}">
+<div class="modal" role="dialog" aria-modal="true" aria-label="${_esc(_titulo)}">
   <div class="modal-img-wrap${hasGallery ? ' has-gallery' : ''}">
     ${galleryHTML}
     <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">✕</button>
@@ -1317,7 +1401,8 @@ function openModal(id) {
   <div class="modal-right">
     <div class="modal-body">
       <p class="modal-cat">${catDisplay}</p>
-      <h2 class="modal-title">${_esc(p.name)}</h2>
+      <h2 class="modal-title">${_esc(_titulo)}</h2>
+      ${_selectorVar}
       ${descHTML}
       ${kitHTML}
       ${urgencyText}

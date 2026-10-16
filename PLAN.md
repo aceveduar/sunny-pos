@@ -77,7 +77,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 1) Modelo en base + "Con tallas o colores" en Inventario (cuadrícula de piezas) + cuadrícula editable en la ficha.
 - [ ] 1b) Lista de Inventario agrupada por prenda (hoy cada variante es un renglón).
 - [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color).
-- [ ] 3) Tienda: una tarjeta por prenda con botones de talla/color.
+- [x] 3) Tienda: una tarjeta por prenda ("4 tallas · 2 colores", "Desde $X", "Elegir talla"); en la ficha, botones por opción con las agotadas tachadas; carrito y WhatsApp con la variante exacta.
 - [ ] 4) Reportes por talla.
 
 ## 8. Rapidez (máxima velocidad de carga)
