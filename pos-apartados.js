@@ -1360,9 +1360,13 @@ function openEditAptScanner() {
 function searchEditApt(q) {
   const res = document.getElementById('edit-apt-search-results');
   if (!q.trim()) { res.style.display = 'none'; return; }
-  const matches = products.filter(p =>
-    p.name.toLowerCase().includes(q.toLowerCase())
-  ).sort((a, b) => {
+  // Palabra por palabra y sin acentos: "lino m negro" encuentra "Blusa de lino · M · Negro"
+  const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const palabras = norm(q).split(/\s+/).filter(Boolean);
+  const matches = products.filter(p => {
+    const n = norm(p.name) + ' ' + (p.barcode || '');
+    return palabras.every(w => n.includes(w));
+  }).sort((a, b) => {
     const aOos = !_editAptCanAdd(a.id);
     const bOos = !_editAptCanAdd(b.id);
     return aOos - bOos;
