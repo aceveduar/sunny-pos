@@ -1168,13 +1168,12 @@ function renderAdditionalImages() {
       ? `<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--brand);color:var(--on-brand);font-size:.42rem;font-weight:700;padding:1px 5px;border-radius:var(--radio-md);white-space:nowrap;pointer-events:none;box-shadow:var(--sombra-1);display:flex;align-items:center;gap:2px"><svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Principal</span>`
       : '';
     const border = isMain ? '2px solid var(--brand)' : '1px solid var(--border)';
-    const btnStyle = 'width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;color:var(--charcoal);flex-shrink:0;touch-action:manipulation';
     const btnLeft  = i > 0
-      ? `<button type="button" onclick="event.stopPropagation();_aiMove(${i},-1)" ontouchend="event.preventDefault();event.stopPropagation();_aiMove(${i},-1)" style="${btnStyle}" title="Mover a la izquierda${i===1?' (→ Principal)':''}">‹</button>`
-      : `<span style="width:22px;flex-shrink:0"></span>`;
+      ? `<button type="button" onclick="event.stopPropagation();_aiMove(${i},-1)" ontouchend="event.preventDefault();event.stopPropagation();_aiMove(${i},-1)" class="ai-mov" title="Mover a la izquierda${i===1?' (→ Principal)':''}">‹</button>`
+      : `<span class="ai-mov-vacio"></span>`;
     const btnRight = i < total - 1
-      ? `<button type="button" onclick="event.stopPropagation();_aiMove(${i},1)" ontouchend="event.preventDefault();event.stopPropagation();_aiMove(${i},1)" style="${btnStyle}" title="${i===0?'Quitar de principal':'Mover a la derecha'}">›</button>`
-      : `<span style="width:22px;flex-shrink:0"></span>`;
+      ? `<button type="button" onclick="event.stopPropagation();_aiMove(${i},1)" ontouchend="event.preventDefault();event.stopPropagation();_aiMove(${i},1)" class="ai-mov" title="${i===0?'Quitar de principal':'Mover a la derecha'}">›</button>`
+      : `<span class="ai-mov-vacio"></span>`;
     return `
 <div draggable="true" data-ai="${i}"
   style="position:relative;flex-shrink:0;transition:opacity .15s,outline .15s;display:flex;flex-direction:column;align-items:center;gap:4px;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none"
@@ -1185,7 +1184,7 @@ function renderAdditionalImages() {
   ontouchstart="event.stopPropagation()">
   <div style="position:relative;margin-top:${isMain?'8':'2'}px">
     <img src="${url}" style="width:68px;height:68px;object-fit:contain;border-radius:var(--radio-sm);border:${border};background:var(--surface-soft);display:block;pointer-events:none;cursor:grab;-webkit-touch-callout:none;-webkit-user-drag:none" onerror="this.style.opacity='.3'">
-    <button type="button" onclick="removeAdditionalImage(${i})" ontouchend="event.preventDefault();removeAdditionalImage(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:var(--sombra-1);touch-action:manipulation">✕</button>
+    <button type="button" onclick="removeAdditionalImage(${i})" ontouchend="event.preventDefault();removeAdditionalImage(${i})" class="ai-del" aria-label="Quitar foto ${i + 1}">✕</button>
     ${mainBadge}${storageBadge}
   </div>
   <div style="display:flex;gap:3px">${btnLeft}${btnRight}</div>

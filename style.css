@@ -359,7 +359,7 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
    de toque real crece a ~40px con un ::after invisible, mismo hit-slop que
    .hi-del en Caja, para que siga siendo fácil de tocar en mobile. */
 .admin-link{opacity:.18;font-size:1rem;color:inherit!important;transition:opacity .25s;display:flex;align-items:center;position:relative}
-.admin-link::after{content:'';position:absolute;inset:-10px}
+.admin-link::after{content:'';position:absolute;inset:-14px}
 .admin-link:hover{opacity:.55}
 
 /* Botón compartir en modal */
@@ -953,4 +953,11 @@ body{font-feature-settings:"lnum" 1}
 .mv-con-foto .mv-btn img{width:66px;height:66px;object-fit:contain;background:#fff;border-radius:var(--radio-sm);display:block}
 .mv-con-foto .mv-btn.on{background:var(--surface);color:var(--charcoal);border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
 .mv-con-foto .mv-btn.agotada img{opacity:.45}
+
+/* ── Áreas de toque ≥44 px (scripts/pruebas/toques.py) ── */
+.nav-toggle,.cart-sheet-close{position:relative}
+.nav-toggle::after{content:'';position:absolute;inset:-6px}
+.nav-cart-btn::after,.cart-sheet-close::after{content:'';position:absolute;inset:-4px}
+.nav-logo{position:relative}
+.nav-logo::after{content:'';position:absolute;inset:-10px -4px}
 

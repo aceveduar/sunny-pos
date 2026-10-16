@@ -665,7 +665,7 @@ function _renderQV(p) {
     ? `<span style="color:var(--muted-light)">· Creado por ${_esc(_creatorFullName(p.createdBy))}</span>`
     : '';
   idEl.innerHTML = `<span style="font-family:monospace">ID #${p.id}</span>${p.barcode ? `<span style="font-family:monospace;color:var(--muted)">· ${_esc(p.barcode)}</span>` : ''}${p.supplierCode ? `<span style="font-family:monospace;color:var(--muted-light)">· prov. ${_esc(p.supplierCode)}</span>` : ''}${creatorEl}` +
-    ` <a href="#" onclick="event.preventDefault();openProductTimeline(${p.id},'${_esc(p.name).replace(/'/g,"\\'")}')" style="color:var(--brand-dark);font-weight:700;text-decoration:underline;font-family:inherit">${QV_ICO_CLOCK(11)} Ver historial</a>`;
+    ` <a href="#" onclick="event.preventDefault();openProductTimeline(${p.id},'${_esc(p.name).replace(/'/g,"\\'")}')" class="qv-link-historial">${QV_ICO_CLOCK(11)} Ver historial</a>`;
 
   // Botones de acción
   const btnEdit = can.editProduct

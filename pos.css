@@ -1268,3 +1268,16 @@ button,a{touch-action:manipulation}
   .apt-page-body > .apt-page-grid{grid-column:1 / -1}
 }
 
+/* ── Áreas de toque ≥44 px (scripts/pruebas/toques.py) ── */
+.pos-prod-add{position:relative}
+.pos-prod-add::after{content:'';position:absolute;inset:-6px}
+/* Chips en fila: el área crece solo hacia arriba y abajo (no invade al vecino) */
+.cat-chip{position:relative}
+.cat-chip{padding-top:8px;padding-bottom:8px}
+/* 30 px + 7 arriba y abajo = 44, dentro del relleno de 8 px de .cat-chip-bar (que recorta lo que se sale) */
+.cat-chip::after{content:'';position:absolute;inset:-7px -3px}
+.sd-close::after,.pos-preview-close::after{content:'';position:absolute;inset:-8px}
+.scan-close{position:relative}
+.scan-close::after{content:'';position:absolute;inset:-6px}
+@media(max-width:640px){ .pos-search-bar .btn{min-width:44px} }
+

@@ -1971,3 +1971,34 @@ label:has(> #f-is-kit){min-height:44px}
 .var-llego:placeholder-shown{border-style:dashed}
 .var-hay{display:block;text-align:center;font-size:.7rem;color:var(--muted);margin-top:2px}
 .var-llego-btn{margin-top:8px;width:100%}
+
+/* ── Áreas de toque ≥44 px (scripts/pruebas/toques.py) ── */
+.modal-close-btn,.cat-sheet-close,.dictate-btn{position:relative}
+.modal-close-btn::after{content:'';position:absolute;inset:-6px}
+.cat-sheet-close::after{content:'';position:absolute;inset:-8px}
+.qv-close::after{content:'';position:absolute;inset:-6px}
+.qv-img-nav::after{content:'';position:absolute;inset:0 -9px}
+.dictate-btn::after{content:'';position:absolute;inset:-11px -3px}
+.ai-del{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:var(--sombra-1);touch-action:manipulation}
+.ai-del::after{content:'';position:absolute;inset:-12px}
+.dtb-btn{position:relative}
+.dtb-btn{min-width:32px;justify-content:center}
+.dtb-btn::after{content:'';position:absolute;inset:-11px -6px}
+.btn-oferta-toggle{min-height:44px}
+.qv-btn{min-height:44px}
+/* Textos que se tocan para editar (nombre, precio, categoría, piezas) y "Ver historial" */
+.qv-editable,.qv-chip,.qv-cat-label{position:relative}
+.qv-editable::after,.qv-chip::after,.qv-cat-label::after{content:'';position:absolute;inset:-9px -2px}
+@media(max-width:640px){
+  /* Campos de 44 px (estaban en 38–42) */
+  .field input:not([type=checkbox]):not([type=radio]),.field select,.f-cat-btn,#search-input,#cat-filter-btn,#cat-sheet-search{min-height:44px}
+}
+.qv-link-historial{position:relative;color:var(--brand-dark);font-weight:700;text-decoration:underline;font-family:inherit}
+.qv-link-historial::after{content:'';position:absolute;inset:-15px -4px}
+/* Flechas para reordenar fotos: dos por miniatura (no caben dos de 44 de ancho);
+   44 de alto con el área extendida. Excepción de ancho en scripts/pruebas/toques.py */
+.ai-mov{position:relative;width:30px;height:30px;border-radius:var(--radio-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:var(--charcoal);flex-shrink:0;touch-action:manipulation}
+.ai-mov::after{content:'';position:absolute;inset:-7px -2px}
+.ai-mov-vacio{width:30px;flex-shrink:0}
+.dictate-btn.btn-clear-field::after{inset:-11px -5px}
+

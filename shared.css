@@ -345,3 +345,6 @@ body{font-feature-settings:"lnum" 1}
 .base-aviso button{position:relative;flex-shrink:0;width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
 .base-aviso button::after{content:"";position:absolute;inset:-6px}
 
+/* ── Áreas de toque ≥44 px sin cambiar el dibujo (::after invisible) ── */
+#notif-bell::after{content:'';position:absolute;inset:-10px}
+.tbn-icon{min-height:44px}
