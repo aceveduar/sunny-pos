@@ -1594,10 +1594,10 @@ function renderVariantes() {
     .sort((a, b) => b.qty - a.qty);
   const resurtirHTML = resurtir.length ? `<div class="vr-bloque vr-resurtir">
       <h3 class="vr-titulo">Se vendieron y ya no quedan</h3>
-      ${resurtir.slice(0, 8).map(x => `<div class="vr-agotada">
+      <div class="vr-agotadas">${resurtir.slice(0, 8).map(x => `<div class="vr-agotada">
         <span class="vr-agotada-nom">${_esc(x.p.name)}</span>
         <span class="vr-num">vendió ${x.qty}</span>
-      </div>`).join('')}
+      </div>`).join('')}</div>
       ${resurtir.length > 8 ? `<p class="vr-mas">y ${resurtir.length - 8} más</p>` : ''}
     </div>` : '';
   el.innerHTML = `<div class="vr-grid">${bloques}${resurtirHTML}</div>`;

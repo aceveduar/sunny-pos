@@ -513,4 +513,12 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
   .kpi-stat .kpi-sub{grid-column:1;grid-row:2;margin-top:0}
   .kpi-stat-value{grid-column:2;grid-row:1 / span 2;justify-content:flex-end;text-align:right}
 }
+/* Mapa del mes en pantallas anchas: casillas de 64 px de alto (cuadradas
+   medían ~170 px y el calendario ocupaba una pantalla entera) */
+@media(min-width:900px){
+  .cal-cell{aspect-ratio:auto;height:64px}
+}
+/* Tallas y colores: "Se vendieron y ya no quedan" a todo el ancho, en columnas */
+.vr-resurtir{grid-column:1 / -1;border-top:1px solid var(--border);padding-top:12px}
+.vr-resurtir .vr-agotadas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));column-gap:28px}
 
