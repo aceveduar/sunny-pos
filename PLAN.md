@@ -84,6 +84,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 4) Reportes (2026-10-16): tarjeta "Tallas y colores" (piezas por talla en su orden, por color, por número…, y "Se vendieron y ya no quedan"); Productos más vendidos suma cada prenda con su talla/color más vendida. Solo aparece si se vendió algo con variantes. Ventas demo: 25% prendas.
 - [x] 5) Juntar productos sueltos (2026-10-16): selección → Más acciones → "Juntar en una prenda" adivina nombre común, talla/número y color (corregibles), valida combinaciones repetidas; sirve también para sumar un suelto a una prenda. Ficha → Más → "Quitar de la prenda".
 - [x] 6) Etiquetas (2026-10-16, `admin-etiquetas.js`): ficha → Más → Etiquetas (prenda = todas sus variantes) y selección → Imprimir etiquetas. Hoja carta 3×10 (66.7×25.4 mm) o rollo térmico 50×25 mm; una por pieza o una de cada; EAN-13/Code 128 con JsBarcode; ofrece crear códigos faltantes. Falta probar en impresora real.
+- [x] 7) Cuadrícula → "Llegaron" (2026-10-16): sumar mercancía por talla/color (queda como recepción en Actividad). Caja: una tarjeta por prenda con cuadrícula para elegir talla y color.
 - [x] 4) Reportes por talla (ver 4 arriba).
 
 ## 8. Rapidez (máxima velocidad de carga)
