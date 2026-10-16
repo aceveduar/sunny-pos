@@ -736,7 +736,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_av) _av.textContent = _initial;
   } catch {}
   initDivider();
+  // Al instante: la última copia del catálogo guardada en este dispositivo; la
+  // fresca la reemplaza en ~1 s. El servidor valida stock y precio al cobrar.
+  const _cache = await _cacheGet('pos_products');
+  if (_cache?.rows?.length && !products.length) {
+    products = _cache.rows.map(_mapPosProduct);
+    try { setPosView(posView); showAllProducts(); } catch {}
+  }
+  const _t0 = Date.now();
   await Promise.all([loadProducts(), loadPosCategories(), loadTopProductsFromSales(), loadPosNameMap(), loadPosConfig(), loadPosRecentlyEdited()]);
+  // Si se cobró o editó algo mientras bajaba el catálogo, esa copia puede traer stock viejo
+  if (_lastPosWriteAt > _t0) await loadProducts();
   renderCategoryChips();
   setPosView(posView);
   _restoreCart();

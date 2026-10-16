@@ -489,7 +489,9 @@ function _posSessionEmailClaim() {
   } catch { return ''; }
 }
 
+let _lastPosWriteAt = 0;
 async function api(path, opts = {}) {
+  if (opts.method && opts.method !== 'GET') _lastPosWriteAt = Date.now();
   const _call = (tk) => _posFetchTimeout(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...opts,
     headers: {
@@ -1096,17 +1098,15 @@ async function loadProducts() {
   if (loadGeneration !== _productsLoadGeneration) return false;
   if (result.ok && Array.isArray(result.data)) {
     products = result.data.map(_mapPosProduct);
-    try {
-      localStorage.setItem('te_pos_products_cache', JSON.stringify(result.data));
-      localStorage.setItem('te_pos_products_cache_ts', Date.now());
-    } catch {}
+    _cacheSet('pos_products', { ts: Date.now(), rows: result.data });
+    try { localStorage.removeItem('te_pos_products_cache'); localStorage.removeItem('te_pos_products_cache_ts'); } catch {}  // copia vieja
   } else {
-    // Fallback: cargar desde caché local si no hay conexión
+    // Sin conexión: la última copia guardada
     try {
-      const cached = localStorage.getItem('te_pos_products_cache');
-      if (cached) {
-        products = JSON.parse(cached).map(_mapPosProduct);
-        const ts = parseInt(localStorage.getItem('te_pos_products_cache_ts') || '0');
+      const cache = await _cacheGet('pos_products');
+      if (cache?.rows?.length) {
+        products = cache.rows.map(_mapPosProduct);
+        const ts = cache.ts || 0;
         const mins = Math.round((Date.now() - ts) / 60000);
         const age = mins < 60 ? `${mins} min` : `${Math.round(mins/60)} h`;
         toast(`Sin conexión — catálogo de hace ${age}. Las ventas no se pueden registrar.`, 'error');
