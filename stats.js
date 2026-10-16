@@ -1424,8 +1424,10 @@ function renderCatChart() {
   sales.forEach(s => {
     if (!Array.isArray(s.items)) return;
     _realItems(s.items).forEach(item => {
-      const prod = products.find(p => +p.id === +item.id);
-      const cat = prod?.category_label || prod?.category || 'Otro';
+      const prod = _prodById().get(+item.id);
+      // Si el producto ya no existe, la categoría guardada en la venta (desde 2026-10-16)
+      const catGuardada = item.category && (categories.find(c => c.code === item.category)?.label || item.category);
+      const cat = prod?.category_label || prod?.category || catGuardada || 'Otro';
       catMap[cat] = (catMap[cat]||0) + (item.subtotal||0);
     });
   });
@@ -1549,7 +1551,8 @@ function renderVariantes() {
   const porOpcion = {};          // { Talla: { M: 12, … }, Color: { … } }
   const vendidas = new Map();    // id → piezas vendidas
   if (salesLoaded) sales.forEach(s => _realItems(s.items).forEach(item => {
-    const prod = byId.get(+item.id);
+    // Si el producto ya no existe, la talla/color guardada en la venta
+    const prod = byId.get(+item.id) || (Array.isArray(item.variant) ? { id: +item.id, variant_group: 'venta', variant: item.variant, name: item.name, is_archived: true } : null);
     if (!prod?.variant_group || !Array.isArray(prod.variant)) return;
     const qty = item.qty || 1;
     vendidas.set(prod.id, (vendidas.get(prod.id) || 0) + qty);

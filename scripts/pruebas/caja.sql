@@ -188,6 +188,12 @@ BEGIN
     RAISE EXCEPTION 'PRUEBA FALLÓ: la venta con tarjeta no quedó registrada como tarjeta';
   END IF;
   INSERT INTO _ok(prueba) VALUES ('Venta con tarjeta: se registra como tarjeta');
+  -- El renglón guarda la categoría (Reportes no depende de que el producto siga existiendo)
+  IF (SELECT items -> 0 ->> 'category' FROM public.sales WHERE id = (SELECT v::bigint FROM _ctx WHERE k='vtarjeta'))
+     IS DISTINCT FROM (SELECT category FROM public.products WHERE id = pid) THEN
+    RAISE EXCEPTION 'PRUEBA FALLÓ: el renglón de la venta no guardó la categoría';
+  END IF;
+  INSERT INTO _ok(prueba) VALUES ('La venta guarda la categoría de cada renglón');
   -- Stock: la venta se canceló (regresa), el apartado sigue reservando 1 y la de tarjeta se llevó 1
   SELECT stock INTO x FROM public.products WHERE id = pid;
   IF x <> stock0 - 2 THEN RAISE EXCEPTION 'PRUEBA FALLÓ: stock final % (esperado %)', x, stock0 - 2; END IF;

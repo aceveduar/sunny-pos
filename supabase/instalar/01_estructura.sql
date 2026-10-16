@@ -3826,8 +3826,12 @@ BEGIN
       'name', v_name,
       'price', v_price,
       'qty', v_qty,
-      'subtotal', round(v_price * v_qty, 2)
+      'subtotal', round(v_price * v_qty, 2),
+      'category', v_product.category
     );
+    IF v_product.variant_group IS NOT NULL THEN
+      v_normalized := v_normalized || jsonb_build_object('variant', v_product.variant, 'variant_base', v_product.variant_base);
+    END IF;
 
     -- Congela el precio real de catalogo cuando hubo override -- antes este
     -- dato se perdia por completo al llegar aqui, sin dejar rastro permanente.
@@ -4601,6 +4605,31 @@ BEGIN
       EXECUTE d;
     END IF;
   END LOOP;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- La venta guarda la categoría (y la talla/color) de cada renglón — 2026-10-16
+-- Antes, si el producto se borraba, Reportes mostraba su venta como "Otro".
+-- No se guarda el costo: las cajeras leen las ventas y el costo es interno.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE d text;
+BEGIN
+  SELECT pg_get_functiondef(p.oid) INTO d FROM pg_proc p
+   WHERE p.pronamespace = 'public'::regnamespace AND p.proname = 'te_snapshot_sale_items';
+  IF d IS NOT NULL AND position('''category'', v_product.category' IN d) = 0 THEN
+    d := replace(d, '''subtotal'', round(v_price * v_qty, 2)
+    );', '''subtotal'', round(v_price * v_qty, 2),
+      ''category'', v_product.category
+    );
+    IF v_product.variant_group IS NOT NULL THEN
+      v_normalized := v_normalized || jsonb_build_object(''variant'', v_product.variant, ''variant_base'', v_product.variant_base);
+    END IF;');
+    IF position('''category'', v_product.category' IN d) = 0 THEN
+      RAISE EXCEPTION 'te_snapshot_sale_items cambió: no se pudo agregar la categoría';
+    END IF;
+    EXECUTE d;
+  END IF;
 END $$;
 
 COMMIT;

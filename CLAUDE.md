@@ -199,7 +199,7 @@ Supabase no tiene respaldos en el plan gratis. `python scripts/respaldo.py` guar
 - **Inventario de Reportes** (Estado del inventario, Valor en venta, Rentabilidad, Por caducar) usa `_invProducts()`: sin archivados ni kits, mismos criterios que Inventario → Pendientes. `products` completo solo para nombres/categorías de ventas pasadas. Rentabilidad enlaza a `admin.html#pendiente=sin-costo` (Inventario abre con ese pendiente; sirve con cualquier clave de `_PEND_ITEMS`).
 - **Listas largas en celular** (Movimientos, Turnos, Apartados, Valor por categoría, Clientes): sin scroll interno; primeros renglones + "Ver todo / Ver menos" (`_mobileListExpanders`). En escritorio conservan su scroll interno.
 - Chart.js lee colores con `_cssVar()` (`_brand()`/`_brandA(a)` para el color de marca) y se repinta al cambiar el tema (MutationObserver). Mapa del mes: 5 tonos del color de marca.
-- Una venta guarda el renglón sin categoría: si el producto se borra, Reportes la muestra como "Otro" (mejora pendiente: guardar la categoría en el renglón).
+- Cada renglón de venta guarda `category` (y `variant`/`variant_base` si es talla/color) desde 2026-10-16 (`te_snapshot_sale_items`): si el producto se borra, Reportes usa eso. Las ventas anteriores sin el dato siguen saliendo como "Otro". El costo no se guarda en la venta (las cajeras leen `sales`).
 
 ---
 
