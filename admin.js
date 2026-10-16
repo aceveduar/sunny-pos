@@ -698,7 +698,9 @@ function _adminFetchTimeout(url, opts = {}, ms = 20000) {
   return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
+let _lastProductWriteAt = 0;
 async function supabaseApi(path, opts = {}) {
+  if (opts.method && opts.method !== 'GET' && /^(products|rpc\/)/.test(path)) _lastProductWriteAt = Date.now();
   const _call = (token) => _adminFetchTimeout(getSupabaseUrl() + '/rest/v1/' + path, {
     ...opts,
     headers: {
@@ -1121,8 +1123,20 @@ async function showApp() {
 
   _showAdminSkeleton();
 
+  // Al instante: la última copia guardada en este dispositivo (se reemplaza en
+  // cuanto llega la fresca, ~1-2 s después). Patrón de Shopify/Square.
+  const _cache = await _cacheGet('products');
+  if (_cache?.rows?.length && !products.length) {
+    products = _cache.rows.map(mapProduct);
+    try { renderStats(); setAdminView(currentAdminView); } catch {}
+  }
+
   // Todo a la vez: nada de esto depende de lo demás para descargarse
+  const _t0 = Date.now();
   await Promise.all([loadCategories(), loadAppConfig(), loadFlagged(), loadRecentlyEdited(), loadApartadosMap(), loadProductsFromSupabase()]);
+  // Si alguien guardó un cambio mientras bajaba la copia fresca, esa copia
+  // podría no traerlo: se pide de nuevo.
+  if (_lastProductWriteAt > _t0) await loadProductsFromSupabase();
   _syncFlagFilter();
   renderStats();
   _refreshCreatorFilter();
@@ -1236,18 +1250,16 @@ async function loadProductsFromSupabase() {
   const data = result.data;
   if (result.ok && Array.isArray(data) && data.length) {
     products = data.map(mapProduct);
-    try {
-      localStorage.setItem('te_products_cache', JSON.stringify(data));
-      localStorage.setItem('te_products_cache_ts', Date.now());
-    } catch {}
+    _cacheSet('products', { ts: Date.now(), rows: data });
+    try { localStorage.removeItem('te_products_cache'); localStorage.removeItem('te_products_cache_ts'); } catch {}  // copia vieja
     return;
   }
-  // Fallback: cargar desde caché local si no hay conexión
+  // Sin conexión: la última copia guardada
   try {
-    const cached = localStorage.getItem('te_products_cache');
-    if (cached) {
-      products = JSON.parse(cached).map(mapProduct);
-      const ts = parseInt(localStorage.getItem('te_products_cache_ts') || '0');
+    const cache = await _cacheGet('products');
+    if (cache?.rows?.length) {
+      products = cache.rows.map(mapProduct);
+      const ts = cache.ts || 0;
       const mins = Math.round((Date.now() - ts) / 60000);
       const age = mins < 60 ? `${mins} min` : `${Math.round(mins/60)} h`;
       toast(`Sin conexión — mostrando catálogo de hace ${age}`, 'error');

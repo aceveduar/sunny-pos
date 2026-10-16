@@ -1363,3 +1363,49 @@ document.addEventListener('DOMContentLoaded', () => {
   el.textContent = NEGOCIO.nombre;
   left.prepend(el);
 });
+
+/* ── Copia local en IndexedDB ────────────────────────────────────────────
+   Para abrir al instante con la última copia y sin conexión. localStorage se
+   llena con ~6,000 productos (5 MB); IndexedDB aguanta cientos de MB. Una base
+   por proyecto de Supabase (no mezclar negocios en el mismo dispositivo).
+   Nunca lanza: si el navegador no deja, devuelve null y la app sigue normal. */
+let _idbPromise = null;
+function _idbOpen() {
+  if (_idbPromise) return _idbPromise;
+  _idbPromise = new Promise((res, rej) => {
+    const ref = (window.NEGOCIO?.supabaseUrl || '').replace(/^https:\/\/|\.supabase\.co.*$/g, '') || 'local';
+    const r = indexedDB.open('sunnypos-' + ref, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('cache');
+    r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
+    r.onerror = () => rej(r.error);
+    r.onblocked = () => rej(new Error('idb bloqueada'));
+  });
+  _idbPromise.catch(() => { _idbPromise = null; });
+  return _idbPromise;
+}
+// Nunca esperar más de ~1 s a la copia local: si otra pestaña la tiene tomada
+// (o el navegador tarda), se sigue sin ella en vez de dejar la pantalla colgada.
+function _idbTimeout(p, ms = 1000) {
+  return Promise.race([p, new Promise(res => setTimeout(() => res(null), ms))]);
+}
+async function _cacheGet(key) {
+  try {
+    const db = await _idbTimeout(_idbOpen());
+    if (!db) return null;
+    return await _idbTimeout(new Promise(res => {
+      const q = db.transaction('cache').objectStore('cache').get(key);
+      q.onsuccess = () => res(q.result ?? null); q.onerror = () => res(null);
+    }));
+  } catch { return null; }
+}
+async function _cacheSet(key, value) {
+  try {
+    const db = await _idbTimeout(_idbOpen(), 3000);
+    if (!db) return;
+    await new Promise(res => {
+      const tx = db.transaction('cache', 'readwrite');
+      tx.objectStore('cache').put(value, key);
+      tx.oncomplete = res; tx.onerror = res; tx.onabort = res;
+    });
+  } catch {}
+}
