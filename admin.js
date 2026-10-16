@@ -1188,7 +1188,10 @@ function mapProduct(p) {
     createdAt: p.created_at || null,
     isArchived: p.is_archived || false,
     expiryDate: p.expiry_date || null,
-    supplierCode: p.supplier_code || null
+    supplierCode: p.supplier_code || null,
+    variantGroup: p.variant_group || null,
+    variant: p.variant || null,
+    variantBase: p.variant_base || null
   };
 }
 

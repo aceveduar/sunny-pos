@@ -88,6 +88,7 @@
       <button class="bmo-item" onclick="closeAddMenu();openForm()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Producto nuevo</button>
       <button class="bmo-item" id="add-menu-capture" onclick="closeAddMenu();openCaptureMode()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>Captura rápida</button>
       <button class="bmo-item" onclick="closeAddMenu();openKitBuilder()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Kit / Bundle</button>
+      <button class="bmo-item" onclick="closeAddMenu();openVariantBuilder()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Con tallas o colores</button>
       <button class="bmo-item" id="add-menu-recv" onclick="closeAddMenu();openRecvMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Recibir mercancía</button>
       <button class="bmo-item" id="add-menu-recv-ia" onclick="closeAddMenu();openRecvIaMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Recepción con IA</button>
     </div>
@@ -879,6 +880,49 @@
   </div>
 </div>
 
+
+<!-- VARIANTES: prenda con tallas/colores (admin-variantes.js) -->
+<div class="overlay" id="var-overlay" onclick="if(event.target===this)closeVariantBuilder()">
+  <div class="modal var-modal" role="dialog" aria-modal="true" aria-labelledby="var-title">
+    <div class="modal-head">
+      <h3 id="var-title">Con tallas o colores</h3>
+      <button class="modal-close-btn" onclick="closeVariantBuilder()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="var-top">
+        <label class="var-foto" for="var-foto-input" title="Foto (opcional)">
+          <img id="var-foto-img" alt="" hidden>
+          <span id="var-foto-ph" class="var-foto-ph"><svg width="22" height="22" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Foto</span>
+          <button type="button" id="var-foto-quitar" class="var-foto-quitar" hidden onclick="event.preventDefault();_varQuitarFoto()" aria-label="Quitar foto">✕</button>
+        </label>
+        <input type="file" id="var-foto-input" accept="image/*" hidden onchange="_varFoto(this)">
+        <div class="field var-top-name">
+          <label for="var-name">Nombre (sin talla ni color)</label>
+          <input type="text" id="var-name" placeholder="Ej: Blusa de lino" maxlength="120" onblur="applyTitleCase('var-name')">
+        </div>
+      </div>
+      <div class="field">
+        <label for="var-category">Categoría</label>
+        <select id="var-category" onchange="_varCambioCategoria()"></select>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="var-price">Precio de venta</label><input type="number" id="var-price" min="0" step="1" inputmode="decimal" placeholder="$0"></div>
+        <div class="field"><label for="var-cost">Costo <span class="var-opt">opcional</span></label><input type="number" id="var-cost" min="0" step="1" inputmode="decimal" placeholder="$0"></div>
+      </div>
+      <p class="form-section">Opciones</p>
+      <div id="var-opciones"></div>
+      <p class="form-section">Piezas de cada una</p>
+      <div class="var-grid-wrap" id="var-grid"></div>
+      <label class="checkbox-row" id="var-publish-row"><input type="checkbox" id="var-publish"> Publicar en la Tienda</label>
+    </div>
+    <div class="modal-foot">
+      <span class="var-total" id="var-total"></span>
+      <button class="btn btn-outline" onclick="closeVariantBuilder()">Cancelar</button>
+      <button class="btn btn-gold" id="var-save" onclick="saveVariantes()">Crear</button>
+    </div>
+  </div>
+</div>
+
 <script src="admin.js"></script>
 <script src="admin-render.js"></script>
 <script src="admin-images.js"></script>
@@ -891,6 +935,7 @@
 <script src="admin-capture.js"></script>
 <script src="admin-qv.js"></script>
 <script src="admin-kit-builder.js"></script>
+<script src="admin-variantes.js"></script>
 <!-- COMPARE ZOOM: split fullscreen -->
 <div id="cmp-zoom" onclick="closeCmpZoom()">
   <button id="cmp-zoom-close" onclick="event.stopPropagation();closeCmpZoom()">✕</button>

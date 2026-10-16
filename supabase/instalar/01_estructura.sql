@@ -18,7 +18,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FU
 CREATE SEQUENCE IF NOT EXISTS public.activity_log_id_seq AS integer START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 CREATE SEQUENCE IF NOT EXISTS public.products_id_seq AS bigint START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;
 CREATE SEQUENCE IF NOT EXISTS public.sales_id_seq AS bigint START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;
-CREATE SEQUENCE IF NOT EXISTS public.usage_log_id_seq AS integer START WITH 1 INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 -- ======================================================================
 -- Tablas
@@ -30,7 +29,7 @@ CREATE TABLE public.activity_log (
   action text NOT NULL,
   summary text NOT NULL,
   meta jsonb,
-  created_at timestamp with time zone DEFAULT now()
+  created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.cash_shift_expenses (
@@ -79,7 +78,7 @@ CREATE TABLE public.client_errors (
 CREATE TABLE public.config (
   id text NOT NULL,
   value text NOT NULL,
-  updated_at timestamp with time zone DEFAULT now()
+  updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.customers (
@@ -130,30 +129,33 @@ CREATE TABLE public.products (
   image text NOT NULL,
   badge text,
   badge_type text,
-  featured boolean DEFAULT false,
-  out_of_stock boolean DEFAULT false,
+  featured boolean DEFAULT false NOT NULL,
+  out_of_stock boolean DEFAULT false NOT NULL,
   original_price numeric,
-  "position" integer DEFAULT 0,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
+  "position" integer DEFAULT 0 NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
   barcode text,
   stock integer DEFAULT 0 NOT NULL,
   cost numeric,
-  is_published boolean DEFAULT true,
+  is_published boolean DEFAULT false NOT NULL,
   notes text,
   kit_items jsonb,
   images jsonb,
-  is_apartado boolean DEFAULT false,
+  is_apartado boolean DEFAULT false NOT NULL,
   created_by text,
-  is_archived boolean DEFAULT false,
+  is_archived boolean DEFAULT false NOT NULL,
   expiry_date date,
-  supplier_code text
+  supplier_code text,
+  variant_group uuid,
+  variant jsonb,
+  variant_base text
 );
 
 CREATE TABLE public.recently_edited (
   product_id integer NOT NULL,
   user_email text,
-  edited_at timestamp with time zone DEFAULT now()
+  edited_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.sale_payments (
@@ -176,7 +178,7 @@ CREATE TABLE public.sale_payments (
 
 CREATE TABLE public.sales (
   id bigint DEFAULT nextval('sales_id_seq'::regclass) NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
   total numeric NOT NULL,
   items jsonb NOT NULL,
   discount numeric DEFAULT 0,
@@ -200,12 +202,24 @@ CREATE TABLE public.sales (
   saldo_favor numeric DEFAULT 0 NOT NULL
 );
 
-CREATE TABLE public.usage_log (
-  id integer DEFAULT nextval('usage_log_id_seq'::regclass) NOT NULL,
-  event text NOT NULL,
-  user_email text,
-  payload jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone DEFAULT now()
+CREATE TABLE public.team_notice_reads (
+  notice_id bigint NOT NULL,
+  user_email text NOT NULL,
+  read_at timestamp with time zone DEFAULT now() NOT NULL,
+  dismissed_at timestamp with time zone
+);
+
+CREATE TABLE public.team_notices (
+  id bigint DEFAULT nextval('team_notices_id_seq'::regclass) NOT NULL,
+  title text NOT NULL,
+  body text DEFAULT ''::text NOT NULL,
+  help_query text,
+  audience text DEFAULT 'todos'::text NOT NULL,
+  until date NOT NULL,
+  active boolean DEFAULT true NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.user_pins (
@@ -217,7 +231,7 @@ CREATE TABLE public.user_pins (
 ALTER SEQUENCE public.activity_log_id_seq OWNED BY public.activity_log.id;
 ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
 ALTER SEQUENCE public.sales_id_seq OWNED BY public.sales.id;
-ALTER SEQUENCE public.usage_log_id_seq OWNED BY public.usage_log.id;
+ALTER SEQUENCE public.team_notices_id_seq OWNED BY public.team_notices.id;
 
 -- ======================================================================
 -- Llaves, únicos y restricciones
@@ -227,6 +241,7 @@ ALTER TABLE public.activity_log ADD CONSTRAINT activity_log_pkey PRIMARY KEY (id
 ALTER TABLE public.cash_shift_expenses ADD CONSTRAINT cash_shift_expenses_amount_check CHECK ((amount > (0)::numeric));
 ALTER TABLE public.cash_shift_expenses ADD CONSTRAINT cash_shift_expenses_kind_check CHECK ((kind = ANY (ARRAY['gasto'::text, 'ingreso'::text, 'retiro'::text])));
 ALTER TABLE public.cash_shift_expenses ADD CONSTRAINT cash_shift_expenses_pkey PRIMARY KEY (id);
+ALTER TABLE public.cash_shifts ADD CONSTRAINT cash_shifts_fondo_check CHECK ((fondo_inicial >= (0)::numeric));
 ALTER TABLE public.cash_shifts ADD CONSTRAINT cash_shifts_pkey PRIMARY KEY (id);
 ALTER TABLE public.cash_shifts ADD CONSTRAINT cash_shifts_status_check CHECK ((status = ANY (ARRAY['abierto'::text, 'cerrado'::text, 'cerrado_auto'::text])));
 ALTER TABLE public.client_errors ADD CONSTRAINT client_errors_pkey PRIMARY KEY (id);
@@ -235,17 +250,31 @@ ALTER TABLE public.customers ADD CONSTRAINT customers_pkey PRIMARY KEY (id);
 ALTER TABLE public.permission_overrides ADD CONSTRAINT permission_overrides_pkey PRIMARY KEY (id);
 ALTER TABLE public.pos_rpc_requests ADD CONSTRAINT pos_rpc_requests_pkey PRIMARY KEY (request_id);
 ALTER TABLE public.product_changes ADD CONSTRAINT product_changes_pkey PRIMARY KEY (id);
+ALTER TABLE public.products ADD CONSTRAINT products_badge_type_check CHECK (((badge_type IS NULL) OR (badge_type = ANY (ARRAY['best'::text, 'new'::text, 'promo'::text, 'natura'::text]))));
+ALTER TABLE public.products ADD CONSTRAINT products_cost_check CHECK (((cost IS NULL) OR (cost >= (0)::numeric)));
+ALTER TABLE public.products ADD CONSTRAINT products_original_price_check CHECK (((original_price IS NULL) OR (original_price >= (0)::numeric)));
 ALTER TABLE public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+ALTER TABLE public.products ADD CONSTRAINT products_price_check CHECK ((price >= (0)::numeric));
+ALTER TABLE public.products ADD CONSTRAINT products_stock_check CHECK ((stock >= 0));
+ALTER TABLE public.products ADD CONSTRAINT products_variant_check CHECK (((variant_group IS NULL) OR ((jsonb_typeof(variant) = 'array'::text) AND (variant_base IS NOT NULL) AND (kit_items IS NULL))));
 ALTER TABLE public.recently_edited ADD CONSTRAINT recently_edited_pkey PRIMARY KEY (product_id);
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_amount_check CHECK ((((kind = 'payment'::text) AND (amount > (0)::numeric)) OR ((kind = 'refund'::text) AND (amount < (0)::numeric)) OR ((kind = 'adjustment'::text) AND (amount <> (0)::numeric))));
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_amount_finite_check CHECK (((amount)::text <> ALL (ARRAY['NaN'::text, 'Infinity'::text, '-Infinity'::text])));
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_kind_check CHECK ((kind = ANY (ARRAY['payment'::text, 'refund'::text, 'adjustment'::text])));
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_method_check CHECK ((method = ANY (ARRAY['efectivo'::text, 'transferencia'::text, 'unknown'::text])));
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_pkey PRIMARY KEY (id);
+ALTER TABLE public.sales ADD CONSTRAINT sales_discount_check CHECK (((discount IS NULL) OR (discount >= (0)::numeric)));
 ALTER TABLE public.sales ADD CONSTRAINT sales_origin_type_check CHECK ((origin_type = ANY (ARRAY['venta'::text, 'apartado'::text])));
 ALTER TABLE public.sales ADD CONSTRAINT sales_pkey PRIMARY KEY (id);
+ALTER TABLE public.sales ADD CONSTRAINT sales_saldo_favor_check CHECK ((saldo_favor >= (0)::numeric));
 ALTER TABLE public.sales ADD CONSTRAINT sales_status_check CHECK ((status = ANY (ARRAY['activo'::text, 'liquidado'::text, 'cancelado'::text])));
-ALTER TABLE public.usage_log ADD CONSTRAINT usage_log_pkey PRIMARY KEY (id);
+ALTER TABLE public.sales ADD CONSTRAINT sales_total_check CHECK ((total >= (0)::numeric));
+ALTER TABLE public.team_notice_reads ADD CONSTRAINT team_notice_reads_pkey PRIMARY KEY (notice_id, user_email);
+ALTER TABLE public.team_notices ADD CONSTRAINT team_notices_audience_check CHECK ((audience = ANY (ARRAY['todos'::text, 'caja'::text, 'inventario'::text])));
+ALTER TABLE public.team_notices ADD CONSTRAINT team_notices_body_check CHECK ((char_length(body) <= 280));
+ALTER TABLE public.team_notices ADD CONSTRAINT team_notices_help_query_check CHECK (((help_query IS NULL) OR (char_length(help_query) <= 60)));
+ALTER TABLE public.team_notices ADD CONSTRAINT team_notices_pkey PRIMARY KEY (id);
+ALTER TABLE public.team_notices ADD CONSTRAINT team_notices_title_check CHECK (((char_length(btrim(title)) >= 1) AND (char_length(btrim(title)) <= 60)));
 ALTER TABLE public.user_pins ADD CONSTRAINT user_pins_pkey PRIMARY KEY (email);
 
 -- ======================================================================
@@ -256,6 +285,7 @@ ALTER TABLE public.cash_shift_expenses ADD CONSTRAINT cash_shift_expenses_shift_
 ALTER TABLE public.pos_rpc_requests ADD CONSTRAINT pos_rpc_requests_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL;
 ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE RESTRICT;
 ALTER TABLE public.sales ADD CONSTRAINT sales_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL;
+ALTER TABLE public.team_notice_reads ADD CONSTRAINT team_notice_reads_notice_id_fkey FOREIGN KEY (notice_id) REFERENCES team_notices(id) ON DELETE CASCADE;
 
 -- ======================================================================
 -- Funciones
@@ -1987,6 +2017,39 @@ END;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.rls_auto_enable()
+ RETURNS event_trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog'
+AS $function$
+DECLARE
+  cmd record;
+  tbl name;
+BEGIN
+  FOR cmd IN
+    SELECT *
+    FROM pg_event_trigger_ddl_commands()
+    WHERE command_tag IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
+      AND object_type IN ('table','partitioned table')
+  LOOP
+     IF cmd.schema_name IS NOT NULL AND cmd.schema_name IN ('public') AND cmd.schema_name NOT IN ('pg_catalog','information_schema') AND cmd.schema_name NOT LIKE 'pg_toast%' AND cmd.schema_name NOT LIKE 'pg_temp%' THEN
+      BEGIN
+        SELECT c.relname INTO tbl FROM pg_catalog.pg_class c WHERE c.oid = cmd.objid;
+        EXECUTE format('alter table if exists %I.%I enable row level security', cmd.schema_name, tbl);
+        RAISE LOG 'rls_auto_enable: enabled RLS on %', cmd.object_identity;
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE LOG 'rls_auto_enable: failed to enable RLS on %', cmd.object_identity;
+      END;
+     ELSE
+        RAISE LOG 'rls_auto_enable: skip % (either system schema or not in enforced list: %.)', cmd.object_identity, cmd.schema_name;
+     END IF;
+  END LOOP;
+END;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.te_activity_log_stamp()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -2586,334 +2649,6 @@ AS $function$
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.te_libreta_apartado_create(p_request_id uuid, p_name text, p_phone text DEFAULT NULL::text, p_total numeric DEFAULT NULL::numeric, p_balance numeric DEFAULT NULL::numeric, p_payments jsonb DEFAULT '[]'::jsonb, p_opened_on date DEFAULT NULL::date, p_due_date date DEFAULT NULL::date, p_note text DEFAULT NULL::text, p_photo text DEFAULT NULL::text, p_override_tickets uuid[] DEFAULT NULL::uuid[])
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
-AS $function$
-DECLARE
-  v_operation   constant text := 'libreta_apartado_create';
-  v_cached      jsonb;
-  v_response    jsonb;
-  v_name        text := NULLIF(btrim(p_name), '');
-  v_phone       text := NULLIF(regexp_replace(COALESCE(p_phone, ''), '\D', '', 'g'), '');
-  v_note        text := NULLIF(btrim(p_note), '');
-  v_photo       text := NULLIF(btrim(p_photo), '');
-  v_payments    jsonb := CASE WHEN jsonb_typeof(p_payments) = 'array' THEN p_payments ELSE '[]'::jsonb END;
-  v_paid        numeric := 0;
-  v_total       numeric;
-  v_balance     numeric;
-  v_today       date := (now() AT TIME ZONE 'America/Mexico_City')::date;
-  v_created_at  timestamptz;
-  v_customer    text;
-  v_customer_id bigint;
-  v_items       jsonb;
-  v_sale_id     bigint;
-  v_entry       record;
-  v_line        smallint := 0;
-  v_authorized_by text;
-  v_actor_email text := lower(auth.jwt() ->> 'email');
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'No autenticado';
-  END IF;
-  IF NOT public.te_permission_or_override('canEditApartado', p_override_tickets) THEN
-    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Sin permiso para registrar apartados de libreta';
-  END IF;
-
-  v_cached := public.te_rpc_replay(p_request_id, v_operation);
-  IF v_cached IS NOT NULL THEN RETURN v_cached; END IF;
-
-  IF NOT public.te_has_permission('canEditApartado') THEN
-    v_authorized_by := public.te_consume_matching_override('canEditApartado', p_override_tickets);
-    IF v_authorized_by IS NULL THEN
-      RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Autorización inválida o expirada';
-    END IF;
-  END IF;
-
-  PERFORM set_config('sunnypos.rpc_v2', 'on', true);
-
-  IF v_name IS NULL THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Falta el nombre de la clienta';
-  END IF;
-  IF char_length(v_name) > 80 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'El nombre es demasiado largo (máximo 80 caracteres)';
-  END IF;
-  IF v_phone IS NOT NULL AND length(v_phone) <> 10 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Teléfono inválido: deben ser 10 dígitos';
-  END IF;
-  IF v_note IS NOT NULL AND char_length(v_note) > 300 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'La nota es demasiado larga (máximo 300 caracteres)';
-  END IF;
-  -- La foto se pinta en src="…": solo URLs https sin comillas/espacios.
-  IF v_photo IS NOT NULL AND v_photo !~ '^https://[^\s"''<>]+$' THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Foto inválida';
-  END IF;
-  IF p_opened_on IS NOT NULL AND (p_opened_on > v_today OR p_opened_on < DATE '2015-01-01') THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'La fecha del apartado no puede ser futura';
-  END IF;
-  IF jsonb_array_length(v_payments) > 60 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Demasiados abonos';
-  END IF;
-
-  -- Cada abono: monto > 0 con centavos a lo más y fecha opcional no futura.
-  FOR v_entry IN
-    SELECT public.te_try_numeric(x.item ->> 'amount') AS amount, x.item ->> 'date' AS raw_date
-    FROM jsonb_array_elements(v_payments) AS x(item)
-  LOOP
-    IF v_entry.amount IS NULL OR NOT public.te_numeric_is_finite(v_entry.amount)
-       OR v_entry.amount <= 0 OR round(v_entry.amount, 2) <> v_entry.amount THEN
-      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Hay un abono con monto inválido';
-    END IF;
-    IF NULLIF(v_entry.raw_date, '') IS NOT NULL THEN
-      IF v_entry.raw_date !~ '^\d{4}-\d{2}-\d{2}$' OR v_entry.raw_date::date > v_today THEN
-        RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Hay un abono con fecha inválida';
-      END IF;
-    END IF;
-    v_paid := v_paid + v_entry.amount;
-  END LOOP;
-
-  IF p_total IS NOT NULL THEN
-    v_total := round(p_total, 2);
-    IF NOT public.te_numeric_is_finite(v_total) OR v_total <= 0 THEN
-      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'El total debe ser mayor a cero';
-    END IF;
-    IF v_paid >= v_total THEN
-      RAISE EXCEPTION USING ERRCODE = '22023',
-        MESSAGE = 'Los abonos cubren todo el total: ese apartado ya está pagado y no hace falta pasarlo';
-    END IF;
-  ELSE
-    IF jsonb_array_length(v_payments) > 0 THEN
-      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Para anotar abonos hace falta el total del apartado';
-    END IF;
-    v_total := round(COALESCE(p_balance, 0), 2);
-    IF NOT public.te_numeric_is_finite(v_total) OR v_total <= 0 THEN
-      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Falta cuánto debe';
-    END IF;
-  END IF;
-  v_balance := v_total - v_paid;
-
-  v_customer := v_name || CASE WHEN v_phone IS NOT NULL THEN ' · 📱 ' || v_phone ELSE '' END;
-  IF v_phone IS NOT NULL THEN
-    v_customer_id := NULLIF(public.te_find_or_create_customer(v_name, v_phone) ->> 'id', '')::bigint;
-  END IF;
-
-  -- Mediodía de Ciudad de México: el día queda bien en cualquier zona.
-  v_created_at := CASE
-    WHEN p_opened_on IS NOT NULL THEN (p_opened_on + time '12:00') AT TIME ZONE 'America/Mexico_City'
-    ELSE now()
-  END;
-
-  v_items := jsonb_build_array(jsonb_build_object(
-    'libreta', true,
-    'name', 'Apartado de libreta',
-    'price', v_total,
-    'qty', 1,
-    'subtotal', v_total,
-    'nota', v_note,
-    'foto', v_photo,
-    'fecha_apartado', p_opened_on
-  ));
-
-  INSERT INTO public.sales (
-    created_at, total, items, discount, payment_method, note, type, paid_amount,
-    customer, customer_id, due_date, seller_email, abonos,
-    origin_type, status, liquidated_at, last_payment_at, updated_at, version
-  ) VALUES (
-    v_created_at, v_total, v_items, NULL, 'efectivo', v_note, 'apartado', v_paid,
-    v_customer, v_customer_id, p_due_date, v_actor_email, NULL,
-    'apartado', 'activo', NULL, NULL, now(), 0
-  )
-  RETURNING id INTO v_sale_id;
-
-  FOR v_entry IN
-    SELECT public.te_try_numeric(x.item ->> 'amount') AS amount,
-           NULLIF(x.item ->> 'date', '')::date AS paid_on,
-           x.ord
-    FROM jsonb_array_elements(v_payments) WITH ORDINALITY AS x(item, ord)
-    ORDER BY x.ord
-  LOOP
-    v_line := v_line + 1;
-    INSERT INTO public.sale_payments (
-      sale_id, request_id, request_line, kind, amount, method, paid_at,
-      collected_by, collected_by_email, is_estimated, source, meta
-    ) VALUES (
-      v_sale_id, p_request_id, v_line, 'payment', round(v_entry.amount, 2), 'unknown', NULL,
-      NULL, NULL, true, 'libreta',
-      jsonb_build_object('fecha', v_entry.paid_on, 'orden', v_entry.ord, 'registrado_por', v_actor_email)
-    );
-  END LOOP;
-
-  PERFORM public.te_log_activity(
-    'apartado_libreta',
-    format('Pasó de la libreta el apartado de %s — debe $%s', v_name, v_balance),
-    jsonb_build_object(
-      'id', v_sale_id, 'customer', v_name, 'total', v_total, 'pagado', v_paid,
-      'pendiente', v_balance, 'abonos', jsonb_array_length(v_payments),
-      'fecha_apartado', p_opened_on, 'dueDate', p_due_date, 'nota', v_note,
-      'foto', v_photo IS NOT NULL, 'authorized_by', v_authorized_by,
-      'request_id', p_request_id
-    )
-  );
-
-  v_response := jsonb_build_object(
-    'ok', true,
-    'operation', v_operation,
-    'request_id', p_request_id,
-    'sale', jsonb_build_object(
-      'id', v_sale_id, 'origin_type', 'apartado', 'status', 'activo', 'type', 'apartado',
-      'total', v_total, 'paid_amount', v_paid, 'remaining', v_balance, 'version', 0
-    )
-  );
-  PERFORM public.te_rpc_store(p_request_id, v_operation, v_sale_id, v_response);
-  RETURN v_response;
-END;
-$function$
-;
-
-CREATE OR REPLACE FUNCTION public.te_libreta_apartado_edit(p_request_id uuid, p_sale_id bigint, p_expected_version bigint, p_name text DEFAULT NULL::text, p_phone text DEFAULT NULL::text, p_due_date date DEFAULT NULL::date, p_note text DEFAULT NULL::text, p_balance numeric DEFAULT NULL::numeric, p_override_tickets uuid[] DEFAULT NULL::uuid[])
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
-AS $function$
-DECLARE
-  v_operation   constant text := 'libreta_apartado_edit';
-  v_cached      jsonb;
-  v_response    jsonb;
-  v_sale        public.sales%ROWTYPE;
-  v_old_name    text;
-  v_old_tel     text;
-  v_new_name    text;
-  v_new_tel     text;
-  v_note        text;
-  v_paid        numeric;
-  v_old_balance numeric;
-  v_balance     numeric;
-  v_total       numeric;
-  v_items       jsonb;
-  v_changes     text[] := ARRAY[]::text[];
-  v_authorized_by text;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'No autenticado';
-  END IF;
-  IF NOT public.te_permission_or_override('canEditApartado', p_override_tickets) THEN
-    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Sin permiso para editar apartados';
-  END IF;
-
-  v_cached := public.te_rpc_replay(p_request_id, v_operation);
-  IF v_cached IS NOT NULL THEN RETURN v_cached; END IF;
-
-  IF NOT public.te_has_permission('canEditApartado') THEN
-    v_authorized_by := public.te_consume_matching_override('canEditApartado', p_override_tickets);
-    IF v_authorized_by IS NULL THEN
-      RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Autorización inválida o expirada';
-    END IF;
-  END IF;
-
-  PERFORM set_config('sunnypos.rpc_v2', 'on', true);
-
-  SELECT * INTO v_sale FROM public.sales WHERE id = p_sale_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Apartado no encontrado';
-  END IF;
-  IF p_expected_version IS NULL OR p_expected_version <> v_sale.version THEN
-    RAISE EXCEPTION USING ERRCODE = '40001', MESSAGE = 'El apartado cambió en otro dispositivo; vuelve a cargarlo';
-  END IF;
-  IF NOT public.te_sale_is_libreta(v_sale.items) THEN
-    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Este apartado no es de libreta';
-  END IF;
-  IF v_sale.origin_type <> 'apartado' OR v_sale.status <> 'activo' OR v_sale.cancelled_at IS NOT NULL THEN
-    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Solo se puede editar un apartado activo';
-  END IF;
-
-  v_old_name := COALESCE(NULLIF(split_part(v_sale.customer, ' · 📱 ', 1), ''), 'Cliente');
-  v_old_tel  := NULLIF(split_part(v_sale.customer, ' · 📱 ', 2), '');
-  v_new_name := COALESCE(NULLIF(btrim(p_name), ''), v_old_name);
-  IF char_length(v_new_name) > 80 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'El nombre es demasiado largo (máximo 80 caracteres)';
-  END IF;
-  v_new_tel := v_old_tel;
-  IF p_phone IS NOT NULL THEN
-    v_new_tel := NULLIF(regexp_replace(p_phone, '\D', '', 'g'), '');
-    IF v_new_tel IS NOT NULL AND length(v_new_tel) <> 10 THEN
-      RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Teléfono inválido: deben ser 10 dígitos';
-    END IF;
-  END IF;
-  v_note := CASE WHEN p_note IS NULL THEN v_sale.note ELSE NULLIF(btrim(p_note), '') END;
-  IF v_note IS NOT NULL AND char_length(v_note) > 300 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'La nota es demasiado larga (máximo 300 caracteres)';
-  END IF;
-
-  v_paid := round(COALESCE(v_sale.paid_amount, 0), 2);
-  v_old_balance := round(v_sale.total - v_paid, 2);
-  v_balance := CASE WHEN p_balance IS NULL THEN v_old_balance ELSE round(p_balance, 2) END;
-  IF NOT public.te_numeric_is_finite(v_balance) OR v_balance <= 0 THEN
-    RAISE EXCEPTION USING ERRCODE = '22023',
-      MESSAGE = 'Lo que debe tiene que ser mayor a cero (si ya pagó todo, usa "Cobrar saldo")';
-  END IF;
-  v_total := v_paid + v_balance;
-
-  IF v_new_name <> v_old_name THEN v_changes := v_changes || format('nombre (antes: %s)', v_old_name); END IF;
-  IF v_new_tel IS DISTINCT FROM v_old_tel THEN v_changes := v_changes || 'teléfono'::text; END IF;
-  IF p_due_date IS DISTINCT FROM v_sale.due_date THEN v_changes := v_changes || 'fecha límite'::text; END IF;
-  IF v_note IS DISTINCT FROM v_sale.note THEN v_changes := v_changes || 'nota'::text; END IF;
-  IF v_balance <> v_old_balance THEN
-    v_changes := v_changes || format('saldo $%s → $%s', v_old_balance, v_balance);
-  END IF;
-
-  -- El renglón de libreta lleva el total y la nota que se pintan en la ficha.
-  SELECT jsonb_agg(
-           CASE WHEN COALESCE((e.item ->> 'libreta')::boolean, false)
-             THEN e.item || jsonb_build_object('price', v_total, 'subtotal', v_total, 'nota', v_note)
-             ELSE e.item END
-           ORDER BY e.ord)
-    INTO v_items
-  FROM jsonb_array_elements(v_sale.items) WITH ORDINALITY AS e(item, ord);
-
-  UPDATE public.sales SET
-    customer   = v_new_name || CASE WHEN v_new_tel IS NOT NULL THEN ' · 📱 ' || v_new_tel ELSE '' END,
-    customer_id = CASE
-      WHEN v_new_tel IS NOT NULL AND v_new_tel IS DISTINCT FROM v_old_tel
-        THEN NULLIF(public.te_find_or_create_customer(v_new_name, v_new_tel) ->> 'id', '')::bigint
-      ELSE customer_id END,
-    due_date   = p_due_date,
-    note       = v_note,
-    total      = v_total,
-    items      = v_items,
-    updated_at = now(),
-    version    = version + 1
-  WHERE id = p_sale_id;
-
-  IF array_length(v_changes, 1) > 0 THEN
-    PERFORM public.te_log_activity(
-      'apartado_editado',
-      format('Corrigió el apartado de libreta de %s: %s', v_new_name, array_to_string(v_changes, ', ')),
-      jsonb_build_object(
-        'id', p_sale_id, 'customer', v_new_name, 'libreta', true,
-        'total', v_total, 'pendiente', v_balance, 'pendiente_antes', v_old_balance,
-        'dueDate', p_due_date, 'authorized_by', v_authorized_by, 'request_id', p_request_id
-      )
-    );
-  END IF;
-
-  v_response := jsonb_build_object(
-    'ok', true,
-    'operation', v_operation,
-    'request_id', p_request_id,
-    'sale', jsonb_build_object(
-      'id', p_sale_id, 'total', v_total, 'paid_amount', v_paid,
-      'remaining', v_balance, 'version', v_sale.version + 1
-    )
-  );
-  PERFORM public.te_rpc_store(p_request_id, v_operation, p_sale_id, v_response);
-  RETURN v_response;
-END;
-$function$
-;
-
 CREATE OR REPLACE FUNCTION public.te_log_activity(p_action text, p_summary text, p_meta jsonb DEFAULT NULL::jsonb)
  RETURNS void
  LANGUAGE plpgsql
@@ -3009,6 +2744,28 @@ BEGIN
 END;
 $function$
 ;
+
+CREATE OR REPLACE FUNCTION public.te_mark_notice_read(p_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'No autenticado'; END IF;
+  INSERT INTO public.team_notice_reads (notice_id, user_email)
+  SELECT p_id, lower(auth.jwt() ->> 'email') WHERE EXISTS (SELECT 1 FROM public.team_notices WHERE id = p_id)
+  ON CONFLICT DO NOTHING;
+  RETURN jsonb_build_object('ok', true);
+END $$;
+
+CREATE OR REPLACE FUNCTION public.te_notice_readers()
+RETURNS TABLE (notice_id bigint, user_email text, read_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.te_has_permission('canManageSettings') THEN
+    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Sin permiso';
+  END IF;
+  RETURN QUERY SELECT r.notice_id, r.user_email, r.read_at
+    FROM public.team_notice_reads r JOIN public.team_notices n ON n.id = r.notice_id
+   WHERE n.active ORDER BY r.read_at;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.te_numeric_is_finite(p_value numeric)
  RETURNS boolean
@@ -3212,6 +2969,23 @@ BEGIN
 END;
 $function$
 ;
+
+CREATE OR REPLACE FUNCTION public.te_products_normalize()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+  NEW.featured      := COALESCE(NEW.featured, false);
+  NEW.is_published  := COALESCE(NEW.is_published, false);
+  NEW.is_archived   := COALESCE(NEW.is_archived, false);
+  NEW.out_of_stock  := COALESCE(NEW.out_of_stock, false);
+  NEW.is_apartado   := COALESCE(NEW.is_apartado, false);
+  NEW."position"    := COALESCE(NEW."position", 0);
+  NEW.created_at    := COALESCE(NEW.created_at, now());
+  NEW.updated_at    := COALESCE(NEW.updated_at, now());
+  NEW.barcode       := NULLIF(btrim(NEW.barcode), '');
+  NEW.supplier_code := NULLIF(btrim(NEW.supplier_code), '');
+  NEW.badge_type    := NULLIF(btrim(NEW.badge_type), '');
+  RETURN NEW;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.te_products_publish_guard()
  RETURNS trigger
@@ -3522,6 +3296,21 @@ END;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.te_remove_notice(p_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE v_title text;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'No autenticado'; END IF;
+  IF NOT public.te_has_permission('canManageSettings') THEN
+    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Sin permiso para quitar avisos';
+  END IF;
+  UPDATE public.team_notices SET active = false, updated_at = now() WHERE id = p_id AND active RETURNING title INTO v_title;
+  IF v_title IS NOT NULL THEN
+    PERFORM public.te_log_activity('aviso_quitado', 'Quitó el aviso "' || v_title || '"', jsonb_build_object('notice_id', p_id));
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END $$;
+
 CREATE OR REPLACE FUNCTION public.te_request_override(p_permission text, p_authorizer_email text, p_pin text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -3736,6 +3525,35 @@ BEGIN
 END;
 $function$
 ;
+
+CREATE OR REPLACE FUNCTION public.te_save_notice(p_id bigint, p_title text, p_body text, p_help_query text,
+                                                 p_audience text, p_until date)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE v_id bigint; v_email text := lower(auth.jwt() ->> 'email');
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'No autenticado'; END IF;
+  IF NOT public.te_has_permission('canManageSettings') THEN
+    RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'Sin permiso para publicar avisos';
+  END IF;
+  IF p_until IS NULL OR p_until < (now() AT TIME ZONE 'America/Mexico_City')::date THEN
+    RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'La fecha "mostrar hasta" ya pasó';
+  END IF;
+  IF p_id IS NULL THEN
+    INSERT INTO public.team_notices (title, body, help_query, audience, until, created_by)
+    VALUES (btrim(p_title), coalesce(btrim(p_body), ''), nullif(btrim(p_help_query), ''), coalesce(p_audience, 'todos'), p_until, v_email)
+    RETURNING id INTO v_id;
+    PERFORM public.te_log_activity('aviso_publicado', 'Publicó el aviso "' || btrim(p_title) || '"', jsonb_build_object('notice_id', v_id));
+  ELSE
+    UPDATE public.team_notices
+       SET title = btrim(p_title), body = coalesce(btrim(p_body), ''), help_query = nullif(btrim(p_help_query), ''),
+           audience = coalesce(p_audience, 'todos'), until = p_until, updated_at = now()
+     WHERE id = p_id AND active
+    RETURNING id INTO v_id;
+    IF v_id IS NULL THEN RAISE EXCEPTION USING ERRCODE = 'P0002', MESSAGE = 'Ese aviso ya no existe'; END IF;
+    PERFORM public.te_log_activity('aviso_editado', 'Editó el aviso "' || btrim(p_title) || '"', jsonb_build_object('notice_id', v_id));
+  END IF;
+  RETURN jsonb_build_object('ok', true, 'id', v_id);
+END $$;
 
 CREATE OR REPLACE FUNCTION public.te_save_user_permissions(p_permissions jsonb)
  RETURNS jsonb
@@ -4160,6 +3978,9 @@ ALTER TABLE public.products ADD CONSTRAINT products_image_safe CHECK ((te_is_saf
 -- Índices
 -- ======================================================================
 
+CREATE INDEX activity_log_action_idx ON public.activity_log USING btree (action, created_at DESC);
+CREATE INDEX activity_log_created_idx ON public.activity_log USING btree (created_at DESC);
+CREATE INDEX activity_log_user_idx ON public.activity_log USING btree (user_email, created_at DESC);
 CREATE INDEX cash_shift_expenses_shift_id_idx ON public.cash_shift_expenses USING btree (shift_id);
 CREATE INDEX cash_shifts_opened_at_idx ON public.cash_shifts USING btree (opened_at DESC);
 CREATE INDEX cash_shifts_user_status_idx ON public.cash_shifts USING btree (user_email, status);
@@ -4167,14 +3988,23 @@ CREATE INDEX client_errors_last_idx ON public.client_errors USING btree (last_at
 CREATE UNIQUE INDEX customers_phone_unique ON public.customers USING btree (phone) WHERE (phone IS NOT NULL);
 CREATE INDEX permission_overrides_lookup_idx ON public.permission_overrides USING btree (granted_to_uid, permission, used_at, expires_at);
 CREATE INDEX pos_rpc_requests_created_at_idx ON public.pos_rpc_requests USING btree (created_at DESC);
+CREATE INDEX pos_rpc_requests_sale_id_idx ON public.pos_rpc_requests USING btree (sale_id) WHERE (sale_id IS NOT NULL);
 CREATE INDEX product_changes_product_idx ON public.product_changes USING btree (product_id, changed_at DESC);
 CREATE INDEX product_changes_time_idx ON public.product_changes USING btree (changed_at DESC);
+CREATE UNIQUE INDEX products_barcode_unique ON public.products USING btree (barcode) WHERE (barcode IS NOT NULL);
+CREATE INDEX products_store_idx ON public.products USING btree ("position") WHERE (is_published AND (NOT is_archived));
+CREATE INDEX products_supplier_code_idx ON public.products USING btree (supplier_code) WHERE (supplier_code IS NOT NULL);
+CREATE INDEX products_variant_group_idx ON public.products USING btree (variant_group) WHERE (variant_group IS NOT NULL);
+CREATE INDEX recently_edited_at_idx ON public.recently_edited USING btree (edited_at DESC);
 CREATE UNIQUE INDEX sale_payments_legacy_key_uidx ON public.sale_payments USING btree (legacy_key) WHERE (legacy_key IS NOT NULL);
 CREATE INDEX sale_payments_paid_at_idx ON public.sale_payments USING btree (paid_at DESC, id DESC);
 CREATE UNIQUE INDEX sale_payments_request_id_uidx ON public.sale_payments USING btree (request_id, request_line) WHERE (request_id IS NOT NULL);
 CREATE INDEX sale_payments_sale_id_idx ON public.sale_payments USING btree (sale_id, id);
 CREATE INDEX sales_active_apartados_idx ON public.sales USING btree (id) WHERE ((origin_type = 'apartado'::text) AND (status = 'activo'::text) AND (cancelled_at IS NULL));
+CREATE INDEX sales_created_at_idx ON public.sales USING btree (created_at DESC);
+CREATE INDEX sales_customer_id_idx ON public.sales USING btree (customer_id) WHERE (customer_id IS NOT NULL);
 CREATE INDEX sales_last_payment_at_idx ON public.sales USING btree (last_payment_at DESC) WHERE (last_payment_at IS NOT NULL);
+CREATE INDEX sales_liquidated_at_idx ON public.sales USING btree (liquidated_at DESC) WHERE (liquidated_at IS NOT NULL);
 CREATE INDEX sales_status_idx ON public.sales USING btree (status, created_at DESC);
 
 -- ======================================================================
@@ -4182,6 +4012,7 @@ CREATE INDEX sales_status_idx ON public.sales USING btree (status, created_at DE
 -- ======================================================================
 
 CREATE TRIGGER te_activity_log_stamp_trg BEFORE INSERT ON public.activity_log FOR EACH ROW EXECUTE FUNCTION te_activity_log_stamp();
+CREATE TRIGGER te_products_00_normalize_trg BEFORE INSERT OR UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION te_products_normalize();
 CREATE TRIGGER te_products_0_stock_sync_trg BEFORE INSERT OR UPDATE OF stock, out_of_stock, is_apartado, is_archived, kit_items ON public.products FOR EACH ROW EXECUTE FUNCTION te_products_stock_sync();
 CREATE TRIGGER te_products_audit_changes_trg AFTER UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION te_products_audit_changes();
 CREATE TRIGGER te_products_immutable_cols_trg BEFORE UPDATE OF id, created_at, created_by ON public.products FOR EACH ROW EXECUTE FUNCTION te_products_immutable_cols();
@@ -4205,7 +4036,8 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recently_edited ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sale_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.usage_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_notice_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_pins ENABLE ROW LEVEL SECURITY;
 CREATE POLICY activity_delete ON public.activity_log AS PERMISSIVE FOR DELETE TO authenticated USING ((( SELECT get_user_role() AS get_user_role) = 'superadmin'::text));
 CREATE POLICY activity_insert ON public.activity_log AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (true);
@@ -4228,6 +4060,8 @@ CREATE POLICY products_update ON public.products AS PERMISSIVE FOR UPDATE TO aut
 CREATE POLICY recently_edited_auth ON public.recently_edited AS PERMISSIVE FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY sale_payments_auth_select ON public.sale_payments AS PERMISSIVE FOR SELECT TO authenticated USING (true);
 CREATE POLICY sales_auth_select ON public.sales AS PERMISSIVE FOR SELECT TO authenticated USING (true);
+CREATE POLICY team_notice_reads_own ON public.team_notice_reads AS PERMISSIVE FOR SELECT TO authenticated USING ((user_email = lower((( SELECT auth.jwt() AS jwt) ->> 'email'::text))));
+CREATE POLICY team_notices_read ON public.team_notices AS PERMISSIVE FOR SELECT TO authenticated USING (true);
 
 -- ======================================================================
 -- Permisos: se quita todo y se da solo lo necesario
@@ -4236,70 +4070,53 @@ CREATE POLICY sales_auth_select ON public.sales AS PERMISSIVE FOR SELECT TO auth
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC, anon, authenticated;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.activity_log TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.activity_log TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.activity_log TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.activity_log TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.activity_log_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.activity_log_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.activity_log_id_seq TO service_role;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.cash_shift_expenses TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.cash_shift_expenses TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.cash_shift_expenses TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.cash_shift_expenses TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shift_expenses_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shift_expenses_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shift_expenses_id_seq TO service_role;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.cash_shifts TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.cash_shifts TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.cash_shifts TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shifts_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shifts_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.cash_shifts_id_seq TO service_role;
 GRANT SELECT ON TABLE public.client_errors TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.client_errors TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.client_errors_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.client_errors_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.client_errors_id_seq TO service_role;
-GRANT MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE ON TABLE public.config TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.config TO authenticated;
+GRANT SELECT ON TABLE public.config TO anon;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.config TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.config TO service_role;
-GRANT MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE ON TABLE public.customers TO authenticated;
+GRANT SELECT, UPDATE ON TABLE public.customers TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.customers TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.customers_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.customers_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.customers_id_seq TO service_role;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.permission_overrides TO service_role;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.pos_rpc_requests TO service_role;
 GRANT SELECT ON TABLE public.product_changes TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.product_changes TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.product_changes_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.product_changes_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.product_changes_id_seq TO service_role;
-GRANT MAINTAIN, REFERENCES, TRIGGER, TRUNCATE ON TABLE public.products TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.products TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.products TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.products TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.products_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.products_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.products_id_seq TO service_role;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.recently_edited TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.recently_edited TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.recently_edited TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.recently_edited TO service_role;
-GRANT MAINTAIN, REFERENCES, SELECT, TRIGGER ON TABLE public.sale_payments TO anon;
-GRANT MAINTAIN, REFERENCES, SELECT, TRIGGER ON TABLE public.sale_payments TO authenticated;
+GRANT SELECT ON TABLE public.sale_payments TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.sale_payments TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sale_payments_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sale_payments_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sale_payments_id_seq TO service_role;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.sales TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.sales TO authenticated;
+GRANT DELETE, INSERT, SELECT, UPDATE ON TABLE public.sales TO authenticated;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.sales TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sales_id_seq TO anon;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sales_id_seq TO authenticated;
 GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.sales_id_seq TO service_role;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.usage_log TO anon;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.usage_log TO authenticated;
-GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.usage_log TO service_role;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.usage_log_id_seq TO anon;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.usage_log_id_seq TO authenticated;
-GRANT SELECT, UPDATE, USAGE ON SEQUENCE public.usage_log_id_seq TO service_role;
+GRANT SELECT ON TABLE public.team_notice_reads TO authenticated;
+GRANT MAINTAIN, REFERENCES, TRIGGER, TRUNCATE ON TABLE public.team_notice_reads TO service_role;
+GRANT SELECT ON TABLE public.team_notices TO authenticated;
+GRANT MAINTAIN, REFERENCES, TRIGGER, TRUNCATE ON TABLE public.team_notices TO service_role;
 GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE public.user_pins TO service_role;
 GRANT SELECT (badge) ON TABLE public.products TO anon;
 GRANT SELECT (badge_type) ON TABLE public.products TO anon;
@@ -4319,13 +4136,15 @@ GRANT SELECT (out_of_stock) ON TABLE public.products TO anon;
 GRANT SELECT ("position") ON TABLE public.products TO anon;
 GRANT SELECT (price) ON TABLE public.products TO anon;
 GRANT SELECT (stock) ON TABLE public.products TO anon;
+GRANT SELECT (variant) ON TABLE public.products TO anon;
+GRANT SELECT (variant_base) ON TABLE public.products TO anon;
+GRANT SELECT (variant_group) ON TABLE public.products TO anon;
 GRANT EXECUTE ON FUNCTION public._te_distance_to_store_m(p_lat double precision, p_lng double precision) TO authenticated;
 GRANT EXECUTE ON FUNCTION public._te_distance_to_store_m(p_lat double precision, p_lng double precision) TO service_role;
 GRANT EXECUTE ON FUNCTION public._te_is_far_from_store(p_lat double precision, p_lng double precision) TO authenticated;
 GRANT EXECUTE ON FUNCTION public._te_is_far_from_store(p_lat double precision, p_lng double precision) TO service_role;
 GRANT EXECUTE ON FUNCTION public._te_is_superadmin_email(p_email text) TO service_role;
 GRANT EXECUTE ON FUNCTION public._te_permission_for_email(p_email text, p_permission text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.cancel_sale_atomic(p_request_id uuid, p_sale_id bigint, p_reason text, p_expected_version bigint, p_override_tickets uuid[], p_keep_credit boolean) TO PUBLIC;
 GRANT EXECUTE ON FUNCTION public.cancel_sale_atomic(p_request_id uuid, p_sale_id bigint, p_reason text, p_expected_version bigint, p_override_tickets uuid[], p_keep_credit boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancel_sale_atomic(p_request_id uuid, p_sale_id bigint, p_reason text, p_expected_version bigint, p_override_tickets uuid[], p_keep_credit boolean) TO service_role;
 GRANT EXECUTE ON FUNCTION public.edit_apartado_atomic(p_request_id uuid, p_sale_id bigint, p_items jsonb, p_expected_version bigint, p_discount numeric, p_due_date date, p_override_tickets uuid[], p_phone text, p_name text) TO authenticated;
@@ -4376,16 +4195,14 @@ GRANT EXECUTE ON FUNCTION public.te_inventory_demand(p_items jsonb) TO service_r
 GRANT EXECUTE ON FUNCTION public.te_is_safe_img_url(p_url text) TO PUBLIC;
 GRANT EXECUTE ON FUNCTION public.te_is_safe_img_url(p_url text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_is_safe_img_url(p_url text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.te_libreta_apartado_create(p_request_id uuid, p_name text, p_phone text, p_total numeric, p_balance numeric, p_payments jsonb, p_opened_on date, p_due_date date, p_note text, p_photo text, p_override_tickets uuid[]) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.te_libreta_apartado_create(p_request_id uuid, p_name text, p_phone text, p_total numeric, p_balance numeric, p_payments jsonb, p_opened_on date, p_due_date date, p_note text, p_photo text, p_override_tickets uuid[]) TO service_role;
-GRANT EXECUTE ON FUNCTION public.te_libreta_apartado_edit(p_request_id uuid, p_sale_id bigint, p_expected_version bigint, p_name text, p_phone text, p_due_date date, p_note text, p_balance numeric, p_override_tickets uuid[]) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.te_libreta_apartado_edit(p_request_id uuid, p_sale_id bigint, p_expected_version bigint, p_name text, p_phone text, p_due_date date, p_note text, p_balance numeric, p_override_tickets uuid[]) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_log_activity(p_action text, p_summary text, p_meta jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_log_client_error(p_module text, p_message text, p_source text, p_stack text, p_url text, p_user_agent text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_log_client_error(p_module text, p_message text, p_source text, p_stack text, p_url text, p_user_agent text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_log_failed_login(p_email text) TO anon;
 GRANT EXECUTE ON FUNCTION public.te_log_failed_login(p_email text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_log_failed_login(p_email text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.te_mark_notice_read(p_id bigint, p_dismiss boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.te_notice_readers() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_numeric_is_finite(p_value numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_numeric_is_finite(p_value numeric) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_open_cash_shift(p_fondo_inicial numeric, p_lat double precision, p_lng double precision) TO authenticated;
@@ -4407,6 +4224,7 @@ GRANT EXECUTE ON FUNCTION public.te_refresh_apartado_product_flags(p_product_ids
 GRANT EXECUTE ON FUNCTION public.te_refund_credit(p_request_id uuid, p_sale_id bigint, p_override_tickets uuid[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_refund_credit(p_request_id uuid, p_sale_id bigint, p_override_tickets uuid[]) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_refund_sale_balance(p_sale_id bigint, p_request_id uuid, p_source text, p_reason text, p_paid_at timestamp with time zone) TO service_role;
+GRANT EXECUTE ON FUNCTION public.te_remove_notice(p_id bigint) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_request_override(p_permission text, p_authorizer_email text, p_pin text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_request_override(p_permission text, p_authorizer_email text, p_pin text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_require_positive_bigint(p_value text, p_label text) TO authenticated;
@@ -4417,6 +4235,7 @@ GRANT EXECUTE ON FUNCTION public.te_sale_is_libreta(p_items jsonb) TO authentica
 GRANT EXECUTE ON FUNCTION public.te_sale_is_libreta(p_items jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_save_config_value(p_id text, p_value text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_save_config_value(p_id text, p_value text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.te_save_notice(p_id bigint, p_title text, p_body text, p_help_query text, p_audience text, p_until date) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_save_user_permissions(p_permissions jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.te_save_user_permissions(p_permissions jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.te_search_activity_meta(p_pattern text, p_from timestamp with time zone, p_user text) TO authenticated;
@@ -4611,7 +4430,7 @@ DROP FUNCTION IF EXISTS public.te_libreta_apartado_edit(uuid,bigint,bigint,text,
 DELETE FROM public.config WHERE id = 'show_libreta';
 
 -- ---------------------------------------------------------------------------
--- Avisos al equipo (traído de Tres Encantos, 2026-10-14): la dueña publica,
+-- Avisos al equipo (traído del negocio piloto, 2026-10-14): la dueña publica,
 -- edita y quita los avisos de la campana desde Configuración → Avisos al equipo
 -- y ve quién los leyó (leído = lo desplegó). Antes eran un arreglo en shared.js.
 -- ---------------------------------------------------------------------------
@@ -4743,5 +4562,22 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.te_mark_notice_read(bigint, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.te_mark_notice_read(bigint, boolean) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Variantes (tallas, colores, tamaños) — 2026-10-15
+-- Cada variante es un producto normal (su stock, precio y código de barras);
+-- las de una misma prenda comparten variant_group. Sin producto "padre": ventas,
+-- apartados, kits, escáner y reportes siguen igual. El nombre completo incluye la
+-- variante ("Blusa lino · M · Negro"); variant_base guarda "Blusa lino".
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant_group uuid;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant jsonb;        -- [["Talla","M"],["Color","Negro"]] (lista: jsonb no respeta el orden de un objeto)
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant_base text;    -- nombre sin la variante
+CREATE INDEX IF NOT EXISTS products_variant_group_idx ON public.products (variant_group) WHERE variant_group IS NOT NULL;
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_variant_check;
+ALTER TABLE public.products ADD CONSTRAINT products_variant_check CHECK (
+  variant_group IS NULL OR (jsonb_typeof(variant) = 'array' AND variant_base IS NOT NULL AND kit_items IS NULL));
+-- La Tienda (anon) necesita agruparlas
+GRANT SELECT (variant_group, variant, variant_base) ON public.products TO anon;
 
 COMMIT;

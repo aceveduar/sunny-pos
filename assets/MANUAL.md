@@ -176,6 +176,14 @@ Para sacar un producto de circulación usa **Archivar** (vista rápida → Más)
 ### Kits
 **+ Agregar → Kit / Bundle** arma un kit con 2 o más productos. Su disponibilidad depende de las piezas de sus componentes: si falta uno, el kit no se puede vender y la Tienda no lo muestra hasta que haya piezas.
 
+### Ropa y calzado: tallas y colores
+**+ Agregar → Con tallas o colores** crea una prenda con todas sus variantes de un jalón:
+1. Escribe el nombre **sin** talla ni color (por ejemplo "Blusa de lino"), la categoría y el precio.
+2. Elige las **tallas** (o números, en calzado) y, si aplica, los **colores**. Si falta una, escríbela en **+ Otra**.
+3. Escribe cuántas piezas hay de cada combinación en la cuadrícula y toca **Crear**.
+
+Cada variante es un producto con su propio stock y su nombre completo ("Blusa de lino · M · Negro"), así que en Caja se busca, se escanea y se vende como cualquier otro. Para ver o cambiar las piezas de todas las tallas y colores, abre cualquiera de ellas: en su ficha está la cuadrícula; toca un número para cambiarlo.
+
 ### Qué sale primero en la Tienda
 - **Al inicio** (vista rápida → Más) pone el producto primero en la Tienda.
 - La **estrella** (destacado) lo pone en la portada: en computadora salen los 3 primeros y en el celular todos, así que conviene tener pocos (unos 10) y con buena foto.

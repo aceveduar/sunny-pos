@@ -151,7 +151,7 @@ DROP FUNCTION IF EXISTS public.te_libreta_apartado_edit(uuid,bigint,bigint,text,
 DELETE FROM public.config WHERE id = 'show_libreta';
 
 -- ---------------------------------------------------------------------------
--- Avisos al equipo (traído de Tres Encantos, 2026-10-14): la dueña publica,
+-- Avisos al equipo (traído del negocio piloto, 2026-10-14): la dueña publica,
 -- edita y quita los avisos de la campana desde Configuración → Avisos al equipo
 -- y ve quién los leyó (leído = lo desplegó). Antes eran un arreglo en shared.js.
 -- ---------------------------------------------------------------------------
@@ -283,3 +283,20 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.te_mark_notice_read(bigint, boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.te_mark_notice_read(bigint, boolean) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Variantes (tallas, colores, tamaños) — 2026-10-15
+-- Cada variante es un producto normal (su stock, precio y código de barras);
+-- las de una misma prenda comparten variant_group. Sin producto "padre": ventas,
+-- apartados, kits, escáner y reportes siguen igual. El nombre completo incluye la
+-- variante ("Blusa lino · M · Negro"); variant_base guarda "Blusa lino".
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant_group uuid;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant jsonb;        -- [["Talla","M"],["Color","Negro"]] (lista: jsonb no respeta el orden de un objeto)
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variant_base text;    -- nombre sin la variante
+CREATE INDEX IF NOT EXISTS products_variant_group_idx ON public.products (variant_group) WHERE variant_group IS NOT NULL;
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_variant_check;
+ALTER TABLE public.products ADD CONSTRAINT products_variant_check CHECK (
+  variant_group IS NULL OR (jsonb_typeof(variant) = 'array' AND variant_base IS NOT NULL AND kit_items IS NULL));
+-- La Tienda (anon) necesita agruparlas
+GRANT SELECT (variant_group, variant, variant_base) ON public.products TO anon;

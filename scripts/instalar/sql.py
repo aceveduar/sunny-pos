@@ -37,6 +37,7 @@ def query(sql):
     return json.loads(ejecutar(sql))
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
     RAW = '--raw' in sys.argv
     args = [a for a in sys.argv[1:] if a != '--raw']
     sql = args[1] if args[0] == '-e' else open(args[0], encoding='utf-8').read()

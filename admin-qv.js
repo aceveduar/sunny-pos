@@ -572,6 +572,11 @@ function _renderQV(p) {
     }
   }
 
+  // Tallas/colores: existencias de todo el grupo, editables (admin-variantes.js)
+  let varZone = document.getElementById('qv-var-zone');
+  if (!varZone && kitZone) { varZone = document.createElement('div'); varZone.id = 'qv-var-zone'; kitZone.after(varZone); }
+  if (varZone) varZone.innerHTML = p.variantGroup ? variantGridHTML(p) : '';
+
   // Zona de apartado — quién reservó este producto
   const aptZone = document.getElementById('qv-apartado-zone');
   if (aptZone) {

@@ -71,7 +71,14 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - **Reportes:** ventas agrupadas por padre y "lo que más se vende por talla", para saber qué resurtir.
 - **Etiquetas:** imprimir código de barras por variante (fase posterior).
 
-**Fases:** 1) modelo + matriz en Inventario · 2) Caja · 3) Tienda · 4) Reportes por talla.
+**Decisión (2026-10-15): sin producto padre.** Cada variante es un producto normal y las de una prenda comparten `variant_group`; `variant` = lista ordenada `[["Talla","M"],["Color","Negro"]]` (un objeto jsonb reordena las llaves); `variant_base` = nombre sin variante. Ventas, apartados, kits, escáner y reportes siguen igual; solo se agrupa la vista.
+
+**Fases:**
+- [x] 1) Modelo en base + "Con tallas o colores" en Inventario (cuadrícula de piezas) + cuadrícula editable en la ficha.
+- [ ] 1b) Lista de Inventario agrupada por prenda (hoy cada variante es un renglón).
+- [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color).
+- [ ] 3) Tienda: una tarjeta por prenda con botones de talla/color.
+- [ ] 4) Reportes por talla.
 
 ## 8. Rapidez (máxima velocidad de carga)
 **Punto de partida (2026-10-13, 5,000 productos, PC de Eduardo, sesión real):** Inventario 7–8 s · Caja ~5 s · Reportes ~6 s · Actividad ~6 s · Configuración ~4.5 s. Inventario descarga ~4 MB.
