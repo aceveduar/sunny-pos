@@ -258,3 +258,103 @@ async function _varGuardarStock(input) {
   if (tot) { const t = hs.reduce((s, x) => s + (x.stock || 0), 0); tot.textContent = `${t} pza${t !== 1 ? 's' : ''} en ${hs.length} variantes`; }
   renderTable(); renderStats();
 }
+
+
+/* ── Lista de Inventario: una prenda = un renglón ──
+   La lista se filtra y ordena igual que siempre; al final, las variantes de
+   una prenda que quedaron en la lista se juntan en un renglón en el lugar de
+   la primera. Si el filtro deja una sola variante, se muestra esa variante
+   (con su edición directa). El renglón agrupado no edita piezas ni precio
+   directo (cambiaría una sola talla sin que se note): al tocarlo abre la ficha
+   con la cuadrícula. Su casilla selecciona la prenda completa. */
+function _agruparVariantes(list) {
+  if (!list.some(p => p.variantGroup)) return list;
+  const grupos = new Map();
+  list.forEach(p => { if (p.variantGroup) (grupos.get(p.variantGroup) || grupos.set(p.variantGroup, []).get(p.variantGroup)).push(p); });
+  const out = [], hechos = new Set();
+  list.forEach(p => {
+    if (!p.variantGroup) { out.push(p); return; }
+    if (hechos.has(p.variantGroup)) return;
+    hechos.add(p.variantGroup);
+    const ms = grupos.get(p.variantGroup);
+    out.push(ms.length === 1 ? p : { _grupo: ms, id: ms[0].id, variantGroup: p.variantGroup });
+  });
+  return out;
+}
+
+function _grupoDatos(g) {
+  const ms = g._grupo, f = ms[0], todas = _varHermanas(f);
+  const piezas = ms.reduce((s, v) => s + (v.stock || 0), 0);
+  const precios = ms.map(v => v.price || 0), pmin = Math.min(...precios), pmax = Math.max(...precios);
+  const fmt = n => n.toLocaleString('es-MX');
+  const pub = ms.filter(v => v.isPublished !== false).length;
+  return {
+    ms, f, piezas, nombre: f.variantBase || f.name,
+    precio: pmin === pmax ? `$${fmt(pmin)}` : `$${fmt(pmin)}–${fmt(pmax)}`,
+    resumen: ms.length < todas.length ? `${ms.length} de ${todas.length} variantes` : `${todas.length} variantes`,
+    sel: todas.every(v => selectedIds.has(v.id)),
+    chipStock: `<span class="stock-chip ${piezas === 0 ? 'stock-sold' : 'stock-ok'}" style="cursor:default">${piezas} pza${piezas !== 1 ? 's' : ''}</span>`,
+    chipWeb: pub === 0
+      ? `<span class="pub-toggle pub-hidden" style="cursor:default;pointer-events:none">${AR_ICO_EYEOFF(13)}<span class="pub-toggle-lbl">Oculto</span></span>`
+      : `<span class="pub-toggle pub-visible" style="cursor:default;pointer-events:none">${AR_ICO_GLOBE(13)}<span class="pub-toggle-lbl">${pub < ms.length ? 'Web (algunas)' : 'Web'}</span></span>`,
+  };
+}
+
+function _grupoSelect(id, checked) {
+  const p = products.find(x => x.id === id);
+  _varHermanas(p).forEach(v => { if (checked) selectedIds.add(v.id); else selectedIds.delete(v.id); });
+  renderTable();
+  updateBulkBar();
+}
+
+function variantGroupMobile(g) {
+  const d = _grupoDatos(g);
+  return `
+<tr class="mpc-row${d.sel ? ' row-selected' : ''}" data-group="${_esc(g.variantGroup)}">
+  <td><div class="mpc${d.piezas === 0 ? ' mpc-oos' : ''}">
+    <div class="mpc-top" onclick="openQV(${d.f.id})" style="cursor:pointer">
+      <div class="mpc-img-wrap">
+        <img class="mpc-img" src="${_driveSz(d.f.image, 300)}" alt="${_esc(d.nombre)}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
+        <input type="checkbox" class="row-check mpc-check-over" aria-label="Seleccionar ${_esc(d.nombre)}" ${d.sel ? 'checked' : ''} onclick="event.stopPropagation()" onchange="_grupoSelect(${d.f.id}, this.checked)">
+      </div>
+      <div class="mpc-info">
+        <div class="mpc-name">${_esc(d.nombre)}</div>
+        <div class="mpc-cat-tag"><span class="cat-dot" style="background:${getCatColor(d.f.category)}"></span><span class="cat-label-inline" style="pointer-events:none">${_esc(_catDisplayLabel(d.f))}</span><span class="var-tag">${d.resumen}</span></div>
+        <div class="mpc-price-row"><span class="mpc-price">${d.precio}</span>${d.chipStock}${d.chipWeb}</div>
+      </div>
+    </div>
+  </div></td>
+</tr>`;
+}
+
+function variantGroupRow(g) {
+  const d = _grupoDatos(g);
+  return `
+<tr data-group="${_esc(g.variantGroup)}" class="${d.sel ? 'row-selected' : ''}" onclick="if(!event.target.closest('input'))openQV(${d.f.id})" style="cursor:pointer" title="Ver tallas y colores">
+  <td class="col-check" style="text-align:center"><input type="checkbox" class="row-check" aria-label="Seleccionar ${_esc(d.nombre)}" ${d.sel ? 'checked' : ''} onchange="_grupoSelect(${d.f.id}, this.checked)"></td>
+  <td class="col-product"><div style="display:flex;align-items:center;gap:10px;min-width:0">
+    <img class="prod-thumb" src="${_driveSz(d.f.image, 80)}" alt="${_esc(d.nombre)}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
+    <div style="min-width:0;flex:1"><div class="prod-name">${_esc(d.nombre)}</div>
+      <div class="prod-meta"><span class="cat-dot" style="background:${getCatColor(d.f.category)}"></span><span class="prod-meta-text">${_esc(_catDisplayLabel(d.f))}</span><span class="var-tag">${d.resumen}</span>${d.chipWeb}</div></div>
+  </div></td>
+  <td class="col-price"><div class="price-cell">${d.precio}</div></td>
+  <td class="col-state"><div class="state-cell">${d.chipStock}</div></td>
+</tr>`;
+}
+
+function variantGroupCard(g) {
+  const d = _grupoDatos(g);
+  return `
+<div class="admin-card${d.sel ? ' card-selected' : ''}${d.piezas === 0 ? ' card-oos' : ''}" data-group="${_esc(g.variantGroup)}" onclick="if(!event.target.closest('input'))openQV(${d.f.id})" style="cursor:pointer">
+  <div class="ac-img-wrap">
+    <img class="ac-img" src="${_driveSz(d.f.image, 300)}" alt="${_esc(d.nombre)}" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
+    <input type="checkbox" class="ac-check row-check" aria-label="Seleccionar ${_esc(d.nombre)}" ${d.sel ? 'checked' : ''} onchange="_grupoSelect(${d.f.id}, this.checked)">
+  </div>
+  <div class="ac-body">
+    <div class="ac-name" title="${_esc(d.nombre)}">${_esc(d.nombre)}</div>
+    <div class="ac-meta"><span class="var-tag">${d.resumen}</span></div>
+    <div class="ac-price-row"><span class="ac-price">${d.precio}</span></div>
+    <div class="ac-footer"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${d.chipStock}${d.chipWeb}</div></div>
+  </div>
+</div>`;
+}

@@ -728,7 +728,7 @@ tr.drop-below{box-shadow:0 3px 0 var(--brand);background:var(--brand-light)}
   position:sticky;top:64px;z-index:40;margin-bottom:14px;
   box-shadow:var(--sombra-2);
 }
-.bulk-bar #bulk-count{font-size:.84rem;font-weight:700;margin-right:6px;color:var(--brand);flex-shrink:0}
+.bulk-bar #bulk-count{font-size:.84rem;font-weight:700;margin-right:6px;color:var(--brand-claro);flex-shrink:0}
 .bulk-bar-scroll-wrap{position:relative;flex:1;min-width:0}
 .bulk-bar-scroll-wrap::after{
   content:'';
@@ -769,7 +769,7 @@ input.row-check{cursor:pointer;width:16px;height:16px;accent-color:var(--brand)}
 /* ══ PRODUCT COUNT ══════════════════════════════════════════════════════ */
 .prod-count{margin-left:auto;padding:0 4px;font-size:.86rem;color:var(--muted);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
 /* "Seleccionar los N" en la barra de selección: acción secundaria, como enlace */
-.bulk-bar .btn.bulk-select-all{border-color:transparent;color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.bulk-bar .btn.bulk-select-all{border-color:transparent;color:var(--brand-claro);text-decoration:underline;text-underline-offset:3px}
 
 /* ══ STOCK CHIPS ════════════════════════════════════════════════════════ */
 .stock-chip{display:inline-flex;align-items:center;gap:3px;font-size:.69rem;font-weight:700;padding:4px 10px;min-height:28px;border-radius:var(--radio-pill);white-space:nowrap;border:1.5px solid transparent}
@@ -1849,3 +1849,5 @@ label:has(> #f-is-kit){min-height:44px}
 .var-qv-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;font-weight:700;font-size:.86rem;color:var(--charcoal)}
 .var-qv-total{font-weight:500;font-size:.78rem;color:var(--muted)}
 .var-qv-hint{font-size:.74rem;color:var(--muted);margin:2px 0 0}
+
+.var-tag{display:inline-flex;align-items:center;font-size:.7rem;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:var(--radio-pill);padding:2px 8px;margin-left:6px;white-space:nowrap}

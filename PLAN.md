@@ -75,8 +75,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 
 **Fases:**
 - [x] 1) Modelo en base + "Con tallas o colores" en Inventario (cuadrícula de piezas) + cuadrícula editable en la ficha.
-- [ ] 1b) Lista de Inventario agrupada por prenda (hoy cada variante es un renglón).
-- [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color).
+- [x] 1b) Lista de Inventario agrupada por prenda (un renglón: variantes, piezas totales, Web; la casilla selecciona la prenda completa; si el filtro deja una sola variante, se ve esa).
+- [x] 2) Caja: funciona sin cambios (el nombre incluye talla y color); las tallas de una prenda salen juntas y en orden.
 - [x] 3) Tienda: una tarjeta por prenda ("4 tallas · 2 colores", "Desde $X", "Elegir talla"); en la ficha, botones por opción con las agotadas tachadas; carrito y WhatsApp con la variante exacta.
 - [ ] 4) Reportes por talla.
 

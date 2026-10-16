@@ -879,14 +879,16 @@ function renderTable() {
 
   if (!document.getElementById('qv-overlay')?.classList.contains('open')) _updateActiveFiltersBar();
 
-  const visible  = filtered.slice(0, _adminPage * ADMIN_PAGE_SIZE);
-  const hasMore  = visible.length < filtered.length;
+  // Una prenda con tallas/colores = un renglón (admin-variantes.js)
+  const vista    = typeof _agruparVariantes === 'function' ? _agruparVariantes(filtered) : filtered;
+  const visible  = vista.slice(0, _adminPage * ADMIN_PAGE_SIZE);
+  const hasMore  = visible.length < vista.length;
   const sentinelHTML = hasMore
     ? `<div id="admin-load-sentinel" style="padding:16px;text-align:center;color:var(--muted);font-size:.85rem">Cargando más…</div>`
     : '';
 
   if (useCards && cardGrid) {
-    cardGrid.innerHTML = visible.map(p => adminCard(p, true)).join('') + sentinelHTML;
+    cardGrid.innerHTML = visible.map(p => p._grupo ? variantGroupCard(p) : adminCard(p, true)).join('') + sentinelHTML;
     updateBulkBar();
     _setupLoadMoreSentinel(hasMore);
     return;
@@ -894,7 +896,7 @@ function renderTable() {
 
   // Vista lista: mobile → mpc cards, desktop → tabla
   const tbody = document.getElementById('products-table');
-  if (tbody) tbody.innerHTML = visible.map(p => mobile ? mobileCard(p) : desktopRow(p)).join('') +
+  if (tbody) tbody.innerHTML = visible.map(p => p._grupo ? (mobile ? variantGroupMobile(p) : variantGroupRow(p)) : (mobile ? mobileCard(p) : desktopRow(p))).join('') +
     (hasMore ? `<tr><td colspan="4">${sentinelHTML}</td></tr>` : '');
 
   updateSelectAllCheckbox();
