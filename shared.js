@@ -1450,3 +1450,34 @@ function _driveSz(url, w) {
   if (!url || !url.includes('drive.google.com')) return url || '';
   return url.replace(/sz=w\d+/, `sz=w${w}`);
 }
+
+/* ── Versión de la base ──
+   La app nueva puede necesitar cambios de base (mejoras.sql). Si a la base de
+   este negocio no se le aplicaron, a quien administra le sale un aviso en vez
+   de fallas sin explicación (p. ej. cobrar con tarjeta). Subir esta fecha junto
+   con la de config.version_base al final de mejoras.sql. */
+const _BASE_REQUERIDA = '2026-10-16';
+async function _revisarVersionBase(up) {
+  if (!(up?.canManageSettings ?? up?.role === 'superadmin')) return;
+  try {
+    if (sessionStorage.getItem('te_base_ok') === _BASE_REQUERIDA) return;
+    const s = JSON.parse(localStorage.getItem('te_admin_session') || '{}');
+    if (!s.access_token || typeof SUPABASE_URL === 'undefined') return;
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 15000);
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/config?id=eq.version_base&select=value`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${s.access_token}` }, signal: ctl.signal });
+    if (!r.ok) return;
+    const tiene = (await r.json())?.[0]?.value || '';
+    if (tiene >= _BASE_REQUERIDA) { sessionStorage.setItem('te_base_ok', _BASE_REQUERIDA); return; }
+    if (document.getElementById('base-aviso')) return;
+    const div = document.createElement('div');
+    div.id = 'base-aviso'; div.className = 'base-aviso'; div.setAttribute('role', 'alert');
+    div.innerHTML = `<span>Falta actualizar la base de datos de este negocio${tiene ? ` (tiene la versión ${_esc(tiene)}` : ' (sin versión'}; el sistema pide la ${_BASE_REQUERIDA}). Algunas funciones nuevas pueden fallar: avisa a Sunname.</span>
+      <button type="button" onclick="this.parentElement.remove()" aria-label="Cerrar aviso">✕</button>`;
+    document.body.appendChild(div);
+  } catch { /* sin conexión: se revisa la próxima vez */ }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  _loadMyPerms().then(up => { if (up) _revisarVersionBase(up); });
+});
+

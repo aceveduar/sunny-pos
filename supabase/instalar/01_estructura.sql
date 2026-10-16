@@ -4632,4 +4632,13 @@ BEGIN
   END IF;
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- VERSIÓN DE LA BASE — debe ir SIEMPRE al final de este archivo.
+-- Cada cambio de esquema nuevo sube esta fecha y la constante _BASE_REQUERIDA
+-- de shared.js. Si la app pide una versión más nueva que la de la base de un
+-- negocio (se publicó código sin aplicar mejoras.sql), avisa a la dueña.
+-- ---------------------------------------------------------------------------
+INSERT INTO public.config (id, value) VALUES ('version_base', '2026-10-16')
+  ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value;
+
 COMMIT;

@@ -25,7 +25,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Desplegar las Edge Functions (`create-user`, `groq-proxy`, `drive-proxy`): sin secretos manuales (usan la service role que inyecta Supabase)
 - [ ] **(Eduardo)** Apps Script de Drive para el negocio de prueba
 - [ ] **Probar `01_estructura.sql` regenerado (2026-10-15, trae variantes y avisos) en un proyecto de Supabase vacío** antes de instalarlo a un cliente.
-- [ ] Control de versiones de la base (qué cambios tiene cada negocio)
+- [x] Control de versiones de la base (2026-10-16): `config.version_base` al final de `mejoras.sql` + `_BASE_REQUERIDA` en `shared.js`; si la base de un negocio se queda atrás, aviso a quien administra.
 
 ## 3. Quitar lo que es solo de Tres Encantos
 - [x] Tienda: nombre, logo, portada, "Nosotros", WhatsApp, redes, dirección → configurables (`NEGOCIO.tienda`; lo vacío se oculta)

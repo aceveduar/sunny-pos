@@ -339,3 +339,9 @@ body{font-feature-settings:"lnum" 1}
 .sin-fiado #apt-se-lo-lleva, .sin-fiado #edit-apt-fiado{display:none !important}
 /* Sin Ocultar ni Compartir, "Más" ocupa el ancho del renglón */
 .sin-tienda .qv-btn-more{grid-column:1 / -1}
+/* Aviso: la base del negocio no tiene los cambios que pide esta versión */
+.base-aviso{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:1200;display:flex;align-items:flex-start;gap:10px;background:var(--ink);color:#fff;border-radius:var(--radio-md);box-shadow:var(--sombra-3);padding:12px 12px 12px 16px;font-size:.88rem;line-height:1.4;max-width:640px;margin:0 auto}
+.base-aviso span{flex:1}
+.base-aviso button{position:relative;flex-shrink:0;width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
+.base-aviso button::after{content:"";position:absolute;inset:-6px}
+
