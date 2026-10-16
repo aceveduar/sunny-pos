@@ -41,8 +41,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Reescribir `CLAUDE.md` para Sunny POS
 
 ## 4. Módulos que se prenden y apagan
-- [ ] Lista de módulos en `negocio.js` / `config`: Tienda, Fiado, Recepción con IA, Marca por catálogo
-- [ ] Tienda apagada: sin ícono, la dirección principal lleva al inicio de sesión, sin "Publicar en web"
+- [x] Módulos en `negocio.js → modulos` (2026-10-16): `tienda` y `fiado`. Recepción con IA ya tenía su interruptor (Configuración → Catálogo) y la marca por catálogo se apaga con `tienda.catalogo` vacío.
+- [x] Tienda apagada: sin ícono, la dirección principal lleva al inicio de sesión, sin Publicar/Ocultar, Compartir ni "Sin publicar"; Configuración esconde WhatsApp flotante y revista. Fiado apagado: sin "Se lo lleva hoy".
 
 - [x] Quitar la Libreta (apartados de papel) del código: pantalla, archivo, interruptor, funciones en la base y pruebas
 

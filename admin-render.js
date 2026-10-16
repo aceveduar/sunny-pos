@@ -31,7 +31,7 @@ const _PEND_ITEMS = [
   ['sin-stock',         'Sin stock',               () => AR_ICO_XCIRCLE(16)],
   ['por-caducar',       'Por caducar',             () => AR_ICO_CLOCK(16)],
   ['revisar',           'Marcados para revisar',   () => AR_ICO_FLAG(16)],
-  ['sin-publicar',      'Sin publicar',            () => AR_ICO_EYEOFF(16)],
+  ...(NEGOCIO.modulos?.tienda === false ? [] : [['sin-publicar', 'Sin publicar', () => AR_ICO_EYEOFF(16)]]),
   ['sin-precio',        'Sin precio',              () => AR_ICO_DOLLAR(16)],
   // Sin costo no hay margen ni "Capital invertido" real en Reportes.
   ['sin-costo',         'Sin costo',               () => AR_ICO_DOLLAR(16)],

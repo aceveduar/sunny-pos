@@ -328,3 +328,14 @@ body{font-feature-settings:"lnum" 1}
 .help-view-body ol,.help-view-body ul{margin:0 0 12px;padding-left:22px}
 .help-view-body li{margin-bottom:6px}
 .help-view-body code{font-size:.9em;background:var(--surface-soft);padding:1px 5px;border-radius:var(--radio-xs)}
+
+/* ── Módulos apagados (negocio.js → modulos) ── */
+.sin-tienda a.tbn-icon[href="index.html"],
+.sin-tienda .tbn-sep:has(+ a.tbn-icon[href="index.html"]),
+.sin-tienda .pub-toggle, .sin-tienda .qv-btn-pub, .sin-tienda .qv-btn-share,
+.sin-tienda .qv-chip-web, .sin-tienda .qv-chip-hidden,
+.sin-tienda #bulk-publish-btn, .sin-tienda #var-publish-row, .sin-tienda .imp-pub,
+.sin-tienda [data-solo-tienda],
+.sin-fiado #apt-se-lo-lleva, .sin-fiado #edit-apt-fiado{display:none !important}
+/* Sin Ocultar ni Compartir, "Más" ocupa el ancho del renglón */
+.sin-tienda .qv-btn-more{grid-column:1 / -1}

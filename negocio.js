@@ -18,6 +18,12 @@ window.NEGOCIO = {
   // cuenta con rol de dueña/superadmin. Vacío = no se muestra el botón.
   duena: { nombre: '', correo: '' },
 
+  // Módulos de este negocio (plan contratado). false = apagado:
+  //  tienda: sin Tienda en línea — la dirección principal lleva al inicio de
+  //          sesión y se esconden Publicar/Ocultar, Compartir y el ícono Tienda.
+  //  fiado:  sin "Se lo lleva hoy" en los apartados.
+  modulos: { tienda: true, fiado: true },
+
   // Formas de pago que aparecen en Caja. Quitar 'tarjeta' si el negocio no
   // tiene terminal (así nadie la toca por error y descuadra el corte).
   formasDePago: ['efectivo', 'transferencia', 'tarjeta'],
@@ -140,3 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// Módulos apagados: clase en <html> (shared.css esconde lo que sobra) y, sin
+// Tienda, la página de la Tienda manda al inicio de sesión.
+(function () {
+  const m = window.NEGOCIO.modulos || {};
+  const raiz = document.documentElement;
+  if (m.tienda === false) {
+    raiz.classList.add('sin-tienda');
+    if (/(^|\/)(index\.html)?$/.test(location.pathname)) location.replace('admin.html');
+  }
+  if (m.fiado === false) raiz.classList.add('sin-fiado');
+})();
