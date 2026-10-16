@@ -116,3 +116,20 @@ body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--charcoal
   /* Chip-group-wrap: ancho completo en su línea */
   .chip-group-wrap{width:100%}
 }
+
+/* ── Escritorio: más ancho y un renglón por movimiento (tipo · qué pasó · quién · hora) ──
+   Antes: columna de 800 px centrada con tarjetas de 2 renglones y medio
+   monitor vacío a los lados. */
+@media(min-width:900px){
+  .main{max-width:1120px}
+  .act-card{align-items:center;padding:9px 16px;margin-bottom:5px}
+  .act-avatar{width:30px;height:30px;font-size:.74rem;margin-top:0}
+  .act-body{display:grid;grid-template-columns:168px minmax(0,1fr) 120px 92px;column-gap:16px;align-items:center}
+  .act-top{display:contents}
+  .act-badge{grid-column:1;grid-row:1;justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .act-summary{grid-column:2;grid-row:1}
+  .act-user{grid-column:3;grid-row:1;overflow:hidden;text-overflow:ellipsis}
+  .act-time{grid-column:4;grid-row:1;margin-left:0;text-align:right}
+  .act-detail,.act-body > :not(.act-top):not(.act-summary){grid-column:2 / -1}
+}
+

@@ -505,3 +505,12 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
 .vr-agotada:last-of-type{border-bottom:none}
 .vr-agotada-nom{color:var(--charcoal);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vr-mas{font-size:.8rem;color:var(--muted);margin:4px 0 0}
+/* Celular: cada stat en 2 renglones (nombre y periodo anterior a la izquierda,
+   la cifra a la derecha) en vez de 3 apilados. Misma letra, ~40% menos alto. */
+@media(max-width:640px){
+  .kpi-stat{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center}
+  .kpi-stat-label{grid-column:1;grid-row:1;margin-bottom:2px}
+  .kpi-stat .kpi-sub{grid-column:1;grid-row:2;margin-top:0}
+  .kpi-stat-value{grid-column:2;grid-row:1 / span 2;justify-content:flex-end;text-align:right}
+}
+

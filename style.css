@@ -740,8 +740,9 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
   .pillars-grid .pillar-card:last-child{grid-column:1/-1;max-width:calc(50% - 10px);margin:0 auto}
   .products-section .section-header{margin-bottom:32px}
   .products-grid{gap:18px}
-  /* Delivery 3 col en tablet — evita card huérfana en row 2 */
-  .delivery-grid{grid-template-columns:repeat(3,1fr)}
+  /* Delivery en una fila: tantas columnas como tarjetas visibles (sin local
+     son 2: antes quedaba una tercera columna vacía) */
+  .delivery-grid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
   .about-content{text-align:center}
   .about-content p{text-align:left}
   .about-features{justify-items:start;margin-top:20px}
@@ -885,7 +886,7 @@ footer{background:#0F0D0C;color:rgba(255,255,255,.58);padding:60px 20px 28px}
 @media(min-width:1001px){
   .products-grid{grid-template-columns:repeat(4,1fr);gap:26px}
   .hero{padding:120px 48px 100px}
-  .delivery-grid{grid-template-columns:repeat(3,1fr)}
+  .delivery-grid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
 }
 
 /* ── PANTALLA GRANDE / iMac (1440px+) ── */

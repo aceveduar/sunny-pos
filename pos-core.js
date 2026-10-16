@@ -835,7 +835,7 @@ function _posCheckShiftReminder() {
     const opened = new Intl.DateTimeFormat('es-MX', {
       timeZone: 'America/Mexico_City', weekday: 'long', hour: '2-digit', minute: '2-digit'
     }).format(new Date(_currentShift.opened_at));
-    txt.textContent = `Tu turno sigue abierto desde el ${opened}. Cuenta el cajón y ciérralo en Corte antes de vender hoy.`;
+    txt.textContent = `Turno abierto desde el ${opened.replace(/\.$/, '')} · ciérralo en Corte antes de vender`;
     banner.classList.add('show', 'no-dismiss');
     return;
   }
@@ -1412,7 +1412,7 @@ function renderPosProducts(list) {
   if (posView === 'cards') {
     el.innerHTML = `<div class="pos-grid">${visible.map(p => p._grupo ? posGarmentCard(p) : posCard(p)).join('')}</div>` + sentinelHTML;
   } else {
-    el.innerHTML = visible.map(p => p._grupo ? posGarmentRow(p) : productCard(p)).join('') + sentinelHTML;
+    el.innerHTML = `<div class="pos-list">${visible.map(p => p._grupo ? posGarmentRow(p) : productCard(p)).join('')}</div>` + sentinelHTML;
   }
   _setupPosLoadSentinel(hasMore);
 }

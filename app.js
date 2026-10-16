@@ -664,6 +664,12 @@ function _aplicarNegocioTienda() {
       `<a href="${_esc(url)}" target="_blank" rel="noopener" class="soc-link ${({ facebook: 'fb', instagram: 'ig', tiktok: 'tt' })[red]}">${ICO[red]} Síguenos en ${NOMBRE_RED[red]}</a>`);
     if (contacto) contacto.insertAdjacentHTML('beforeend', `<li><a href="${_esc(url)}" target="_blank" rel="noopener">${NOMBRE_RED[red]}</a></li>`);
   });
+  // Sin redes, la sección no puede decir "síguenos": invita a escribir
+  if (!Object.keys(ICO).some(red => /^https:\/\//.test(String(redes[red] || '').trim()))) {
+    const t = document.querySelector('.social-title'), st = document.querySelector('.social-sub');
+    if (t) t.textContent = '¿Buscas algo en especial?';
+    if (st) st.textContent = 'Escríbenos: te decimos si lo tenemos, en qué tallas y colores.';
+  }
   // Pie
   const copy = document.getElementById('footer-copy');
   if (copy) copy.textContent = `© ${new Date().getFullYear()} ${NEGOCIO.nombre || ''}${dir.ciudad ? ' · ' + dir.ciudad : ''}`;

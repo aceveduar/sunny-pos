@@ -674,11 +674,12 @@ tr:hover .drag-handle{opacity:1}
 /* ── SECCIONES DEL FORMULARIO ── */
 .form-section{
   font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted-light);margin:18px 0 12px;
-  padding-top:16px;border-top:1px solid var(--border);
+  color:var(--muted-light);margin:14px 0 10px;
+  padding-top:12px;border-top:1px solid var(--border);
   display:flex;align-items:center;gap:7px;
 }
-.form-section:first-child{margin-top:4px;border-top:none;padding-top:0}
+/* La primera sección no lleva raya: también si antes hay un campo oculto (#f-id) */
+.form-section:first-child,.modal-body > input[type=hidden]:first-child + .form-section{margin-top:4px;border-top:none;padding-top:0}
 
 /* Kit editor */
 .kit-comp-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid var(--border);font-size:.82rem}

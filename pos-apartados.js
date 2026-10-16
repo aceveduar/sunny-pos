@@ -580,7 +580,9 @@ async function loadApartados() {
   const alertCount = document.getElementById('apt-vencidos-count');
   if (alertBtn && alertCount) {
     alertBtn.style.display = vencidos > 0 ? '' : 'none';
-    alertCount.textContent = vencidos === 1 ? '1 vencido' : `${vencidos} vencidos`;
+    // En tableta solo el número (la palabra encimaba la barra a 1024 px); el aria-label lo dice completo
+    alertCount.innerHTML = `${vencidos}<span class="avc-txt"> ${vencidos === 1 ? 'vencido' : 'vencidos'}</span>`;
+    alertBtn.setAttribute('aria-label', `Ver ${vencidos} apartado${vencidos === 1 ? '' : 's'} vencido${vencidos === 1 ? '' : 's'}`);
   }
   // Celular: número en la pestaña "Apartados" de abajo (2026-10-10). Antes
   // era un banner rojo grande arriba de Caja todos los días; casi todos los
