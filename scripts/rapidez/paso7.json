@@ -1,0 +1,27 @@
+{
+ "Inventario": {
+  "segundos": 0.42,
+  "MB": 1.22,
+  "consultas": 15
+ },
+ "Caja": {
+  "segundos": 0.4,
+  "MB": 1.12,
+  "consultas": 16
+ },
+ "Reportes": {
+  "segundos": 0.77,
+  "MB": 0.34,
+  "consultas": 32
+ },
+ "Actividad": {
+  "segundos": 0.51,
+  "MB": 0.18,
+  "consultas": 16
+ },
+ "Tienda": {
+  "segundos": 0.87,
+  "MB": 1.08,
+  "consultas": 7
+ }
+}
