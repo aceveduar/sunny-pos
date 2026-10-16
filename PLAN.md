@@ -93,13 +93,13 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Medir con un script repetible: `scripts/medir_rapidez.py` (4G simulado; resultados en `scripts/rapidez/`).
 - [x] Buscador de duplicados de Inventario: bloqueaba 3.5 s al abrir; ahora corre después y tarda 0.5 s.
 - [x] Actividad ya no espera al catálogo para mostrar la lista.
-- [ ] Pedir solo las columnas que cada pantalla usa (Inventario hoy pide `select=*`).
+- [x] ~~Pedir solo las columnas que cada pantalla usa~~ — revisado 2026-10-16: Inventario usa casi todas (solo sobran `notes` y `updated_at`); no vale el riesgo.
 - [x] Páginas de 1,000 en paralelo, no una tras otra (Inventario, Tienda y `_posPaginatedFetch` para Caja/Reportes/Configuración/Actividad).
 - [x] Mostrar al instante la copia guardada y actualizar por detrás (Inventario y Caja, IndexedDB).
 - [ ] Miniaturas del tamaño real en pantalla (las fotos de 1000 px para una miniatura de 80 px pesan de más; Drive ya usa `_driveSz`).
 - [x] Reportes: el dinero se pinta sin esperar al catálogo, a Turnos ni a Clientes frecuentes (esas tarjetas se llenan al llegar).
 - [ ] Reportes con años de historia: que el servidor sume (RPC) Turnos de caja y Clientes frecuentes, que hoy bajan toda la historia (ya no frenan la pantalla, pero crecen sin límite). Hacerlo cuando un negocio pase de ~1 año de datos.
-- [ ] Cargar Chart.js y librerías pesadas solo cuando se necesitan; revisar el orden de scripts.
+- [x] Librerías pesadas: escáner, SheetJS (Excel), JsBarcode (etiquetas) y supabase-js ya se cargan al necesitarse; Chart.js se queda (Reportes la usa al abrir, 0.77 s). Versiones fijas (2026-10-16).
 - [x] Copia sin conexión que no se rompa arriba de ~6,000 productos (IndexedDB en vez de localStorage).
 
 ## Para corregir también en Tres Encantos (anotado desde Sunny POS)
