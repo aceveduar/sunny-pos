@@ -250,6 +250,10 @@ let todayPaymentsLoaded = false;
 let salesLoaded = false;
 let prevSalesLoaded = false;
 let productsLoaded = false;
+// Mientras baja el catálogo (lo último en llegar), sus tarjetas dicen
+// "Cargando…" en vez de "No disponible": el dinero se pinta antes.
+let productsPending = true;
+const _prodMsg = () => (productsPending ? 'Cargando…' : 'No disponible');
 let todaySummaryLoaded = false;
 let apartadosPendientesLoaded = false;
 let _customers = [];
@@ -546,6 +550,7 @@ async function loadPreviousSales(mode = _statsMode, offset = _statsOffset, gener
 async function loadProducts() {
   const r = await _fetchAll('products?select=id,name,category,category_label,price,cost,stock,out_of_stock,image,images,expiry_date,is_archived,kit_items&order=position.asc,id.asc');
   productsLoaded = r.ok;
+  productsPending = false;
   products = (r.ok && Array.isArray(r.data)) ? r.data : [];
 }
 
@@ -1411,7 +1416,7 @@ function _renderDayHourly(ctx) {
 function renderCatChart() {
   if (catChart) { catChart.destroy(); catChart = null; }
   if (!salesLoaded || !productsLoaded) {
-    _chartNoData('cat-chart', 'No disponible');
+    _chartNoData('cat-chart', salesLoaded ? _prodMsg() : 'No disponible');
     const list = document.getElementById('cat-list');
     if (list) list.innerHTML = '';
     return;
@@ -1524,10 +1529,10 @@ function renderTopProducts() {
 function renderInventory() {
   if (!productsLoaded) {
     ['inv-out', 'inv-low', 'inv-ok'].forEach(id => { document.getElementById(id).textContent = '—'; });
-    document.getElementById('inv-total-label').textContent = 'No disponible';
+    document.getElementById('inv-total-label').textContent = _prodMsg();
     document.getElementById('inv-valor-venta').textContent = '—';
     document.getElementById('inv-valor-costo-wrap').style.display = 'none';
-    document.getElementById('inv-list').innerHTML = '<p class="no-data" style="padding:16px 0">No disponible</p>';
+    document.getElementById('inv-list').innerHTML = `<p class="no-data" style="padding:16px 0">${_prodMsg()}</p>`;
     return;
   }
   const out  = _invProducts().filter(p => p.stock===0 || p.out_of_stock);
@@ -1592,8 +1597,8 @@ function renderCapitalCategoria() {
   if (!card || !body) return;
   if (!productsLoaded) {
     card.style.display = '';
-    totalEl.textContent = 'No disponible';
-    body.innerHTML = '<p class="no-data">No disponible</p>';
+    totalEl.textContent = _prodMsg();
+    body.innerHTML = `<p class="no-data">${_prodMsg()}</p>`;
     return;
   }
 
@@ -1646,8 +1651,8 @@ function renderExpiringProducts() {
   const label = document.getElementById('expiring-label');
   if (!card || !body) return;
   if (!productsLoaded) {
-    label.textContent = 'No disponible';
-    body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.84rem">No disponible</div>';
+    label.textContent = _prodMsg();
+    body.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:.84rem">${_prodMsg()}</div>`;
     return;
   }
 
@@ -1689,9 +1694,9 @@ function renderExpiringProducts() {
 function renderRentabilidad() {
   if (!productsLoaded) {
     ['rent-high', 'rent-mid', 'rent-low'].forEach(id => { document.getElementById(id).textContent = '—'; });
-    document.getElementById('rent-label').textContent = 'No disponible';
+    document.getElementById('rent-label').textContent = _prodMsg();
     document.getElementById('rent-no-cost').style.display = 'none';
-    document.getElementById('rent-list').innerHTML = '<p class="no-data">No disponible</p>';
+    document.getElementById('rent-list').innerHTML = `<p class="no-data">${_prodMsg()}</p>`;
     return;
   }
   const margin = p => p.cost > 0 && p.price > 0
@@ -2416,11 +2421,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const initialGeneration = ++_statsReloadGeneration;
   const initialMode = _statsMode;
   const initialOffset = _statsOffset;
+  // El catálogo (5,000 productos) es lo más pesado y solo lo usan las tarjetas
+  // de inventario y los nombres/categorías: se pinta lo demás sin esperarlo y
+  // se vuelve a pintar cuando llega (antes todo esperaba ~1 s de más).
+  const productsReady = loadProducts();
   try {
     _updateNavUI();
     await Promise.race([
       Promise.all([
-        loadProducts(),
         loadSales(initialMode, initialOffset, initialGeneration),
         loadPreviousSales(initialMode, initialOffset, initialGeneration),
         loadApartadosPendientes(),
@@ -2434,6 +2442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ]);
     if (initialGeneration !== _statsReloadGeneration) return;
     renderAll();
+    productsReady.then(() => renderAll());
   } catch {
     if (initialGeneration !== _statsReloadGeneration) return;
     _statsReloadGeneration++;
@@ -2442,6 +2451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     paymentsLoaded = false;
     prevPaymentsLoaded = false;
     productsLoaded = false;
+    productsPending = false;
     todayPaymentsLoaded = false;
     todaySummaryLoaded = false;
     apartadosPendientesLoaded = false;
