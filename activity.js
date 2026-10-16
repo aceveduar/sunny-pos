@@ -97,17 +97,7 @@ async function api(path, opts = {}) {
 }
 
 async function _fetchAllActivity(path, pageSize = 1000) {
-  const rows = [];
-  let offset = 0;
-  while (true) {
-    const sep = path.includes('?') ? '&' : '?';
-    const r = await api(`${path}${sep}limit=${pageSize}&offset=${offset}`);
-    if (!r.ok) return { ...r, data: null };
-    const page = Array.isArray(r.data) ? r.data : [];
-    rows.push(...page);
-    if (page.length < pageSize) return { ok: true, status: r.status, data: rows };
-    offset += page.length;
-  }
+  return _posPaginatedFetch(path, { pageSize });  // shared.js: páginas en paralelo
 }
 
 /* ── STATE ── */
@@ -677,13 +667,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_av) _av.textContent = _n ? _n[0].toUpperCase() : '?';
     if (_nl) _nl.textContent = _n;
   } catch {}
-  const [, productsResult] = await Promise.all([
-    loadNameMap(),
-    _fetchAllActivity('products?select=id,name,image,price&order=id.asc')
-  ]);
-  if (productsResult.ok && Array.isArray(productsResult.data)) {
-    productsResult.data.forEach(p => { _prodMap[p.id] = p; });
-  }
+  // El catálogo solo lo usa el detalle de un movimiento: se baja por detrás y
+  // la lista no lo espera (antes tardaba ~2 s en aparecer con 5,000 productos).
+  _fetchAllActivity('products?select=id,name,image,price&order=id.asc').then(r => {
+    if (r.ok && Array.isArray(r.data)) r.data.forEach(p => { _prodMap[p.id] = p; });
+  });
+  await loadNameMap();
   load();
   _chipsScroll();
 });

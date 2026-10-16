@@ -343,14 +343,21 @@ function supabaseApi(path, opts = {}) {
 // Supabase entrega como máximo 1,000 renglones por consulta (max_rows): con un
 // catálogo más grande, pedirlo de un jalón dejaba fuera productos sin avisar.
 // Se pide por páginas; si una página falla, falla todo (nunca un catálogo a medias).
-async function _fetchAllPages(path, pageSize = 1000) {
-  const rows = [];
-  for (let offset = 0; ; offset += pageSize) {
-    const r = await supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
-    if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
-    rows.push(...r.data);
-    if (r.data.length < pageSize) return { ...r, data: rows };
+async function _fetchAllPages(path, pageSize = 1000, parallel = 4) {
+  const page = offset => supabaseApi(`${path}&limit=${pageSize}&offset=${offset}`);
+  const first = await page(0);
+  if (!first.ok || !Array.isArray(first.data)) return { ...first, ok: false };
+  const rows = [...first.data];
+  // Si la primera vino llena, las siguientes se piden de 4 en 4 al mismo tiempo
+  for (let offset = pageSize; rows.length === offset; offset += parallel * pageSize) {
+    const res = await Promise.all(Array.from({ length: parallel }, (_, k) => page(offset + k * pageSize)));
+    for (const r of res) {
+      if (!r.ok || !Array.isArray(r.data)) return { ...r, ok: false };
+      rows.push(...r.data);
+      if (r.data.length < pageSize) return { ...first, data: rows };
+    }
   }
+  return { ...first, data: rows };
 }
 
 function showSkeleton() {
