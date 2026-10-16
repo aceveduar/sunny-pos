@@ -51,7 +51,8 @@ function _pendCounts() {
     'sin-publicar':      n(p => p.isPublished === false),
     'sin-precio':        can.publishProduct ? n(p => !p.price || p.price === 0) : 0,
     'sin-costo':         can.publishProduct ? n(p => p.cost == null || Number(p.cost) === 0) : 0,
-    'sin-categ':         n(p => p.category === 'por_revisar'),
+    // También los huérfanos: su código de categoría ya no existe en Configuración
+    'sin-categ':         n(p => p.category === 'por_revisar' || (categories.length && !categories.some(c => c.code === p.category))),
     'sin-codigo':        n(p => !p.barcode),
     'sin-cod-proveedor': n(p => !p.supplierCode),
     'imagen-base64':     ROLE === 'superadmin' ? n(p => _isRealBase64Image(p.image)) : 0,

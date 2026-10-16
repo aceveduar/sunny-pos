@@ -970,10 +970,18 @@ async function deleteCategoryAt(idx) {
   // los filtros sin avisar (el riesgo ya documentado, causante de ~300
   // productos huérfanos encontrados y corregidos por separado esta misma
   // sesión). El mensaje ahora describe la consecuencia real.
+  // Sus productos pasan a "Sin categoría" (Inventario → Pendientes) en vez de
+  // quedar con un código que ya no existe (antes desaparecían de los filtros).
   const msg = count > 0
-    ? `¿Eliminar "${c.label}"${childWarning}? ${count} producto(s) quedarán con una categoría que ya no existe — desaparecerán de los filtros de Inventario/Caja/Tienda aunque sigan existiendo (solo se verán en "Todos" o buscando por texto). ¿Continuar?`
+    ? `¿Eliminar "${c.label}"${childWarning}?
+
+${count === 1 ? 'Su producto pasa a "Sin categoría": lo encuentras en Inventario → Pendientes para ponerle otra.' : `Sus ${count} productos pasan a "Sin categoría": los encuentras en Inventario → Pendientes para ponerles otra.`} Mientras, no se ven en la Tienda.`
     : `¿Eliminar la categoría "${c.label}"${childWarning}?`;
   if (!(await teConfirm({ title: 'Eliminar categoría', message: msg, confirmText: 'Eliminar', danger: true }))) return;
+  if (count > 0) {
+    const mv = await api(`products?category=in.(${codes.join(',')})`, { method: 'PATCH', body: JSON.stringify({ category: 'por_revisar', category_label: 'Por revisar' }) });
+    if (!mv?.ok) { toast('No se pudieron mover sus productos; la categoría no se eliminó', 'err'); return; }
+  }
   const removeCodes = new Set(codes);
   const snapshot = categories;
   categories = categories.filter(x => !removeCodes.has(x.code));

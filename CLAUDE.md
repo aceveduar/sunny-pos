@@ -95,7 +95,7 @@ Otros: `tema.css` (sistema de diseño) · `negocio.js` · `supabase/instalar/` (
 - **Tienda muestra** `is_published=true AND category≠por_revisar AND (out_of_stock=false OR is_apartado=true)`.
 - **Archivar** (`is_archived=true` + oculto + agotado) es el borrado reversible preferido; nunca borrado real masivo (un producto puede ser componente vivo de un kit).
 - **No borrar un producto que esté en un apartado activo** (ni como componente de kit): lo exige `te_delete_products` en servidor (y `_productsInActiveApartados()` lo avisa antes en el cliente) — las RPC de editar/cancelar exigen que todos los productos existan.
-- **Categorías** en `config.categories` (`{code,label,color,parent?}`, 7 raíces). Riesgo: renombrar/eliminar un código deja productos huérfanos invisibles en filtros. Si un producto "desaparece" del filtro pero aparece en búsqueda, comparar su `category` contra los códigos vigentes.
+- **Categorías** en `config.categories` (`{code,label,color,parent?}`, 7 raíces). Eliminar una categoría pasa sus productos a `por_revisar` ("Sin categoría" en Pendientes, 2026-10-16); renombrar solo cambia la etiqueta (el código no cambia). "Sin categoría" también lista huérfanos (código que ya no existe), por si algo se coló por otra vía.
 
 ### Roles y permisos
 3 roles. **El servidor toma el rol de `config.user_permissions[email].role`** (lo que se edita en Configuración → Usuarios y Permisos); si el mapa existe y la persona no está, es `operador`. `user_metadata.role` solo lo usa el cliente como respaldo visual mientras carga `get_my_permissions()` — y cada usuario puede editar su propio `user_metadata`, así que **nunca** usarlo para autorizar en servidor. `duena` = alias de `superadmin`.
