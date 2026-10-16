@@ -259,6 +259,7 @@ let apartadosPendientesLoaded = false;
 let _customers = [];
 let _customerSales = [];
 let clientesLoaded = false;
+let clientesPending = true;
 let aptNewCount = 0;
 let aptNewLoaded = false;
 let prevAptNewCount = 0;
@@ -1849,6 +1850,7 @@ async function loadApartadosPendientes() {
    vinculados a un customer_id (customers es aditivo: ventas viejas sin
    teléfono capturado se quedan fuera hasta que esa clienta vuelva a comprar). ── */
 let turnosLoaded = false;
+let turnosPending = true;
 let _turnos = [];
 
 // Historial real de apertura/cierre de caja (cash_shifts) -- reemplaza el
@@ -1865,6 +1867,7 @@ async function loadTurnos() {
   const filtro = d ? `&or=(opened_at.gte.${d},status.eq.abierto,and(status.eq.cerrado,closed_at.gte.${d}))` : '';
   const r = await _fetchAll(`cash_shifts?select=id,user_email,opened_at,closed_at,fondo_inicial,conteo_final,gastos_total,retiros_total,efectivo_otras_cuentas,esperado,diferencia,status${filtro}&order=opened_at.desc&limit=60`);
   turnosLoaded = r.ok;
+  turnosPending = false;
   _turnos = r.ok ? (r.data || []) : [];
 }
 
@@ -1879,8 +1882,9 @@ function renderTurnos() {
   const label = document.getElementById('turnos-label');
   if (!card || !body) return;
   if (!turnosLoaded) {
-    label.textContent = 'No disponible';
-    body.innerHTML = '<p class="no-data">No disponible</p>';
+    const m = turnosPending ? 'Cargando…' : 'No disponible';
+    label.textContent = m;
+    body.innerHTML = `<p class="no-data">${m}</p>`;
     return;
   }
   const desdeTxt = _turnosDesde
@@ -1981,6 +1985,7 @@ async function loadClientesReport() {
     _fetchAll(`sales?customer_id=not.is.null&status=neq.cancelado&select=id,customer_id,total,paid_amount,created_at,origin_type,status&order=created_at.desc`)
   ]);
   clientesLoaded = custR.ok && salesR.ok;
+  clientesPending = false;
   _customers = custR.ok ? (custR.data || []) : [];
   _customerSales = salesR.ok ? (salesR.data || []) : [];
 }
@@ -2004,8 +2009,9 @@ function renderTopClientes() {
   const label = document.getElementById('clientes-label');
   if (!card || !body) return;
   if (!clientesLoaded) {
-    label.textContent = 'No disponible';
-    body.innerHTML = '<p class="no-data">No disponible</p>';
+    const m = clientesPending ? 'Cargando…' : 'No disponible';
+    label.textContent = m;
+    body.innerHTML = `<p class="no-data">${m}</p>`;
     return;
   }
 
@@ -2425,6 +2431,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // de inventario y los nombres/categorías: se pinta lo demás sin esperarlo y
   // se vuelve a pintar cuando llega (antes todo esperaba ~1 s de más).
   const productsReady = loadProducts();
+  // Turnos y Clientes frecuentes traen toda la historia (crecen con los años):
+  // tampoco frenan el dinero; sus tarjetas se llenan al llegar.
+  const historiaReady = Promise.all([loadClientesReport(), loadTurnos()]);
   try {
     _updateNavUI();
     await Promise.race([
@@ -2432,8 +2441,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadSales(initialMode, initialOffset, initialGeneration),
         loadPreviousSales(initialMode, initialOffset, initialGeneration),
         loadApartadosPendientes(),
-        loadClientesReport(),
-        loadTurnos(),
         loadNameMap(),
         loadTodaySales(initialGeneration),
         loadCategories()
@@ -2443,6 +2450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (initialGeneration !== _statsReloadGeneration) return;
     renderAll();
     productsReady.then(() => renderAll());
+    historiaReady.then(() => renderAll());
   } catch {
     if (initialGeneration !== _statsReloadGeneration) return;
     _statsReloadGeneration++;
@@ -2457,6 +2465,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     apartadosPendientesLoaded = false;
     clientesLoaded = false;
     turnosLoaded = false;
+    clientesPending = false;
+    turnosPending = false;
     renderAll();
     const aptLabel = document.getElementById('apt-summary-label');
     const aptBody = document.getElementById('apt-pending-body');

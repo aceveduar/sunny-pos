@@ -75,7 +75,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 
 ## 8. Rapidez (máxima velocidad de carga)
 **Punto de partida (2026-10-13, 5,000 productos, PC de Eduardo, sesión real):** Inventario 7–8 s · Caja ~5 s · Reportes ~6 s · Actividad ~6 s · Configuración ~4.5 s. Inventario descarga ~4 MB.
-**Con 4G simulado (2026-10-15):** Inventario 6.1 → 0.45 s · Caja 2.9 → 0.38 s · Reportes 2.4 → 1.4 s · Actividad 1.7 → 0.5 s · Tienda 1.8 → 0.9 s (Inventario/Caja: al volver a abrir; la primera vez ~2 s).
+**Con 4G simulado (2026-10-15):** Inventario 6.1 → 0.45 s · Caja 2.9 → 0.38 s · Reportes 2.4 → 0.8 s · Actividad 1.7 → 0.5 s · Tienda 1.8 → 0.9 s (Inventario/Caja: al volver a abrir; la primera vez ~2 s).
 - [x] Medir con un script repetible: `scripts/medir_rapidez.py` (4G simulado; resultados en `scripts/rapidez/`).
 - [x] Buscador de duplicados de Inventario: bloqueaba 3.5 s al abrir; ahora corre después y tarda 0.5 s.
 - [x] Actividad ya no espera al catálogo para mostrar la lista.
@@ -83,7 +83,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Páginas de 1,000 en paralelo, no una tras otra (Inventario, Tienda y `_posPaginatedFetch` para Caja/Reportes/Configuración/Actividad).
 - [x] Mostrar al instante la copia guardada y actualizar por detrás (Inventario y Caja, IndexedDB).
 - [ ] Miniaturas del tamaño real en pantalla (las fotos de 1000 px para una miniatura de 80 px pesan de más; Drive ya usa `_driveSz`).
-- [ ] Reportes: que el servidor sume (RPC por día/categoría/producto) en vez de bajar todas las ventas.
+- [x] Reportes: el dinero se pinta sin esperar al catálogo, a Turnos ni a Clientes frecuentes (esas tarjetas se llenan al llegar).
+- [ ] Reportes con años de historia: que el servidor sume (RPC) Turnos de caja y Clientes frecuentes, que hoy bajan toda la historia (ya no frenan la pantalla, pero crecen sin límite). Hacerlo cuando un negocio pase de ~1 año de datos.
 - [ ] Cargar Chart.js y librerías pesadas solo cuando se necesitan; revisar el orden de scripts.
 - [x] Copia sin conexión que no se rompa arriba de ~6,000 productos (IndexedDB en vez de localStorage).
 
