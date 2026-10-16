@@ -57,7 +57,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Aviso de privacidad y términos — **borradores listos** en `docs/legal/` (2026-10-16): aviso integral + simplificado para cada negocio (responsable) y términos Sunname–negocio (Sunname como encargado). **(Eduardo)** revisarlos con un abogado; luego publicar el aviso en la Tienda.
 - [ ] **(Eduardo)** Nombre definitivo (hoy "Sunny POS" es de trabajo), antes de logo, dominio o primera venta
 - [ ] Precio y planes (básico / con tienda / diseño a la medida aparte)
-- [ ] Instalarlo a un segundo negocio piloto
+- [ ] Instalarlo a un segundo negocio piloto — asistente listo: `python scripts/instalar/nuevo_negocio.py` (2026-10-16), probado contra Pruebas; falta estrenarlo en un proyecto vacío (también prueba `01_estructura.sql`).
 
 ## 7. Ropa y calzado: tallas, colores y tamaños (variantes)
 **Problema:** hoy cada producto es un renglón con su stock. Una blusa en 4 tallas × 3 colores serían 12 productos sueltos: la Tienda mostraría 12 tarjetas casi iguales y nadie sabría qué tallas quedan.

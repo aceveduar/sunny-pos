@@ -10,11 +10,15 @@ import json, os, re, sys, urllib.request
 RAIZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 
 def proyecto():
-    if os.environ.get('SUPABASE_REF'): return os.environ['SUPABASE_REF']
-    src = open(os.path.join(RAIZ, 'negocio.js'), encoding='utf-8').read()
-    m = re.search(r"supabaseUrl:\s*'https://([a-z0-9]+)\.supabase\.co'", src)
-    if not m: sys.exit('negocio.js no tiene supabaseUrl')
-    return m.group(1)
+    if os.environ.get('SUPABASE_REF'): ref = os.environ['SUPABASE_REF']
+    else:
+        src = open(os.path.join(RAIZ, 'negocio.js'), encoding='utf-8').read()
+        m = re.search(r"supabaseUrl:\s*'https://([a-z0-9]+)\.supabase\.co'", src)
+        if not m: sys.exit('negocio.js no tiene supabaseUrl')
+        ref = m.group(1)
+    # Candado: la base de Tres Encantos (piloto, otro repo) nunca se toca desde aquí
+    if ref == 'qxvrggmpaqhslgdmbhqw': sys.exit('ERROR: ese es el proyecto de Tres Encantos; Sunny POS no se conecta ahi.')
+    return ref
 
 def _token():
     ruta = os.environ.get('SUPABASE_TOKEN_FILE') or os.path.expanduser('~/sunnypos-token.txt')
