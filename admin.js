@@ -509,7 +509,6 @@ function adminCatMatches(productCat, filterCat) {
   return false;
 }
 
-const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // Productos Natura/naturales caducan — alerta si faltan <=60 días o ya caducó
 const _EXPIRY_SOON_DAYS = 60;
@@ -644,10 +643,6 @@ function getFilteredProducts() {
   }
 }
 
-function _driveSz(url, w) {
-  if (!url || !url.includes('drive.google.com')) return url;
-  return url.replace(/sz=w\d+/, `sz=w${w}`);
-}
 
 function _openKitLightbox(p, editFn) {
   document.getElementById('kit-lightbox')?.remove();

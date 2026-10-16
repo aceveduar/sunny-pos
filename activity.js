@@ -2,7 +2,6 @@ const SUPABASE_URL         = NEGOCIO.supabaseUrl;
 const SUPABASE_ANON_KEY    = NEGOCIO.supabaseAnonKey;
 const SESSION_KEY          = 'te_admin_session';
 const ACTIVITY_TZ           = 'America/Mexico_City';
-const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const _activityDateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: ACTIVITY_TZ, year: 'numeric', month: '2-digit', day: '2-digit'

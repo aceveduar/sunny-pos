@@ -18,7 +18,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Sacar de Tres Encantos un solo SQL con toda la estructura (sin datos): `supabase/instalar/01_estructura.sql`, generado con `scripts/instalar/` (instalado en Pruebas 2026-10-13)
 - [ ] Mejoras al modelo de datos (ahora que está vacía):
   - [x] A. Sin tocar la app (`scripts/instalar/mejoras.sql`, aplicado y probado en Pruebas 2026-10-13): índices faltantes, código de barras único, precios/stock no negativos, fechas obligatorias
-  - [ ] B. Con cambios chicos en la app: tabla de categorías (adiós productos huérfanos), quitar columnas viejas (`sales.type`, `abonos`, `legacy_key`, `is_estimated`, `category_label`), método Tarjeta
+  - [ ] B. Con cambios chicos en la app: quitar columnas viejas (`sales.type`, `abonos`, `legacy_key`, `is_estimated`, `category_label`). Hecho 2026-10-16: método Tarjeta, y los huérfanos de categoría se resolvieron sin tabla nueva (eliminar mueve a Sin categoría; Pendientes los detecta).
   - [ ] C. Grandes, decidir después: personas por id y no por correo; renglones de venta en su propia tabla (`sale_items`) para reportes rápidos; reportes calculados en el servidor
 - [x] Datos iniciales: categorías genéricas, configuración por defecto (`02_datos_iniciales.sql`; dueña con `03_primera_duena.sql`)
 - [x] Probarlo en el proyecto nuevo y crear la primera cuenta (dueña): eacevedo@ — producto, venta, turno y Reportes OK (2026-10-13)
@@ -47,7 +47,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Quitar la Libreta (apartados de papel) del código: pantalla, archivo, interruptor, funciones en la base y pruebas
 
 ## 5. Orden en el código (sin framework)
-- [ ] Juntar en `shared.js` lo repetido: `_esc`, `api`, `_driveSz`, `toast`
+- [x] Juntar en `shared.js` lo repetido (2026-10-16): `_esc` y `_driveSz` (eran iguales en 4 y 3 módulos). `api` y `toast` se quedan por módulo: cada uno tiene su token/renovación y Caja usa toasts con botón.
 
 ## 6. Lo que falta para vender
 - [x] Forma de pago Tarjeta (2026-10-16): `sale_payments.method` acepta `tarjeta` (mejoras.sql reescribe las RPC de cobro desde su definición); Caja, corte, historial, Reportes, Actividad y CSV la muestran; no entra al cajón (prueba en caja.sql); `negocio.js → formasDePago` la oculta si el negocio no tiene terminal.

@@ -83,7 +83,6 @@ async function _fetchAll(path, pageSize = 1000) {
   return _posPaginatedFetch(path, { pageSize });
 }
 
-const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // Los gráficos (Chart.js) pintan en <canvas>, que no responde a CSS ni a
 // [data-theme="dark"] -- sin esto, los textos/líneas de los ejes se
 // quedarían con su color de modo claro fijo, ilegibles sobre las tarjetas
@@ -91,7 +90,6 @@ const _esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace
 // dibujar cada gráfica (ver _reColorCharts() más abajo, que las vuelve a
 // crear si el tema cambia mientras la página sigue abierta).
 const _cssVar = (name, fallback) => (getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
-const _driveSz = (url, w) => (url && url.includes('drive.google.com')) ? url.replace(/sz=w\d+/, `sz=w${w}`) : (url || '');
 
 const _myEmail = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)||'{}')?.user?.email||''; } catch { return ''; } })();
 function logActivity(action, summary, meta = null) {

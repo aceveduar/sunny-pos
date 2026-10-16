@@ -1440,3 +1440,13 @@ function _metodosActivos() {
   const lista = Array.isArray(window.NEGOCIO?.formasDePago) ? window.NEGOCIO.formasDePago : Object.keys(_METODOS_PAGO);
   return Object.keys(_METODOS_PAGO).filter(m => m === 'efectivo' || lista.includes(m));
 }
+
+/* ── Ayudantes comunes de los 5 módulos (antes repetidos en cada archivo) ──
+   Se usan dentro de funciones, nunca al cargar: shared.js va al final del body. */
+// Texto de la base o del usuario antes de meterlo en innerHTML
+function _esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+// Foto de Drive al tamaño en pantalla (w ≈ px mostrados); otras URLs igual
+function _driveSz(url, w) {
+  if (!url || !url.includes('drive.google.com')) return url || '';
+  return url.replace(/sz=w\d+/, `sz=w${w}`);
+}
