@@ -1148,6 +1148,7 @@ async function showApp() {
   const sortSel = document.getElementById('sort-select');
   if (sortSel) sortSel.value = currentSort;
   setAdminView(currentAdminView);
+  initPrimerosPasos();  // guía de inicio (solo quien administra)
   initRealtime();
   // Conteo de duplicados para Configuración: después de pintar, con el celular libre
   (window.requestIdleCallback || (fn => setTimeout(fn, 1500)))(() => {

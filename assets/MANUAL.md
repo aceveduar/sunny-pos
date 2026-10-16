@@ -10,6 +10,9 @@ Guía para el equipo de la tienda: Caja, Inventario, Reportes, Actividad, Tienda
 ### Entrar y moverte por el sistema
 Entra con tu correo y contraseña. Los íconos de arriba llevan a **Caja**, **Inventario**, **Reportes** y **Tienda**. Lo demás está en el menú de tu foto o iniciales (arriba a la derecha): **Actividad**, **Configuración**, **Mi PIN**, **Modo oscuro**, **Ayuda** y **Cerrar sesión**. Si no ves alguno de estos, es porque tu cuenta no tiene ese permiso.
 
+### Primeros pasos
+Al empezar, la dueña ve arriba de Inventario una guía con lo que falta para dejar lista la tienda: agregar productos, revisar categorías, crear las cuentas del equipo, hacer la primera venta, compartir la Tienda y conocer la Ayuda. Cada paso se marca solo cuando ya está hecho. Toca **Ocultar** si ya no la quieres ver.
+
 ### Permisos y PIN de autorización
 Cada persona tiene sus permisos (los define la dueña en Configuración → Usuarios y permisos). Si algo te pide autorización, una persona que sí tenga ese permiso escribe **su PIN** en tu dispositivo y la acción sigue. La autorización sirve para una sola acción y dura 5 minutos. Después de 5 PIN equivocados se bloquea 10 minutos.
 

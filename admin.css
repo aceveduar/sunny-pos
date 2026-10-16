@@ -1945,3 +1945,23 @@ label:has(> #f-is-kit){min-height:44px}
 .imp-prev-precio{font-weight:700;color:var(--charcoal);white-space:nowrap}
 .imp-mas{font-size:.8rem;color:var(--muted);margin:6px 0}
 @media(max-width:640px){.imp-prev-fila{grid-template-columns:1fr auto}.imp-prev-dato{display:none}}
+
+/* ── Primeros pasos (admin-primeros.js) ── */
+.pp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radio-lg);padding:16px 16px 6px;margin:0 0 14px;box-shadow:var(--sombra-1)}
+.pp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pp-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--charcoal);margin:0}
+.pp-progreso{font-size:.86rem;color:var(--muted);margin:2px 0 0}
+.pp-ocultar{min-height:44px;padding:0 6px;border:none;background:none;color:var(--muted);font-size:.86rem;font-family:inherit;cursor:pointer;text-decoration:underline}
+.pp-barra{height:4px;border-radius:var(--radio-pill);background:var(--surface-soft);margin:8px 0 6px;overflow:hidden}
+.pp-barra div{height:100%;background:var(--brand);border-radius:inherit}
+.pp-lista{list-style:none;margin:0;padding:0}
+.pp-paso{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 0;border:none;border-top:1px solid var(--border);background:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--charcoal)}
+.pp-lista li:first-child .pp-paso{border-top:none}
+.pp-ico{flex-shrink:0;color:var(--muted-light);display:flex}
+.pp-paso.hecho .pp-ico{color:var(--brand)}
+.pp-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.pp-t{font-size:.95rem;font-weight:600}
+.pp-paso.hecho .pp-t{color:var(--muted);text-decoration:line-through}
+.pp-d{font-size:.84rem;color:var(--muted)}
+.pp-flecha{flex-shrink:0;color:var(--muted-light)}
+.pp-paso:hover .pp-flecha{color:var(--charcoal)}

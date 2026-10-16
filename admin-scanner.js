@@ -656,7 +656,10 @@ async function _deleteDupProduct(id, pairKey) {
         stock: deleted.stock, position: deletedIdx, cost: deleted.cost,
         is_published: deleted.isPublished,
         kit_items: deleted.kitItems || null, images: deleted.images || null,
-        expiry_date: deleted.expiryDate || null, supplier_code: deleted.supplierCode || null
+        expiry_date: deleted.expiryDate || null, supplier_code: deleted.supplierCode || null,
+        // Tallas/colores y creador: sin esto, deshacer la regresaba suelta y "sin registro"
+        variant_group: deleted.variantGroup || null, variant: deleted.variant || null,
+        variant_base: deleted.variantBase || null, created_by: deleted.createdBy || null
       })
     });
     if (!r.ok) { toast('No se pudo restaurar', 'error'); return; }
@@ -668,6 +671,8 @@ async function _deleteDupProduct(id, pairKey) {
     // Borra de Drive la principal y todas las adicionales -- ver mismo fix
     // en admin-form.js confirmDelete().
     [deleted?.image, ...(deleted?.images || [])].filter(Boolean).forEach(url => {
+      // Otra talla/color (u otro producto) sigue usando esta foto
+      if (products.some(o => o.image === url || (o.images || []).includes(url))) return;
       const fileId = _driveFileId(url);
       if (fileId) _deleteDriveFile(fileId);
     });

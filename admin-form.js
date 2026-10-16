@@ -1336,7 +1336,10 @@ async function confirmDelete() {
         stock: deleted.stock, position: deletedIdx,
         cost: deleted.cost ?? null, is_published: deleted.isPublished !== false,
         kit_items: deleted.kitItems || null, images: deleted.images || null,
-        expiry_date: deleted.expiryDate || null, supplier_code: deleted.supplierCode || null
+        expiry_date: deleted.expiryDate || null, supplier_code: deleted.supplierCode || null,
+        // Tallas/colores y creador: sin esto, deshacer la regresaba suelta y "sin registro"
+        variant_group: deleted.variantGroup || null, variant: deleted.variant || null,
+        variant_base: deleted.variantBase || null, created_by: deleted.createdBy || null
       })
     });
     if (r.ok) {
@@ -1350,6 +1353,8 @@ async function confirmDelete() {
     // borraba la principal, dejando huérfanas las adicionales de cualquier
     // producto eliminado que tuviera más de una foto.
     [deleted?.image, ...(deleted?.images || [])].filter(Boolean).forEach(url => {
+      // Otra talla/color (u otro producto) sigue usando esta foto
+      if (products.some(o => o.image === url || (o.images || []).includes(url))) return;
       const fileId = _driveFileId(url);
       if (fileId) _deleteDriveFile(fileId);
     });

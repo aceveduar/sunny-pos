@@ -65,6 +65,7 @@ function _activePendKey() {
 }
 
 function renderStats() {
+  if (typeof _pp !== 'undefined' && _pp) renderPrimerosPasos();  // la guía se marca sola al haber productos
   const nArchivados = products.filter(p => p.isArchived).length;
   const total       = products.filter(p => !p.isArchived).length;
   const nKits       = products.filter(p => !p.isArchived && Array.isArray(p.kitItems)).length;
