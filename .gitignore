@@ -8,3 +8,4 @@ supabase/.temp/
 
 # Muestras de diseño (no son parte de la app)
 muestras/
+__pycache__/
