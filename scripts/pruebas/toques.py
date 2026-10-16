@@ -48,6 +48,7 @@ PANTALLAS = [
     ('Inventario', 'admin.html', None),
     ('Inventario · ficha', 'admin.html', "openQV(products[0].id)"),
     ('Inventario · formulario', 'admin.html', "openForm(products[0].id)"),
+    ('Inventario · tallas y colores', 'admin.html', "openVarManager(products.find(x => x.variantGroup).id); _varCambiarModo('codigos')"),
     ('Caja', 'pos.html', None),
     ('Caja · apartados', 'pos.html', "openApartados()"),
     ('Reportes', 'stats.html', None),

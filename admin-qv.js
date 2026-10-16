@@ -481,11 +481,10 @@ function _renderQV(p) {
   const _pubClick = can.publishProduct
     ? `onclick="_qvTogglePublished(${p.id})" ontouchstart="event.stopPropagation()" style="cursor:pointer" title="Toca para cambiar visibilidad"`
     : '';
+  // Solo si está en la Web u oculto: "Agotado" aquí repetía el chip "Sin stock"
   const pubChip  = p.isPublished === false
     ? `<span class="qv-chip qv-chip-hidden" ${_pubClick}>${QV_ICO_EYEOFF(13)}Oculto</span>`
-    : p.outOfStock
-      ? `<span class="qv-chip qv-chip-warn">${QV_ICO_WARN(13)}Agotado</span>`
-      : `<span class="qv-chip qv-chip-web" ${_pubClick}>${QV_ICO_GLOBE(13)}Web</span>`;
+    : `<span class="qv-chip qv-chip-web" ${_pubClick}>${QV_ICO_GLOBE(13)}Web</span>`;
   const stockCls = p.stock === 0 ? 'qv-chip-sold' : p.stock === 1 ? '' : 'qv-chip-ok';
   const featChip    = p.featured ? `<span class="qv-chip">${QV_ICO_STAR(13)}Destacado</span>` : '';
   let marginChip = '';

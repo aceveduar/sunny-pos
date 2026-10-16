@@ -204,8 +204,7 @@ async function saveVariantes() {
   renderTable(); renderStats();
   toast(`"${base}": ${combos.length} variantes creadas`, 'success');
   // Abrir su ficha: ahí se ponen fotos por color y códigos de barras
-  _varModo = 'piezas';
-  openQV(r.data[0].id);
+  openVarManager(r.data[0].id);
 }
 
 /* ── Ficha (Quick View): existencias de todo el grupo ── */
@@ -219,7 +218,7 @@ const _varOpcionFoto = nombres => nombres.findIndex(n => /color|tono/i.test(n ||
 const _jsq = v => _esc(v).replace(/'/g, "\\'");
 
 // Cuadrícula de existencias del grupo, con las celdas editables
-function variantGridHTML(p) {
+function variantGridHTML(p, completa = false) {
   const hs = _varHermanas(p);
   if (hs.length < 2 && !p?.variantGroup) return '';
   const nombres = (Array.isArray(hs[0]?.variant) ? hs[0].variant : []).map(e => e[0]);
@@ -230,20 +229,20 @@ function variantGridHTML(p) {
   const celda = (f, c) => hs.find(x => _varValor(x, n1) === f && (c === null || _varValor(x, n2) === c));
   const total = hs.reduce((s, x) => s + (x.stock || 0), 0);
   // Foto por color: en el encabezado de cada color (columna, o renglón si es la única opción)
-  const fi = can.editProduct && new Set(hs.map(x => _varValor(x, nombres[_varOpcionFoto(nombres)]))).size > 1 ? _varOpcionFoto(nombres) : -1;
+  const fi = completa && can.editProduct && new Set(hs.map(x => _varValor(x, nombres[_varOpcionFoto(nombres)]))).size > 1 ? _varOpcionFoto(nombres) : -1;
   const foto = (i, val) => {
     if (fi !== i) return '';
     const v = hs.find(x => _varValor(x, nombres[i]) === val);
     return `<button type="button" class="var-fotocol" onclick="_varFotoColor(${p.id}, '${_jsq(nombres[i])}', '${_jsq(val)}')" aria-label="Cambiar foto de ${_esc(val)}" title="Foto de ${_esc(val)}">
       <img src="${_driveSz(v?.image || DEFAULT_IMG, 80)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'"></button>`;
   };
-  const codigos = _varModo === 'codigos' && can.editProduct;
-  const llegaron = _varModo === 'llegaron' && (can.receiveStock || can.editProduct);
+  const codigos = completa && _varModo === 'codigos' && can.editProduct;
+  const llegaron = completa && _varModo === 'llegaron' && (can.receiveStock || can.editProduct);
   const sinCodigo = hs.filter(x => !x.barcode).length;
   const pestana = (m, on, txt) => `<button type="button" class="${on ? 'on' : ''}" aria-pressed="${on}" onclick="_varCambiarModo('${m}')">${txt}</button>`;
-  return `<div class="var-qv">
+  return `<div class="var-qv${completa ? ' var-completa' : ''}">
     <div class="var-qv-head"><span>${_esc(nombres.join(' y '))}</span><span class="var-qv-total">${total} pza${total !== 1 ? 's' : ''} en ${hs.length} variantes</span></div>
-    ${can.editProduct || can.receiveStock ? `<div class="var-modo" role="group" aria-label="Qué ver en la cuadrícula">
+    ${completa && (can.editProduct || can.receiveStock) ? `<div class="var-modo" role="group" aria-label="Qué ver en la cuadrícula">
       ${pestana('piezas', !codigos && !llegaron, 'Piezas')}
       ${can.receiveStock || can.editProduct ? pestana('llegaron', llegaron, 'Llegaron') : ''}
       ${can.editProduct ? pestana('codigos', codigos, `Códigos${sinCodigo ? ` <span class="var-modo-n">· ${sinCodigo}</span>` : ''}`) : ''}
@@ -252,7 +251,7 @@ function variantGridHTML(p) {
       <thead><tr><th scope="col">${_esc(n1)}</th>${cols.map(c => `<th scope="col">${c === null ? 'Piezas' : foto(1, c) + _esc(c)}</th>`).join('')}</tr></thead>
       <tbody>${filas.map(f => `<tr><th scope="row"><span class="var-fila">${foto(0, f)}${_esc(f)}</span></th>${cols.map(c => {
         const v = celda(f, c);
-        if (!v) return can.addProduct
+        if (!v) return completa && can.addProduct
           ? `<td><button type="button" class="var-falta" onclick="_varCrearCombos(${p.id}, [[['${_jsq(n1)}', '${_jsq(f)}']${c === null ? '' : `, ['${_jsq(n2)}', '${_jsq(c)}']`}]])" aria-label="Agregar ${_esc(f)}${c === null ? '' : ' ' + _esc(c)}" title="Agregar esta combinación">+</button></td>`
           : '<td class="var-na">—</td>';
         if (llegaron) return `<td><input type="number" min="0" step="1" inputmode="numeric" class="var-celda var-llego" placeholder="0" data-id="${v.id}"
@@ -273,7 +272,9 @@ function variantGridHTML(p) {
       ? `<p class="var-qv-hint">Escanea o escribe el código de cada una; con Enter pasas a la siguiente.</p>
          ${sinCodigo ? `<button type="button" class="var-mas-btn var-generar" onclick="_varGenerarCodigos(${p.id})">Crear códigos para las ${sinCodigo} que no tienen</button>` : ''}`
       : `<p class="var-qv-hint">Toca un número para cambiar las piezas.${fi >= 0 ? ` Toca la foto de un ${_esc(nombres[fi].toLowerCase())} para cambiarla.` : ''}</p>`}
-    ${can.addProduct ? `<div class="var-mas" id="var-mas">
+    ${!completa ? `<button type="button" class="var-admin-btn" onclick="openVarManager(${p.id})">${_esc(_varTituloAdmin(nombres))}
+      <span class="var-admin-sub">Mercancía que llegó, códigos, fotos por color${can.addProduct ? ', agregar tallas' : ''}</span></button>` : ''}
+    ${completa && can.addProduct ? `<div class="var-mas" id="var-mas">
       <button type="button" class="var-mas-btn" onclick="_varMostrarAgregar(true)">+ ${_esc(nombres.join(' o ').toLowerCase().replace(/^./, x => x.toUpperCase()))}</button>
       <div class="var-mas-form" hidden>
         ${nombres.length > 1 ? `<select id="var-mas-opcion" aria-label="Qué agregar">${nombres.map((n, i) => `<option value="${i}">${_esc(n)}</option>`).join('')}</select>` : ''}
@@ -322,9 +323,8 @@ async function _varSumarLlegaron(pId) {
 let _varModo = 'piezas';
 function _varCambiarModo(m) {
   _varModo = m;
-  const p = products.find(x => x.id === _qvCurrentId);
-  const zona = document.getElementById('qv-var-zone');
-  if (p && zona) zona.innerHTML = variantGridHTML(p);
+  _varmPintar();
+  const zona = document.getElementById('varm-body');
   if (m === 'llegaron') setTimeout(() => zona?.querySelector('.var-llego')?.focus(), 30);
   if (m === 'codigos') setTimeout(() => (zona?.querySelector('.var-codigo:placeholder-shown') || zona?.querySelector('.var-codigo'))?.focus(), 30);
 }
@@ -398,10 +398,72 @@ async function _varGenerarCodigos(pId) {
 }
 
 function _varRefrescarFicha() {
-  const p = products.find(x => x.id === _qvCurrentId);
-  if (p) _renderQV(p);
+  if (_varmAbierta()) _varmPintar();
+  else { const p = products.find(x => x.id === _qvCurrentId); if (p) _renderQV(p); }
   renderTable(); renderStats();
 }
+
+/* ── Ventana "Administrar tallas y colores" ──
+   La ficha (vista rápida) solo trae la cuadrícula de piezas; lo de gestión
+   (llegaron, códigos, fotos por color, agregar tallas) va aquí, con espacio:
+   en la ficha no cabían los códigos y la cuadrícula tenía su propio scroll. */
+let _varmId = null, _varmVolverQV = false;
+const _varmAbierta = () => document.getElementById('varm-overlay')?.classList.contains('open');
+function _varTituloAdmin(nombres) {
+  const plural = n => n.toLowerCase().replace(/ón$/, 'ones').replace(/([aeiou])$/, '$1s').replace(/([^aeious])$/, '$1es');
+  return 'Administrar ' + nombres.map(plural).join(' y ');
+}
+function openVarManager(id) {
+  const p = products.find(x => x.id === id); if (!p?.variantGroup) return;
+  _varmVolverQV = !!document.getElementById('qv-overlay')?.classList.contains('open');
+  if (_varmVolverQV) closeQV();   // la ficha va encima de las ventanas
+  _varmId = id; _varModo = 'piezas';
+  let ov = document.getElementById('varm-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'overlay'; ov.id = 'varm-overlay';
+    ov.onclick = e => { if (e.target === ov) closeVarManager(); };
+    ov.innerHTML = `<div class="modal varm-modal" role="dialog" aria-modal="true" aria-labelledby="varm-title">
+      <div class="modal-head varm-head">
+        <img id="varm-img" alt="">
+        <div class="varm-tit"><h3 id="varm-title"></h3><p id="varm-sub"></p></div>
+        <button class="modal-close-btn" onclick="closeVarManager()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body" id="varm-body"></div>
+      <div class="modal-foot"><button class="btn btn-outline varm-etq" onclick="_varmEtiquetas()">Imprimir etiquetas</button><button class="btn btn-gold" onclick="closeVarManager()">Listo</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+  }
+  _varmPintar();
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function _varmPintar() {
+  const p = products.find(x => x.id === _varmId);
+  const body = document.getElementById('varm-body');
+  if (!p || !body) return;
+  const hs = _varHermanas(p);
+  document.getElementById('varm-title').textContent = p.variantBase || p.name;
+  document.getElementById('varm-sub').textContent = `${_catDisplayLabel(p)} · $${(p.price || 0).toLocaleString('es-MX')} · ${hs.length} variantes`;
+  const img = document.getElementById('varm-img');
+  img.src = _driveSz(p.image || DEFAULT_IMG, 120); img.onerror = () => { img.onerror = null; img.src = DEFAULT_IMG; };
+  body.innerHTML = variantGridHTML(p, true);
+}
+// Etiquetas de toda la prenda (después de capturar o crear sus códigos)
+function _varmEtiquetas() {
+  const p = products.find(x => x.id === _varmId); if (!p) return;
+  _varmVolverQV = false;
+  closeVarManager();
+  openLabels(_varHermanas(p).map(x => x.id));
+}
+function closeVarManager() {
+  document.getElementById('varm-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+  _varModo = 'piezas';
+  if (_varmVolverQV && _varmId && products.some(x => x.id === _varmId)) openQV(_varmId);
+  _varmVolverQV = false;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && _varmAbierta()) closeVarManager(); });
 
 function _varMostrarAgregar(abrir) {
   const box = document.getElementById('var-mas'); if (!box) return;
@@ -815,8 +877,7 @@ async function saveVariantJoin() {
   closeVariantJoin();
   selectedIds.clear(); updateBulkBar(); renderTable(); renderStats();
   toast(`"${base}": ${filas.length} productos juntos`, 'success');
-  _varModo = 'piezas';
-  openQV(filas[0].id);
+  openVarManager(filas[0].id);
 }
 
 // Ficha → Más → "Quitar de la prenda": vuelve a ser un producto suelto (conserva su nombre completo)
@@ -856,7 +917,6 @@ async function _varDuplicarPrenda(pId) {
   logActivity('producto_creado', `Duplicó la prenda "${p.variantBase || p.name}" (${filas.length} variantes)`, { ids: r.data.map(x => x.id), name: base, variant_group: grupo });
   renderTable(); renderStats();
   toast(`"${base}" creada (oculta, 0 piezas): cámbiale el nombre`, 'success');
-  _varModo = 'piezas';
-  openQV(r.data[0].id);
+  openVarManager(r.data[0].id);
 }
 
