@@ -1220,3 +1220,30 @@ button,a{touch-action:manipulation}
 .cobranza-liberar{flex-shrink:0;min-height:44px;padding:0 12px;border-radius:var(--radio-pill);border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal);font-size:.8rem;font-weight:700;font-family:inherit;cursor:pointer}
 .btn-favor{flex:1;min-height:44px;padding:10px 14px;border-radius:var(--radio-md);border:1.5px solid var(--ink);background:var(--surface);color:var(--charcoal);font-family:inherit;font-size:.84rem;font-weight:700;cursor:pointer}
 
+/* ── Prendas con tallas y colores (pos-variantes.js) ── */
+.pos-card-var{font-size:.7rem;color:var(--muted);margin:1px 0 2px}
+.pos-prod-oos{opacity:.6}
+.pos-var-overlay{position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+.pos-var-overlay.open{display:flex}
+.pos-var-sheet{background:var(--surface);border-radius:var(--radio-xl);box-shadow:var(--sombra-3);width:100%;max-width:520px;max-height:88dvh;overflow:auto;padding:16px 16px 14px}
+.pos-var-head{display:flex;align-items:center;gap:12px}
+.pos-var-head img{width:56px;height:56px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:var(--radio-sm);flex-shrink:0}
+.pos-var-tit{flex:1;min-width:0}
+.pos-var-tit h3{font-size:1.05rem;font-weight:700;color:var(--charcoal);margin:0;line-height:1.25}
+.pos-var-tit span{font-size:.86rem;color:var(--muted)}
+.pos-var-close{position:relative;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--charcoal);cursor:pointer;flex-shrink:0;font-size:.9rem}
+.pos-var-close::after{content:"";position:absolute;inset:-7px}
+.pos-var-hint{font-size:.88rem;color:var(--charcoal);font-weight:600;margin:14px 0 8px}
+.pos-var-grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pos-var-tabla{border-collapse:separate;border-spacing:6px;margin:-6px}
+.pos-var-tabla th{font-size:.8rem;font-weight:700;color:var(--muted);text-align:center;padding:0 2px;white-space:nowrap}
+.pos-var-tabla tbody th{text-align:left;color:var(--charcoal);font-size:.92rem;padding-right:6px}
+.pos-var-btn{min-width:60px;height:48px;border-radius:var(--radio-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--charcoal);font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer}
+.pos-var-btn:hover,.pos-var-btn:focus-visible{border-color:var(--brand);outline:none;background:var(--brand-light)}
+.pos-var-btn.agotada{color:var(--muted-light);border-style:dashed;background:transparent}
+.pos-var-na{color:var(--muted-light);text-align:center}
+.pos-var-pie{font-size:.78rem;color:var(--muted);margin:10px 0 0}
+@media(max-width:640px){
+  .pos-var-overlay{align-items:flex-end;padding:0}
+  .pos-var-sheet{border-radius:var(--radio-xl) var(--radio-xl) 0 0;max-width:none;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+}

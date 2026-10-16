@@ -187,7 +187,7 @@ Para sacar un producto de circulación usa **Archivar** (vista rápida → Más)
 2. Elige las **tallas** (o números, en calzado) y, si aplica, los **colores**. Si falta una, escríbela en **+ Otra**.
 3. Escribe cuántas piezas hay de cada combinación en la cuadrícula y toca **Crear**.
 
-Cada variante es un producto con su propio stock y su nombre completo ("Blusa de lino · M · Negro"), así que en Caja se busca, se escanea y se vende como cualquier otro. Para ver o cambiar las piezas de todas las tallas y colores, abre cualquiera de ellas: en su ficha está la cuadrícula; toca un número para cambiarlo.
+Cada variante es un producto con su propio stock y su nombre completo ("Blusa de lino · M · Negro"). En **Caja** la prenda sale en una sola tarjeta: tócala y elige en la cuadrícula la talla y el color que se lleva la clienta (el número es cuántas piezas hay). También puedes escanear su etiqueta o buscarla completa ("lino m negro") para agregarla directo. Para ver o cambiar las piezas de todas las tallas y colores, abre cualquiera de ellas: en su ficha está la cuadrícula; toca un número para cambiarlo.
 
 **Agregar una talla o un color después:** abre la prenda y, debajo de la cuadrícula, toca **+ Talla o color**. Escribe la nueva (por ejemplo "Rojo") y toca **Agregar**: se crea en todas las tallas con 0 piezas; luego escribe cuántas llegaron. Si solo falta una combinación, toca el **+** de su casilla.
 

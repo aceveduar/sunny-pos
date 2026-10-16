@@ -1087,14 +1087,16 @@ function _mapPosProduct(p) {
     badgeType: p.badge_type,
     kitItems: p.kit_items || null,
     expiryDate: p.expiry_date || null,
-    variantGroup: p.variant_group || null
+    variantGroup: p.variant_group || null,
+    variant: p.variant || null,
+    variantBase: p.variant_base || null
   };
 }
 
 let _productsLoadGeneration = 0;
 async function loadProducts() {
   const loadGeneration = ++_productsLoadGeneration;
-  const result = await _posFetchAll('products?select=id,name,category,category_label,price,original_price,description,image,barcode,stock,out_of_stock,badge,badge_type,kit_items,expiry_date,variant_group&is_archived=eq.false&order=position.asc,id.asc');
+  const result = await _posFetchAll('products?select=id,name,category,category_label,price,original_price,description,image,barcode,stock,out_of_stock,badge,badge_type,kit_items,expiry_date,variant_group,variant,variant_base&is_archived=eq.false&order=position.asc,id.asc');
   if (loadGeneration !== _productsLoadGeneration) return false;
   if (result.ok && Array.isArray(result.data)) {
     products = result.data.map(_mapPosProduct);
@@ -1275,7 +1277,7 @@ function posCard(p) {
   const stockCls = isKit ? (oos ? 'stock-sold' : 'stock-ok') : (effStock === 0 ? 'stock-sold' : effStock === 1 ? 'stock-one' : 'stock-ok');
   const stockTxt = isKit
     ? (isKit && !p.kitItems.length ? 'Sin componentes' : oos ? 'Sin stock' : `${_giftIconSvg(13)} ${effStock} kit${effStock!==1?'s':''}`)
-    : (effStock === 0 ? 'Sin stock' : `${effStock} ud${effStock!==1?'s':''}`);
+    : (effStock === 0 ? 'Sin stock' : `${effStock} pza${effStock!==1?'s':''}`);
   const kitComps = isKit && p.kitItems.length
     ? p.kitItems.map(c => `<div style="font-size:.6rem;color:var(--muted);line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.qty > 1 ? c.qty + '× ' : ''}${_esc(c.name)}</div>`).join('')
     : '';
@@ -1400,15 +1402,17 @@ function renderPosProducts(list) {
   const el = document.getElementById('pos-results');
   if (!list.length) return;
   _posLastRenderList = list;
-  const visible = list.slice(0, _posPage * POS_PAGE_SIZE);
-  const hasMore = visible.length < list.length;
+  // Tallas/colores de una prenda en una sola tarjeta (pos-variantes.js)
+  const vista = typeof _posAgrupar === 'function' ? _posAgrupar(list) : list;
+  const visible = vista.slice(0, _posPage * POS_PAGE_SIZE);
+  const hasMore = visible.length < vista.length;
   const sentinelHTML = hasMore
     ? `<div id="pos-load-sentinel" style="padding:16px;text-align:center;color:var(--muted);font-size:.85rem">Cargando más…</div>`
     : '';
   if (posView === 'cards') {
-    el.innerHTML = `<div class="pos-grid">${visible.map(p => posCard(p)).join('')}</div>` + sentinelHTML;
+    el.innerHTML = `<div class="pos-grid">${visible.map(p => p._grupo ? posGarmentCard(p) : posCard(p)).join('')}</div>` + sentinelHTML;
   } else {
-    el.innerHTML = visible.map(p => productCard(p)).join('') + sentinelHTML;
+    el.innerHTML = visible.map(p => p._grupo ? posGarmentRow(p) : productCard(p)).join('') + sentinelHTML;
   }
   _setupPosLoadSentinel(hasMore);
 }
