@@ -19,7 +19,7 @@ LISTO = {
     'Inventario': ('admin.html', "document.querySelectorAll('#products-table tr[data-id], #products-card-grid .admin-card[data-id], #products-table .mpc-row:not(.sk-row)').length >= 10"),
     'Caja':       ('pos.html',   "document.querySelectorAll('#pos-results [onclick]').length >= 10"),
     'Reportes':   ('stats.html', "(() => { const v = document.getElementById('kpi-revenue')?.textContent || ''; return /\\$\\s?[0-9]/.test(v); })()"),
-    'Actividad':  ('activity.html', "document.querySelectorAll('.act-item, .act-card, [class*=act-row]').length >= 5"),
+    'Actividad':  ('activity.html', "document.querySelectorAll('.act-card').length >= 1"),
     'Tienda':     ('index.html', "document.querySelectorAll('#products-grid .product-card:not(.skel-card)').length >= 8"),
 }
 

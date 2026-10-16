@@ -983,17 +983,30 @@ function _getGeoLocation(timeoutMs = 6000) {
 // comportamiento original de stats.js (traer la colección completa para
 // que los reportes no corten datos en silencio); pos-core.js sigue
 // pasando su propio tope de 20000.
-async function _posPaginatedFetch(path, { pageSize = 500, maxRows = Infinity, tooManyMessage } = {}) {
-  const rows = [];
-  let offset = 0;
+// Trae todos los renglones de una consulta en páginas (Supabase corta en 1,000).
+// La primera página va sola (casi todo cabe ahí); si viene llena, las siguientes
+// se piden de 4 en 4 al mismo tiempo hasta que una llegue incompleta. Antes iban
+// una tras otra: Caja tardaba 3 s solo en bajar 5,000 productos.
+// Requiere `order=` en la consulta (lo exige también la paginación por offset).
+async function _posPaginatedFetch(path, { pageSize = 1000, maxRows = Infinity, tooManyMessage, parallel = 4 } = {}) {
+  const sep = path.includes('?') ? '&' : '?';
+  const page = offset => api(`${path}${sep}limit=${pageSize}&offset=${offset}`);
+  const first = await page(0);
+  if (!first.ok) return { ...first, data: null };
+  const rows = Array.isArray(first.data) ? [...first.data] : [];
+  if (rows.length < pageSize) return { ok: true, status: first.status, data: rows };
+  let offset = pageSize;
   while (offset < maxRows) {
-    const sep = path.includes('?') ? '&' : '?';
-    const r = await api(`${path}${sep}limit=${pageSize}&offset=${offset}`);
-    if (!r.ok) return { ...r, data: null };
-    const page = Array.isArray(r.data) ? r.data : [];
-    rows.push(...page);
-    if (page.length < pageSize) return { ok: true, status: r.status, data: rows };
-    offset += page.length;
+    const tanda = [];
+    for (let k = 0; k < parallel && offset + k * pageSize < maxRows; k++) tanda.push(page(offset + k * pageSize));
+    const res = await Promise.all(tanda);
+    for (const r of res) {
+      if (!r.ok) return { ...r, data: null };
+      const d = Array.isArray(r.data) ? r.data : [];
+      rows.push(...d);
+      if (d.length < pageSize) return { ok: true, status: first.status, data: rows };
+    }
+    offset += tanda.length * pageSize;
   }
   return { ok: false, status: 413, data: { message: tooManyMessage || 'Demasiados registros para completar la consulta' } };
 }

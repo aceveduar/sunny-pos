@@ -512,7 +512,7 @@ async function api(path, opts = {}) {
   }
 }
 
-async function _posFetchAll(path, pageSize = 500, maxRows = 20000) {
+async function _posFetchAll(path, pageSize = 1000, maxRows = 20000) {
   return _posPaginatedFetch(path, { pageSize, maxRows, tooManyMessage: 'Hay demasiados movimientos para completar la consulta' });
 }
 
