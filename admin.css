@@ -1922,3 +1922,26 @@ label:has(> #f-is-kit){min-height:44px}
   #lbl-print.lbl-rollo .lbl{break-after:page;page-break-after:always}
   #lbl-print .lbl{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* ── Importar desde Excel (admin-importar.js) ── */
+.imp-modal{max-width:620px}
+.imp-txt{font-size:.92rem;color:var(--charcoal);margin:0 0 14px;line-height:1.45}
+.imp-sub{font-size:.8rem;font-weight:700;color:var(--muted);margin:16px 0 6px}
+.imp-elegir{display:flex;align-items:center;justify-content:center;gap:10px;min-height:88px;border:1.5px dashed var(--border);border-radius:var(--radio-md);font-weight:700;font-size:.95rem;color:var(--charcoal);cursor:pointer;background:var(--surface-soft)}
+.imp-elegir:hover{border-color:var(--charcoal)}
+.imp-plantilla{display:block;margin:12px auto 0;min-height:44px;padding:0 12px;border:none;background:none;color:var(--charcoal);text-decoration:underline;font-size:.88rem;font-family:inherit;cursor:pointer}
+.imp-error{background:var(--tint-red-bg);border:1px solid var(--tint-red-border);color:var(--tint-red-strong);border-radius:var(--radio-sm);padding:10px 12px;font-size:.86rem;margin:0 0 12px}
+.imp-map{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 16px}
+.imp-map-fila{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.88rem;color:var(--charcoal)}
+.imp-map-fila b{color:var(--tint-red-strong)}
+.imp-map-fila select{flex:0 1 150px;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radio-sm);background:var(--surface);color:var(--charcoal);font-size:.9rem;font-family:inherit}
+.imp-pub{margin-top:10px}
+.imp-lista{margin:0;padding-left:20px;font-size:.88rem;color:var(--charcoal);line-height:1.6}
+.imp-prev{margin-top:10px;border:1px solid var(--border);border-radius:var(--radio-md);padding:4px 12px}
+.imp-prev-fila{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.86rem}
+.imp-prev-fila:last-of-type{border-bottom:none}
+.imp-prev-nom{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--charcoal);font-weight:600}
+.imp-prev-dato{color:var(--muted);white-space:nowrap;font-size:.8rem}
+.imp-prev-precio{font-weight:700;color:var(--charcoal);white-space:nowrap}
+.imp-mas{font-size:.8rem;color:var(--muted);margin:6px 0}
+@media(max-width:640px){.imp-prev-fila{grid-template-columns:1fr auto}.imp-prev-dato{display:none}}

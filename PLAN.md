@@ -51,7 +51,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 
 ## 6. Lo que falta para vender
 - [x] Forma de pago Tarjeta (2026-10-16): `sale_payments.method` acepta `tarjeta` (mejoras.sql reescribe las RPC de cobro desde su definición); Caja, corte, historial, Reportes, Actividad y CSV la muestran; no entra al cajón (prueba en caja.sql); `negocio.js → formasDePago` la oculta si el negocio no tiene terminal.
-- [ ] Importar productos desde Excel/CSV
+- [x] Importar productos desde Excel/CSV (2026-10-16, `admin-importar.js`, + Agregar → Desde Excel, permiso canImportExport): SheetJS, reconoce columnas por título, CSV en UTF-8 o Windows-1252, montos con $ y comas, plantilla descargable, tallas/colores → prenda, código existente: saltar o actualizar, categoría desconocida → Por revisar.
 - [ ] Asistente de primer uso (nombre, logo, categorías, equipo, primera caja)
 - [ ] Negocio demo con datos ficticios
 - [ ] Aviso de privacidad y términos

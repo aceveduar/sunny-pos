@@ -196,6 +196,15 @@ Cada variante es un producto con su propio stock y su nombre completo ("Blusa de
 
 **Cambiar precio, nombre, descripción o categoría de toda la prenda:** edita cualquiera de sus tallas y guarda. El sistema pregunta **¿Aplicar también a las demás tallas y colores?**: toca **Aplicar a todas**, o **Solo a esta** si de verdad es distinto (por ejemplo, la talla EG más cara). Lo mismo al ocultar o publicar. La foto que cambies en el formulario se aplica solo a las del mismo color. Las piezas y el código de barras son siempre de cada talla.
 
+### Importar productos desde Excel
+Si ya tienes tu lista en Excel, no la captures a mano: en **+ Agregar → Desde Excel** sube el archivo (.xlsx o .csv). La primera fila debe tener los títulos (Nombre, Precio, Piezas, Código de barras, Categoría…). El sistema reconoce cada columna; revisa que esté bien y toca **Importar**.
+- Si no tienes lista, toca **Descarga la plantilla** y llénala.
+- Con columnas **Talla** y **Color**, los renglones con el mismo nombre se juntan en una sola prenda.
+- Si un código de barras ya existe, eliges si no tocar ese producto o actualizar su precio, costo y piezas.
+- Lo que no tenga una categoría que el sistema conozca queda en **Por revisar** (en Pendientes) para que le pongas la suya.
+- Los productos nuevos se guardan ocultos, a menos que marques **Publicar en la Tienda**. Llegan sin foto: agrégala después.
+- Solo lo ve quien tiene el permiso de importar y exportar (la dueña, por default).
+
 ### Imprimir etiquetas
 Abre un producto y toca **Más → Etiquetas** (en una prenda salen todas sus tallas y colores), o selecciona varios en la lista y toca **Más acciones → Imprimir etiquetas**. Cada etiqueta lleva el nombre, la talla y el color, el precio y el código de barras.
 - **Cuántas:** una por pieza en existencia (para etiquetar lo que llegó) o una de cada producto.

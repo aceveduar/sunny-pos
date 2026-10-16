@@ -91,6 +91,7 @@
       <button class="bmo-item" onclick="closeAddMenu();openVariantBuilder()"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Con tallas o colores</button>
       <button class="bmo-item" id="add-menu-recv" onclick="closeAddMenu();openRecvMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Recibir mercancía</button>
       <button class="bmo-item" id="add-menu-recv-ia" onclick="closeAddMenu();openRecvIaMode()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Recepción con IA</button>
+      <button class="bmo-item" id="add-menu-import" onclick="closeAddMenu();openImport()" style="display:none"><svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>Desde Excel</button>
     </div>
   </div>
 
@@ -964,6 +965,7 @@
 <script src="admin-kit-builder.js"></script>
 <script src="admin-variantes.js"></script>
 <script src="admin-etiquetas.js"></script>
+<script src="admin-importar.js"></script>
 <!-- COMPARE ZOOM: split fullscreen -->
 <div id="cmp-zoom" onclick="closeCmpZoom()">
   <button id="cmp-zoom-close" onclick="event.stopPropagation();closeCmpZoom()">✕</button>

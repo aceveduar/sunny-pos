@@ -58,6 +58,7 @@ let can = {
   viewActivity:    ROLE === 'superadmin',
   useReceptionIA:  _isSuperOrEncargado,
   receiveStock:    true,
+  importExport:    ROLE === 'superadmin',
 };
 
 function _applyUserPermsToAdmin(up) {
@@ -72,6 +73,7 @@ function _applyUserPermsToAdmin(up) {
   if ('canAddProduct'     in up) can.addProduct      = up.canAddProduct;
   if ('canViewReports'    in up) can.viewReports     = up.canViewReports;
   if ('canViewActivity'   in up) can.viewActivity    = up.canViewActivity;
+  if ('canImportExport'   in up) can.importExport    = up.canImportExport;
 }
 
 const SUPABASE_URL = NEGOCIO.supabaseUrl;
@@ -1067,6 +1069,8 @@ function _applyRoleUI() {
   // cargar config y al cargar permisos, sin importar cuál termine primero.
   const recvMenuItem = document.getElementById('add-menu-recv');
   if (recvMenuItem) recvMenuItem.style.display = (_showRecv && can.receiveStock) ? '' : 'none';
+  const impMenuItem = document.getElementById('add-menu-import');
+  if (impMenuItem) impMenuItem.style.display = (can.addProduct && can.importExport) ? '' : 'none';
   const recvIaMenuItem = document.getElementById('add-menu-recv-ia');
   if (recvIaMenuItem) recvIaMenuItem.style.display = (_showRecvIa && can.useReceptionIA) ? '' : 'none';
   _tbActionsScroll();
