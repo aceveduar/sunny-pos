@@ -188,6 +188,8 @@ Cada variante es un producto con su propio stock y su nombre completo ("Blusa de
 
 **Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color, y en la Tienda la clienta ve la foto del color que elige.
 
+**Juntar productos que ya tenías sueltos:** si ya capturaste "Blusa lino M negra", "Blusa lino G negra"… como productos separados, selecciónalos en la lista y toca **Más acciones → Juntar en una prenda**. El sistema adivina el nombre de la prenda, la talla y el color de cada uno; corrige lo que haga falta y toca **Juntar**. Cada uno conserva su precio, piezas, código y fotos. Para sumar un producto suelto a una prenda que ya existe, selecciona la prenda y el producto, y júntalos. Si juntaste uno por error, ábrelo y toca **Más → Quitar de la prenda**.
+
 **Códigos de barras por talla y color:** en la ficha de la prenda, arriba de la cuadrícula, cambia de **Piezas** a **Códigos**. Escanea (o escribe) el código de cada casilla; con Enter pasas a la siguiente. Si la ropa no trae código, toca **Crear códigos para las que no tienen**: el sistema les pone un código de la tienda para imprimir en etiqueta. Con eso, en Caja y en Recibir mercancía el escáner reconoce la talla y el color exactos.
 
 **Cambiar precio, nombre, descripción o categoría de toda la prenda:** edita cualquiera de sus tallas y guarda. El sistema pregunta **¿Aplicar también a las demás tallas y colores?**: toca **Aplicar a todas**, o **Solo a esta** si de verdad es distinto (por ejemplo, la talla EG más cara). Lo mismo al ocultar o publicar. La foto que cambies en el formulario se aplica solo a las del mismo color. Las piezas y el código de barras son siempre de cada talla.

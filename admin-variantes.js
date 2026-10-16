@@ -646,3 +646,148 @@ function variantGroupCard(g) {
   </div>
 </div>`;
 }
+
+
+/* ── Juntar productos sueltos en una prenda ──
+   Para la tienda que ya tenía "Blusa lino M negra", "Blusa lino G negra"…
+   capturadas por separado (o que suma un producto suelto a una prenda: se
+   seleccionan la prenda y el suelto). Cada producto conserva su precio,
+   piezas, código y fotos; solo se le pone su talla/color y el grupo. El
+   sistema adivina el nombre común, la talla y el color; todo se puede corregir. */
+const _VARJ_COLORES = ['azul marino', 'verde olivo', 'rosa palo', 'verde menta', 'azul cielo', 'azul rey', 'gris oxford', 'palo de rosa',
+  'negro', 'negra', 'blanco', 'blanca', 'beige', 'rosa', 'rojo', 'roja', 'azul', 'verde', 'gris', 'café', 'cafe', 'camel', 'vino', 'nude',
+  'dorado', 'dorada', 'plateado', 'plateada', 'morado', 'morada', 'lila', 'amarillo', 'amarilla', 'naranja', 'coral', 'crema', 'hueso',
+  'marino', 'mostaza', 'terracota', 'turquesa', 'fucsia', 'menta', 'arena', 'chocolate', 'khaki', 'caqui', 'multicolor', 'estampado', 'estampada'];
+const _VARJ_RELLENO = new Set(['talla', 'tall', 'num', 'num.', 'no', 'no.', 'número', 'numero', 'color', 'col', 'de', 'en', '-', '·', '/']);
+let _varj = null;   // { ids, filas: [{id, v1, v2}] }
+
+function _varjAdivinar(nombres) {
+  const pal = nombres.map(n => n.split(/\s+|·/).map(w => w.trim()).filter(Boolean));
+  // Nombre común = palabras iguales al inicio de todos
+  let k = 0;
+  while (pal.every(ws => ws[k] && ws[k].toLowerCase() === pal[0][k].toLowerCase())) k++;
+  const base = pal[0].slice(0, k).join(' ').replace(/[\s·-]+$/, '');
+  const restos = pal.map(ws => ws.slice(k).filter(w => !_VARJ_RELLENO.has(w.toLowerCase())));
+  const filas = restos.map(ws => {
+    let talla = '', color = '';
+    const libres = [];
+    let txt = ' ' + ws.join(' ').toLowerCase() + ' ';
+    const c = _VARJ_COLORES.find(col => txt.includes(' ' + col + ' '));
+    if (c) { color = c; txt = txt.replace(' ' + c + ' ', ' '); }
+    txt.trim().split(/\s+/).filter(Boolean).forEach(w => {
+      const W = w.toUpperCase().replace(/^#/, '');
+      if (!talla && (_VAR_TALLAS.includes(W) || /^\d{1,2}([.,]5)?$/.test(W))) talla = W;
+      else libres.push(w);
+    });
+    if (!color && libres.length) color = libres.join(' ');
+    const may = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    return { talla, color: may(color) };
+  });
+  const hayTalla = filas.some(f => f.talla), hayColor = filas.some(f => f.color);
+  const numerica = filas.filter(f => f.talla).every(f => /^\d/.test(f.talla));
+  if (hayTalla) return { base, n1: numerica ? 'Número' : 'Talla', n2: hayColor ? 'Color' : '', vals: filas.map(f => [f.talla, f.color]) };
+  return { base, n1: 'Color', n2: '', vals: filas.map(f => [f.color, '']) };
+}
+
+function openVariantJoin() {
+  if (!can.editProduct) { toast('Sin permiso para editar productos', 'error'); return; }
+  const sel = [...selectedIds].map(id => products.find(x => x.id === id)).filter(Boolean);
+  const kits = sel.filter(p => Array.isArray(p.kitItems));
+  if (kits.length) { toast('Los kits no se pueden juntar como tallas o colores', 'error'); return; }
+  if (sel.length < 2) { toast('Selecciona al menos 2 productos', ''); return; }
+  if (sel.length > 120) { toast('Son demasiados: junta una prenda a la vez', 'error'); return; }
+  // Los que ya son variantes dan su nombre y sus valores tal cual
+  const conVar = sel.find(p => p.variantGroup && Array.isArray(p.variant) && p.variant.length);
+  const adiv = _varjAdivinar(sel.map(p => p.variantGroup ? (p.variantBase || p.name) + ' ' + (p.variant || []).map(e => e[1]).join(' ') : p.name));
+  const n1 = conVar ? conVar.variant[0][0] : adiv.n1;
+  const n2 = conVar ? (conVar.variant[1]?.[0] || '') : adiv.n2;
+  _varj = {
+    ids: sel.map(p => p.id),
+    filas: sel.map((p, i) => {
+      if (p.variantGroup && Array.isArray(p.variant)) return { id: p.id, v1: _varValor(p, n1) || '', v2: n2 ? (_varValor(p, n2) || '') : '' };
+      return { id: p.id, v1: adiv.vals[i][0], v2: n2 ? adiv.vals[i][1] : '' };
+    }),
+  };
+  const $ = id => document.getElementById(id);
+  $('varj-name').value = conVar ? (conVar.variantBase || '') : adiv.base;
+  $('varj-n1').value = n1; $('varj-n2').value = n2;
+  _varjPintar();
+  $('varj-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeVariantJoin() {
+  document.getElementById('varj-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function _varjPintar() {
+  const n1 = document.getElementById('varj-n1').value.trim() || 'Talla';
+  const n2 = document.getElementById('varj-n2').value.trim();
+  document.getElementById('varj-lista').innerHTML = `<table class="varj-tabla">
+    <thead><tr><th scope="col">Producto</th><th scope="col">${_esc(n1)}</th>${n2 ? `<th scope="col">${_esc(n2)}</th>` : ''}</tr></thead>
+    <tbody>${_varj.filas.map((f, i) => {
+      const p = products.find(x => x.id === f.id);
+      return `<tr>
+        <td class="varj-prod"><img src="${_driveSz(p.image || DEFAULT_IMG, 80)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_IMG}'"><span>${_esc(p.name)}</span></td>
+        <td><input type="text" class="varj-val" maxlength="20" value="${_esc(f.v1)}" aria-label="${_esc(n1)} de ${_esc(p.name)}" oninput="_varj.filas[${i}].v1=this.value"></td>
+        ${n2 ? `<td><input type="text" class="varj-val" maxlength="20" value="${_esc(f.v2)}" aria-label="${_esc(n2)} de ${_esc(p.name)}" oninput="_varj.filas[${i}].v2=this.value"></td>` : ''}
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  document.getElementById('varj-save').textContent = `Juntar ${_varj.filas.length} productos`;
+}
+
+async function saveVariantJoin() {
+  const $ = id => document.getElementById(id);
+  applyTitleCase('varj-name');
+  const base = $('varj-name').value.trim().replace(/\s+/g, ' ');
+  const n1 = $('varj-n1').value.trim(), n2 = $('varj-n2').value.trim();
+  const limpio = v => String(v || '').trim().replace(/\s+/g, ' ');
+  if (!base) { toast('Escribe el nombre de la prenda', 'error'); $('varj-name').focus(); return; }
+  if (!n1) { toast('Escribe qué cambia entre ellos (por ejemplo Talla)', 'error'); $('varj-n1').focus(); return; }
+  const filas = _varj.filas.map(f => ({ id: f.id, v1: limpio(f.v1), v2: n2 ? limpio(f.v2) : '' }));
+  const sin1 = filas.findIndex(f => !f.v1);
+  if (sin1 >= 0) { toast(`Falta la ${n1.toLowerCase()} de "${products.find(x => x.id === filas[sin1].id)?.name}"`, 'error'); document.querySelectorAll('.varj-tabla tbody tr')[sin1]?.querySelector('input')?.focus(); return; }
+  if (n2 && filas.some(f => f.v2) && filas.some(f => !f.v2)) { toast(`Escribe el ${n2.toLowerCase()} de todos, o deja la columna vacía`, 'error'); return; }
+  const usaN2 = n2 && filas.some(f => f.v2);
+  const vistos = new Map();
+  for (const f of filas) {
+    const k = (f.v1 + '|' + (usaN2 ? f.v2 : '')).toLowerCase();
+    if (vistos.has(k)) { toast(`Dos productos quedarían como "${f.v1}${usaN2 ? ' · ' + f.v2 : ''}"`, 'error'); return; }
+    vistos.set(k, f.id);
+  }
+  const btn = $('varj-save'); btn.disabled = true; btn.textContent = 'Guardando…';
+  const grupo = crypto.randomUUID();
+  let fallas = 0;
+  for (let k = 0; k < filas.length; k += 8) {
+    await Promise.all(filas.slice(k, k + 8).map(async f => {
+      const variant = [[n1, f.v1]]; if (usaN2) variant.push([n2, f.v2]);
+      const body = { variant_group: grupo, variant, variant_base: base, name: `${base} · ${variant.map(e => e[1]).join(' · ')}` };
+      const r = await supabaseApi(`products?id=eq.${f.id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
+      if (!r.ok || !r.data?.[0]) { fallas++; return; }
+      const i = products.findIndex(x => x.id === f.id);
+      if (i > -1) products[i] = { ...products[i], ...mapProduct(r.data[0]) };
+    }));
+  }
+  btn.disabled = false;
+  logActivity('producto_editado', `Juntó ${filas.length - fallas} productos en la prenda "${base}"`, { ids: filas.map(f => f.id), name: base, variant_group: grupo, changes: ['Tallas y colores'] });
+  if (fallas) { toast(`No se pudieron juntar ${fallas}; revisa tu conexión y vuelve a intentarlo`, 'error'); _varjPintar(); return; }
+  closeVariantJoin();
+  selectedIds.clear(); updateBulkBar(); renderTable(); renderStats();
+  toast(`"${base}": ${filas.length} productos juntos`, 'success');
+  _varModo = 'piezas';
+  openQV(filas[0].id);
+}
+
+// Ficha → Más → "Quitar de la prenda": vuelve a ser un producto suelto (conserva su nombre completo)
+async function _varSeparar(id) {
+  const p = products.find(x => x.id === id); if (!p?.variantGroup) return;
+  if (!can.editProduct) { toast('Sin permiso para editar productos', 'error'); return; }
+  const ok = await teConfirm({ title: 'Quitar de la prenda', message: `"${p.name}" quedará como un producto suelto, con el mismo nombre, precio y piezas.\nLas demás tallas y colores no cambian.`, confirmText: 'Quitar' });
+  if (!ok) return;
+  const r = await supabaseApi(`products?id=eq.${id}`, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ variant_group: null, variant: null, variant_base: null }) });
+  if (!r.ok || !r.data?.[0]) { toast('No se pudo quitar', 'error'); return; }
+  const base = p.variantBase || p.name;
+  Object.assign(p, mapProduct(r.data[0]));
+  logActivity('producto_editado', `Quitó "${p.name}" de la prenda "${base}"`, { id, name: p.name, changes: ['Tallas y colores'] });
+  _varRefrescarFicha();
+  toast('Ahora es un producto suelto', 'success');
+}

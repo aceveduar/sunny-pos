@@ -82,7 +82,8 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 3b) Después del alta (2026-10-15): "+ Talla o color" y "+" en casillas faltantes (nacen con 0 pzas), foto por color desde la cuadrícula, y editar una variante (formulario, precio/nombre/categoría rápidos, Ocultar/Publicar) pregunta si aplicar a toda la prenda (la foto solo al mismo color). Tallas ordenadas (CH<M<G, números). Drive no borra una foto que otra variante sigue usando. Duplicados ignora hermanas.
 - [x] 3c) Códigos de barras por talla/color (2026-10-16): la cuadrícula de la ficha cambia a "Códigos" (escanear o escribir, Enter = siguiente, rechaza repetidos) y "Crear códigos" genera EAN-13 internos (empiezan con 2) para la ropa sin código. Recibir mercancía y Caja ya los encuentran porque cada variante es un producto. Tras crear una prenda se abre su ficha.
 - [x] 4) Reportes (2026-10-16): tarjeta "Tallas y colores" (piezas por talla en su orden, por color, por número…, y "Se vendieron y ya no quedan"); Productos más vendidos suma cada prenda con su talla/color más vendida. Solo aparece si se vendió algo con variantes. Ventas demo: 25% prendas.
-- [ ] Pendientes de variantes: juntar productos sueltos en una prenda; etiquetas para imprimir.
+- [x] 5) Juntar productos sueltos (2026-10-16): selección → Más acciones → "Juntar en una prenda" adivina nombre común, talla/número y color (corregibles), valida combinaciones repetidas; sirve también para sumar un suelto a una prenda. Ficha → Más → "Quitar de la prenda".
+- [ ] Pendientes de variantes: etiquetas para imprimir.
 - [ ] 4) Reportes por talla.
 
 ## 8. Rapidez (máxima velocidad de carga)
