@@ -645,7 +645,7 @@ function renderTodaySales() {
     const payIconSvg = isMultiMethod
       ? '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/>'
       : (_METODOS_PAGO[payment.method] || _METODOS_PAGO.efectivo).ico;
-    const payIcon = `<span class="dv-sale-pay ${isTrans ? 'dv-pay-trans' : 'dv-pay-efec'}"><svg class="dv-icon" viewBox="0 0 24 24">${payIconSvg}</svg></span>`;
+    const payIcon = `<span class="dv-sale-pay ${payment.method === 'efectivo' ? 'dv-pay-efec' : 'dv-pay-trans'}"><svg class="dv-icon" viewBox="0 0 24 24">${payIconSvg}</svg></span>`;
     const items = Array.isArray(s?.items) ? s.items : [];
     const origin = _saleOrigin(s);
     const amount = _paymentAmount(payment);
