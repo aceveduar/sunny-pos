@@ -1409,3 +1409,15 @@ async function _cacheSet(key, value) {
     });
   } catch {}
 }
+
+/* ── Tallas y colores (Inventario, Reportes) ── */
+// Tallas en su orden natural (CH antes que G) y números de menor a mayor;
+// cualquier otra lista se queda en el orden en que se capturó.
+const _VAR_TALLAS = ['XXCH', 'XCH', 'XS', 'CH', 'S', 'M', 'G', 'L', 'EG', 'XL', 'XG', 'XXL', 'XXG', 'UNITALLA'];
+function _varOrden(vals) {
+  const t = v => String(v).toUpperCase().replace(/\s+/g, '');
+  if (vals.length > 1 && vals.every(v => _VAR_TALLAS.includes(t(v)))) return [...vals].sort((a, b) => _VAR_TALLAS.indexOf(t(a)) - _VAR_TALLAS.indexOf(t(b)));
+  const n = v => parseFloat(String(v).replace(',', '.'));
+  if (vals.length > 1 && vals.every(v => !isNaN(n(v)))) return [...vals].sort((a, b) => n(a) - n(b));
+  return vals;
+}

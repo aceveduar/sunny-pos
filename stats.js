@@ -549,7 +549,7 @@ async function loadPreviousSales(mode = _statsMode, offset = _statsOffset, gener
 }
 
 async function loadProducts() {
-  const r = await _fetchAll('products?select=id,name,category,category_label,price,cost,stock,out_of_stock,image,images,expiry_date,is_archived,kit_items&order=position.asc,id.asc');
+  const r = await _fetchAll('products?select=id,name,category,category_label,price,cost,stock,out_of_stock,image,images,expiry_date,is_archived,kit_items,variant_group,variant,variant_base&order=position.asc,id.asc');
   productsLoaded = r.ok;
   productsPending = false;
   products = (r.ok && Array.isArray(r.data)) ? r.data : [];
@@ -764,6 +764,7 @@ function renderAll() {
   renderRevenueChart();
   renderCatChart();
   renderTopProducts();
+  renderVariantes();
   renderTodaySales();
   renderHourChart();
   renderInventory();
@@ -1489,15 +1490,29 @@ function renderCatChart() {
 /* Top productos */
 function aggregateProducts() {
   const map = {};
+  const byId = _prodById();
   sales.forEach(s => {
     if (!Array.isArray(s.items)) return;
     _realItems(s.items).forEach(item => {
-      if (!map[item.id]) map[item.id] = { id: item.id, name: item.name, qty:0, revenue:0 };
-      map[item.id].qty += item.qty||1;
-      map[item.id].revenue += item.subtotal||0;
+      // Tallas/colores de una prenda se suman en un renglón
+      const prod = byId.get(+item.id);
+      const key = prod?.variant_group ? 'g:' + prod.variant_group : item.id;
+      if (!map[key]) map[key] = { id: item.id, name: prod?.variant_group ? (prod.variant_base || item.name) : item.name, qty:0, revenue:0, vars: prod?.variant_group ? {} : null };
+      const qty = item.qty || 1;
+      map[key].qty += qty;
+      map[key].revenue += item.subtotal||0;
+      if (map[key].vars) {
+        const etq = (prod.variant || []).map(e => e[1]).join(' · ');
+        map[key].vars[etq] = (map[key].vars[etq] || 0) + qty;
+      }
     });
   });
   return Object.values(map).sort((a,b)=>b.qty-a.qty||b.revenue-a.revenue);
+}
+let _prodByIdCache = null, _prodByIdSrc = null;
+function _prodById() {
+  if (_prodByIdSrc !== products) { _prodByIdCache = new Map(products.map(p => [+p.id, p])); _prodByIdSrc = products; }
+  return _prodByIdCache;
 }
 
 const _TP_PH = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="' + _BRAND_HEX + '" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>');
@@ -1516,6 +1531,7 @@ function renderTopProducts() {
   <img class="tp-img" src="${img}" alt="${_esc(p.name)}" onerror="this.src='${_TP_PH}'">
   <div class="tp-info">
     <div class="tp-name" title="${_esc(p.name)}">${_esc(p.name)}</div>
+    ${p.vars ? `<div class="tp-sub">Más vendida: ${_esc(Object.entries(p.vars).sort((a, b) => b[1] - a[1])[0][0])}</div>` : ''}
     <div class="tp-bar-wrap"><div class="tp-bar" style="width:${Math.round(p.qty/maxQty*100)}%"></div></div>
   </div>
   <div class="tp-stats">
@@ -1524,6 +1540,69 @@ function renderTopProducts() {
   </div>
 </div>`;
   }).join('');
+}
+
+/* Tallas y colores: qué tallas/colores se venden y qué se acabó de lo que se vende.
+   Solo aparece si en el período se vendió algo con tallas o colores. */
+function renderVariantes() {
+  const row = document.getElementById('var-report-row');
+  const el = document.getElementById('var-report');
+  if (!row || !el) return;
+  const byId = _prodById();
+  const porOpcion = {};          // { Talla: { M: 12, … }, Color: { … } }
+  const vendidas = new Map();    // id → piezas vendidas
+  if (salesLoaded) sales.forEach(s => _realItems(s.items).forEach(item => {
+    const prod = byId.get(+item.id);
+    if (!prod?.variant_group || !Array.isArray(prod.variant)) return;
+    const qty = item.qty || 1;
+    vendidas.set(prod.id, (vendidas.get(prod.id) || 0) + qty);
+    prod.variant.forEach(([nombre, valor]) => {
+      const o = porOpcion[nombre] || (porOpcion[nombre] = {});
+      o[valor] = (o[valor] || 0) + qty;
+    });
+  }));
+  // (.bottom-row es grid: el atributo hidden no lo oculta)
+  if (!vendidas.size) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  document.getElementById('var-report-period').textContent = PERIOD_LABELS[currentPeriod] || '';
+
+  const fmtPz = n => `${n} pza${n !== 1 ? 's' : ''}`;
+  const opciones = Object.entries(porOpcion).sort((a, b) =>
+    Object.values(b[1]).reduce((x, y) => x + y, 0) - Object.values(a[1]).reduce((x, y) => x + y, 0));
+  const bloques = opciones.map(([nombre, vals]) => {
+    const total = Object.values(vals).reduce((a, b) => a + b, 0);
+    const max = Math.max(...Object.values(vals));
+    const esColor = /color|tono/i.test(nombre);
+    // Tallas en su orden (se ve la curva); colores del más vendido al menos
+    let claves = esColor ? Object.keys(vals).sort((a, b) => vals[b] - vals[a]) : _varOrden(Object.keys(vals));
+    const resto = esColor && claves.length > 8 ? claves.slice(8).reduce((s, k) => s + vals[k], 0) : 0;
+    if (resto) claves = claves.slice(0, 8);
+    return `<div class="vr-bloque">
+      <h3 class="vr-titulo">Por ${_esc(nombre.toLowerCase())}</h3>
+      ${claves.map(k => `<div class="vr-fila">
+        <span class="vr-valor">${_esc(k)}</span>
+        <div class="tp-bar-wrap vr-bar"><div class="tp-bar" style="width:${Math.round(vals[k] / max * 100)}%"></div></div>
+        <span class="vr-num">${fmtPz(vals[k])}</span>
+        <span class="vr-pct">${Math.round(vals[k] / total * 100)}%</span>
+      </div>`).join('')}
+      ${resto ? `<div class="vr-fila vr-otros"><span class="vr-valor">Otros</span><span></span><span class="vr-num">${fmtPz(resto)}</span><span></span></div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Por resurtir: se vendió en el período y ya no quedan piezas
+  const resurtir = [...vendidas.entries()]
+    .map(([id, qty]) => ({ p: byId.get(id), qty }))
+    .filter(x => x.p && !x.p.is_archived && (x.p.stock || 0) === 0)
+    .sort((a, b) => b.qty - a.qty);
+  const resurtirHTML = resurtir.length ? `<div class="vr-bloque vr-resurtir">
+      <h3 class="vr-titulo">Se vendieron y ya no quedan</h3>
+      ${resurtir.slice(0, 8).map(x => `<div class="vr-agotada">
+        <span class="vr-agotada-nom">${_esc(x.p.name)}</span>
+        <span class="vr-num">vendió ${x.qty}</span>
+      </div>`).join('')}
+      ${resurtir.length > 8 ? `<p class="vr-mas">y ${resurtir.length - 8} más</p>` : ''}
+    </div>` : '';
+  el.innerHTML = `<div class="vr-grid">${bloques}${resurtirHTML}</div>`;
 }
 
 /* Inventario */

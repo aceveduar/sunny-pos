@@ -45,11 +45,22 @@ DIAS = int(next((a for a in sys.argv[1:] if a.isdigit()), 120))
 
 # Productos publicados para vender (con algunos "estrella" que se venden más)
 def query(sql): return json.loads(run_sql(sql, show=False, raw=True))
-prods = query("SELECT id, name, price, category AS cat FROM public.products "
+prods = query("SELECT id, name, price, category AS cat, variant FROM public.products "
               "WHERE is_published AND NOT is_archived AND kit_items IS NULL AND price > 0 AND category <> 'por_revisar'")
 random.shuffle(prods)
+# Prendas con tallas/colores (variantes_demo.py): una cuarta parte de lo vendido,
+# con más venta en las tallas de en medio para que Reportes → Tallas y colores muestre la curva
+variantes = [p for p in prods if p.get('variant')]
+prods = [p for p in prods if not p.get('variant')]
+PESO_TALLA = {'CH': .7, 'M': 1.5, 'G': 1.2, 'EG': .45, '22': .4, '23': 1, '24': 1.4, '25': 1, '26': .5}
+def _peso(p):
+    w = 1
+    for nombre, valor in p['variant']: w *= PESO_TALLA.get(valor, 1)
+    return w
+pesos_var = [_peso(p) for p in variantes]
 estrellas = prods[:40]
 def producto():
+    if variantes and random.random() < .25: return random.choices(variantes, weights=pesos_var)[0]
     return random.choice(estrellas) if random.random() < .35 else random.choice(prods)
 
 NOMBRES = ['María', 'Guadalupe', 'Rosa', 'Ana', 'Fernanda', 'Daniela', 'Karla', 'Alejandra', 'Patricia', 'Sofía', 'Valeria',

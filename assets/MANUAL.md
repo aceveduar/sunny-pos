@@ -207,6 +207,7 @@ Por **Día, Semana o Mes**, con flechas para ir a periodos anteriores. Todo en h
 - **Clientes frecuentes:** toca una clienta para ver su perfil y corregir nombre, teléfono o notas.
 - **Rentabilidad:** si hay productos sin costo, el enlace te lleva a Inventario con esos productos para completarlos.
 - También: movimientos del día, gráficas por hora y categoría, productos más vendidos, apartados pendientes, productos por caducar, estado del inventario, valor en venta por categoría y ventas por vendedora.
+- **Tallas y colores** (solo si vendes prendas con tallas o colores): cuántas piezas se vendieron de cada talla, número y color en el período, y la lista **Se vendieron y ya no quedan** para saber qué resurtir. En **Productos más vendidos** cada prenda sale en un solo renglón, con su talla y color más vendidos.
 
 En el celular, las listas largas muestran los primeros renglones; toca **Ver todo** para el resto.
 

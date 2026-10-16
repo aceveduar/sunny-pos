@@ -490,3 +490,18 @@ main{max-width:1080px;margin:0 auto;padding:28px 28px 60px}
   .card-head > :first-child{white-space:nowrap}
 }
 
+/* ── Tallas y colores ── */
+.tp-sub{font-size:.74rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 28px}
+.vr-bloque{padding:6px 0}
+.vr-titulo{font-size:.8rem;font-weight:700;color:var(--muted);margin:0 0 6px;font-family:inherit;letter-spacing:0}
+.vr-fila{display:grid;grid-template-columns:minmax(52px,auto) 1fr auto 40px;align-items:center;gap:10px;min-height:32px}
+.vr-valor{font-size:.88rem;font-weight:600;color:var(--charcoal);white-space:nowrap}
+.vr-bar{margin:0}
+.vr-num{font-size:.82rem;color:var(--charcoal);white-space:nowrap;text-align:right}
+.vr-pct{font-size:.78rem;color:var(--muted);text-align:right}
+.vr-otros .vr-valor{color:var(--muted);font-weight:500}
+.vr-agotada{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:.86rem}
+.vr-agotada:last-of-type{border-bottom:none}
+.vr-agotada-nom{color:var(--charcoal);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vr-mas{font-size:.8rem;color:var(--muted);margin:4px 0 0}
