@@ -1965,3 +1965,8 @@ label:has(> #f-is-kit){min-height:44px}
 .pp-d{font-size:.84rem;color:var(--muted)}
 .pp-flecha{flex-shrink:0;color:var(--muted-light)}
 .pp-paso:hover .pp-flecha{color:var(--charcoal)}
+
+.var-llego{color:var(--charcoal)}
+.var-llego:placeholder-shown{border-style:dashed}
+.var-hay{display:block;text-align:center;font-size:.7rem;color:var(--muted);margin-top:2px}
+.var-llego-btn{margin-top:8px;width:100%}

@@ -189,6 +189,8 @@ Para sacar un producto de circulación usa **Archivar** (vista rápida → Más)
 
 Cada variante es un producto con su propio stock y su nombre completo ("Blusa de lino · M · Negro"). En **Caja** la prenda sale en una sola tarjeta: tócala y elige en la cuadrícula la talla y el color que se lleva la clienta (el número es cuántas piezas hay). También puedes escanear su etiqueta o buscarla completa ("lino m negro") para agregarla directo. Para ver o cambiar las piezas de todas las tallas y colores, abre cualquiera de ellas: en su ficha está la cuadrícula; toca un número para cambiarlo.
 
+**Cuando llega mercancía de una prenda:** abre la prenda y en la cuadrícula cambia a **Llegaron**. Escribe cuántas llegaron de cada talla y color (debajo ves cuántas había) y toca **Sumar al inventario**: se suman solas, no tienes que calcular el total.
+
 **Agregar una talla o un color después:** abre la prenda y, debajo de la cuadrícula, toca **+ Talla o color**. Escribe la nueva (por ejemplo "Rojo") y toca **Agregar**: se crea en todas las tallas con 0 piezas; luego escribe cuántas llegaron. Si solo falta una combinación, toca el **+** de su casilla.
 
 **Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color, y en la Tienda la clienta ve la foto del color que elige.
