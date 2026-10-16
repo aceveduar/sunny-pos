@@ -274,10 +274,8 @@ function showSaleDone() {
   document.getElementById('sd-cash-label').textContent   = isApt ? 'Anticipo recibido' : s.apartadoLiquidado ? 'Pago completo recibido' : 'Recibido';
   document.getElementById('sd-total').textContent        = fmt(s.total);
   document.getElementById('sd-cash').textContent         = s.paidAmount > 0 ? fmt(s.paidAmount) : '—';
-  document.getElementById('sd-change').textContent       = s.change > 0 ? fmt(s.change) : s.payMethod === 'transferencia' ? '—' : '$0';
-  document.getElementById('sd-method').innerHTML = s.payMethod === 'transferencia'
-    ? '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Transferencia'
-    : '<svg style="width:14px;height:14px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>Efectivo';
+  document.getElementById('sd-change').textContent       = s.change > 0 ? fmt(s.change) : s.payMethod !== 'efectivo' ? '—' : '$0';
+  document.getElementById('sd-method').innerHTML = _metodoIco(s.payMethod, 14) + _metodoLabel(s.payMethod);
 
   const pendiente = Math.max(0, (s.total || 0) - (s.paidAmount || 0));
   document.getElementById('sd-pending-row').style.display  = isApt ? '' : 'none';
@@ -332,7 +330,7 @@ function sendWhatsAppTicket() {
   const totalDisc = Math.round(((s.disc || 0) + _itemsDiscountTotal(s.items)) * 100) / 100;
   const disc     = totalDisc > 0 ? `\n🏷 Descuento: −$${totalDisc.toLocaleString('es-MX')}` : '';
   const note     = s.note ? `\n📝 ${s.note}` : '';
-  const metodo   = s.payMethod === 'transferencia' ? '📱 Transferencia bancaria' : '💵 Efectivo';
+  const metodo   = s.payMethod === 'transferencia' ? '📱 Transferencia bancaria' : `${_metodoEmoji(s.payMethod)} ${_metodoLabel(s.payMethod)}`;
   let msg;
   if (s.isApartado || s.apartadoLiquidado) {
     const custParts = (s.customer||'').split(' · 📱 ');
@@ -641,19 +639,20 @@ async function loadTodayStats() {
     return true;
   }
 
-  let efectivo = 0, transferencia = 0, otros = 0;
+  let efectivo = 0, transferencia = 0, tarjeta = 0, otros = 0;
   result.data.forEach(payment => {
     const amount = parseFloat(payment.amount) || 0;
     if (payment.method === 'transferencia') transferencia += amount;
+    else if (payment.method === 'tarjeta') tarjeta += amount;
     else if (payment.method === 'efectivo') efectivo += amount;
     else otros += amount;
   });
 
-  const total = efectivo + transferencia + otros;
+  const total = efectivo + transferencia + tarjeta + otros;
   const fmt = n => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('es-MX')}`;
   // Total primero; desglose con nombre y solo de los métodos con movimiento
   // (antes "$1,410 · $0 · $1,410" con íconos, sin decir qué era cada cifra).
-  const parts = [['Efectivo', efectivo], ['Transferencia', transferencia], ['Otros', otros]]
+  const parts = [['Efectivo', efectivo], ['Transferencia', transferencia], ['Tarjeta', tarjeta], ['Otros', otros]]
     .filter(([, v]) => Math.abs(v) >= .005);
   const breakdown = parts.length > 1
     ? parts.map(([l, v]) => `<span class="dsm-part">${l} ${fmt(v)}</span>`).join('<span class="dsm-sep">·</span>')
@@ -748,6 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Si se cobró o editó algo mientras bajaba el catálogo, esa copia puede traer stock viejo
   if (_lastPosWriteAt > _t0) await loadProducts();
   renderCategoryChips();
+  _posAplicarMetodos();
   setPosView(posView);
   _restoreCart();
   renderCart();
@@ -876,3 +876,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   })();
 });
+
+// Formas de pago de este negocio (negocio.js → formasDePago): ocultar las demás
+function _posAplicarMetodos() {
+  const activos = _metodosActivos();
+  const ids = { transferencia: ['pay-transferencia', 'apt-pay-transferencia', 'abpay-transferencia', 'liq-pay-transf'],
+                tarjeta: ['pay-tarjeta', 'apt-pay-tarjeta', 'abpay-tarjeta', 'liq-pay-tarjeta'] };
+  Object.entries(ids).forEach(([m, lista]) => lista.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = activos.includes(m) ? '' : 'none';
+  }));
+}

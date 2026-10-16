@@ -300,3 +300,26 @@ ALTER TABLE public.products ADD CONSTRAINT products_variant_check CHECK (
   variant_group IS NULL OR (jsonb_typeof(variant) = 'array' AND variant_base IS NOT NULL AND kit_items IS NULL));
 -- La Tienda (anon) necesita agruparlas
 GRANT SELECT (variant_group, variant, variant_base) ON public.products TO anon;
+
+-- ---------------------------------------------------------------------------
+-- Forma de pago Tarjeta (terminal: Clip, Mercado Pago, banco) — 2026-10-16
+-- Igual que transferencia: no entra al cajón (el corte solo espera efectivo).
+-- Las RPC de cobro validaban ('efectivo','transferencia'); se reescriben desde
+-- su propia definición para no copiar aquí 300 renglones (idempotente).
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.sale_payments DROP CONSTRAINT IF EXISTS sale_payments_method_check;
+ALTER TABLE public.sale_payments ADD CONSTRAINT sale_payments_method_check
+  CHECK (method = ANY (ARRAY['efectivo', 'transferencia', 'tarjeta', 'unknown']));
+DO $$
+DECLARE f record; d text;
+BEGIN
+  FOR f IN SELECT p.oid FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace
+             AND p.proname IN ('record_sale_atomic_v2', 'record_apartado_payment_atomic', 'te_refund_sale_balance') LOOP
+    d := pg_get_functiondef(f.oid);
+    IF position('''tarjeta''' IN d) = 0 THEN
+      d := replace(d, 'NOT IN (''efectivo'', ''transferencia'')', 'NOT IN (''efectivo'', ''transferencia'', ''tarjeta'')');
+      d := replace(d, 'WHEN ''transferencia'' THEN 2 ELSE 3 END', 'WHEN ''transferencia'' THEN 2 WHEN ''tarjeta'' THEN 3 ELSE 4 END');
+      EXECUTE d;
+    END IF;
+  END LOOP;
+END $$;

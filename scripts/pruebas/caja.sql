@@ -36,7 +36,7 @@ GRANT USAGE ON SEQUENCE _ok_n_seq TO authenticated;
 -- Producto de prueba: uno normal (no kit), con stock y precio.
 INSERT INTO _ctx
 SELECT 'pid', id::text FROM public.products
- WHERE kit_items IS NULL AND NOT coalesce(is_archived, false) AND NOT out_of_stock AND stock >= 3 AND price > 0
+ WHERE kit_items IS NULL AND NOT coalesce(is_archived, false) AND NOT out_of_stock AND stock >= 4 AND price > 0
  ORDER BY id LIMIT 1;
 INSERT INTO _ctx SELECT 'price', price::text FROM public.products WHERE id = (SELECT v::bigint FROM _ctx WHERE k = 'pid');
 INSERT INTO _ctx SELECT 'stock0', stock::text FROM public.products WHERE id = (SELECT v::bigint FROM _ctx WHERE k = 'pid');
@@ -80,6 +80,15 @@ SELECT public.record_apartado_payment_atomic(
   p_request_id => gen_random_uuid(), p_sale_id => (SELECT v::bigint FROM _ctx WHERE k='apartado'),
   p_method => 'efectivo', p_amount => 2,
   p_expected_version => (SELECT version FROM public.sales WHERE id = (SELECT v::bigint FROM _ctx WHERE k='apartado')));
+
+-- 3b. Venta con tarjeta de 1 pieza: no entra al cajón (el cierre de abajo no la espera)
+INSERT INTO _ctx
+SELECT 'vtarjeta', (public.record_sale_atomic_v2(
+  p_request_id => gen_random_uuid(),
+  p_items => jsonb_build_array(jsonb_build_object('id', (SELECT v::bigint FROM _ctx WHERE k='pid'), 'name', 'prueba', 'price', (SELECT v::numeric FROM _ctx WHERE k='price'), 'qty', 1)),
+  p_total => (SELECT v::numeric FROM _ctx WHERE k='price'), p_discount => 0, p_payment_method => 'tarjeta',
+  p_note => null, p_is_apartado => false, p_paid_amount => (SELECT v::numeric FROM _ctx WHERE k='price'),
+  p_customer => null, p_due_date => null)) -> 'sale' ->> 'id';
 
 -- 4. Movimientos del turno: gasto 10, ingreso 4, retiro 20
 SELECT public.te_add_shift_expense('prueba gasto', 10, 'gasto');
@@ -174,9 +183,14 @@ BEGIN
   IF x <> 7 THEN RAISE EXCEPTION 'PRUEBA FALLÓ: paid_amount del apartado es % (debía ser 7)', x; END IF;
   INSERT INTO _ok(prueba) VALUES ('Apartado: anticipo + abono = libro = paid_amount');
 
-  -- Stock: la venta se canceló (regresa) y el apartado sigue reservando 1
+  -- Tarjeta: el pago queda como tarjeta (y el cierre de abajo no lo espera en el cajón)
+  IF NOT EXISTS (SELECT 1 FROM public.sale_payments WHERE sale_id = (SELECT v::bigint FROM _ctx WHERE k='vtarjeta') AND method = 'tarjeta' AND kind = 'payment') THEN
+    RAISE EXCEPTION 'PRUEBA FALLÓ: la venta con tarjeta no quedó registrada como tarjeta';
+  END IF;
+  INSERT INTO _ok(prueba) VALUES ('Venta con tarjeta: se registra como tarjeta');
+  -- Stock: la venta se canceló (regresa), el apartado sigue reservando 1 y la de tarjeta se llevó 1
   SELECT stock INTO x FROM public.products WHERE id = pid;
-  IF x <> stock0 - 1 THEN RAISE EXCEPTION 'PRUEBA FALLÓ: stock final % (esperado %)', x, stock0 - 1; END IF;
+  IF x <> stock0 - 2 THEN RAISE EXCEPTION 'PRUEBA FALLÓ: stock final % (esperado %)', x, stock0 - 2; END IF;
   INSERT INTO _ok(prueba) VALUES ('Stock correcto tras venta, cancelación y apartado');
 
   -- Cierre: diferencia 0, gastos netos 6, retiros 20

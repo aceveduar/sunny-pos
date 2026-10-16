@@ -18,6 +18,10 @@ window.NEGOCIO = {
   // cuenta con rol de dueña/superadmin. Vacío = no se muestra el botón.
   duena: { nombre: '', correo: '' },
 
+  // Formas de pago que aparecen en Caja. Quitar 'tarjeta' si el negocio no
+  // tiene terminal (así nadie la toca por error y descuadra el corte).
+  formasDePago: ['efectivo', 'transferencia', 'tarjeta'],
+
   // Google Analytics de la Tienda (G-XXXXXXX). Vacío = sin Analytics.
   analyticsId: '',
 

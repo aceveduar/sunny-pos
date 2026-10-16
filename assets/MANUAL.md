@@ -40,13 +40,15 @@ El turno es de tu **cuenta**, no del dispositivo: si lo abriste en la tablet y e
 ### Registrar una venta
 1. Busca el producto por nombre o toca **Escanear** para leer el código de barras con la cámara (la cámara se queda abierta para el siguiente). Arriba están los **Frecuentes**, lo que más se vende.
 2. Tócalo para agregarlo al carrito. Ajusta cantidades con + / −.
-3. Elige **Efectivo** o **Transferencia**.
+3. Elige **Efectivo**, **Transferencia** o **Tarjeta** (terminal como Clip o Mercado Pago).
 4. En efectivo, toca el billete con el que te pagan (o escribe el monto) y el sistema calcula el cambio. Si no alcanza, dice **Faltan $X**.
 5. Pulsa **Cobrar $…** (el botón dice el total).
 
 Para cambiar un precio, toca el precio del producto en el carrito (si no tienes permiso, se pide PIN). En **Más opciones** están el descuento, la nota, el cliente y **Ya lo cobró** + el nombre de la dueña (cuando el dinero lo recibió ella y no entra a tu cajón).
 
 **Transferencia:** confirma en la app del banco que llegó el dinero antes de entregar el producto.
+
+**Tarjeta:** cobra primero en la terminal y toca **Cobrar** cuando la terminal diga que fue aprobado. Lo cobrado con tarjeta no entra al cajón: el corte lo muestra aparte y no lo cuenta en el efectivo esperado.
 
 ### ¿Te equivocaste y era apartado?
 Justo después de cobrar, en la ventana de confirmación, toca **Era apartado**. La venta se cancela y los productos regresan al carrito como apartado. Captura el anticipo si dejó dinero; si no, devuélvele lo que pagó.

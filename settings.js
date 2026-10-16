@@ -1269,7 +1269,7 @@ async function exportPagosCsv() {
     return [
       p.sale_id, _csvDateTime(p.paid_at), (s?.customer || '').split(' · 📱 ')[0],
       STATUS[s?.status] || s?.status || '', _csvPaymentType(p),
-      p.method === 'transferencia' ? 'Transferencia' : p.method === 'efectivo' ? 'Efectivo' : 'Sin método',
+      _metodoLabel(p.method),
       parseFloat(p.amount) || 0, p.collected_by_email || ''
     ];
   });

@@ -1010,7 +1010,7 @@ async function loadHistory() {
       const totalQty = items.reduce((n, i) => n + (i.qty || 1), 0);
       const amount = parseFloat(payment.amount) || 0;
       const isApt = s.origin_type === 'apartado' || (!s.origin_type && (s.type === 'apartado' || (s.abonos || []).length));
-      const methodIcon = payment.method === 'transferencia' ? _uiIcoPhone() : payment.method === 'efectivo' ? _uiIcoCash() : _uiIcoReceipt();
+      const methodIcon = payment.method === 'transferencia' ? _uiIcoPhone() : payment.method === 'efectivo' ? _uiIcoCash() : payment.method === 'tarjeta' ? _metodoIco('tarjeta') : _uiIcoReceipt();
       let badgeText;
       // Clases en vez de estilo inline -- así el bloque [data-theme="dark"]
       // de pos.css sí puede invertir estos colores.
@@ -1064,7 +1064,7 @@ async function loadHistory() {
       if (payment.is_estimated) tags.push(`<span class="hi-tag note">${_uiIcoWarn()} Histórico estimado</span>`);
       if (payment.refund_breakdown?.length > 1) {
         const breakdown = payment.refund_breakdown.map(line =>
-          `${line.method === 'transferencia' ? _uiIcoPhone() : line.method === 'efectivo' ? _uiIcoCash() : _uiIcoReceipt()} $${Math.abs(line.amount).toLocaleString('es-MX')}`
+          `${line.method === 'transferencia' ? _uiIcoPhone() : line.method === 'efectivo' ? _uiIcoCash() : line.method === 'tarjeta' ? _metodoIco('tarjeta') : _uiIcoReceipt()} $${Math.abs(line.amount).toLocaleString('es-MX')}`
         ).join(' · ');
         tags.push(`<span class="hi-tag note">${breakdown}</span>`);
       }
@@ -1161,7 +1161,7 @@ async function _sendApartadoOrSaleReceipt(payment, s, paymentId) {
   const telLimpio = (custParts[1] || '').replace(/\D/g, '');
   const fecha = payment.paid_at ? new Date(payment.paid_at) : new Date();
   const fechaTxt = `${fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} a las ${fecha.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })}`;
-  const metodoTxt = payment.method === 'transferencia' ? '📱 Transferencia' : '💵 Efectivo';
+  const metodoTxt = `${_metodoEmoji(payment.method)} ${_metodoLabel(payment.method)}`;
   const total = parseFloat(s.total) || 0;
 
   // El pendiente debe reflejar el saldo TAL COMO ERA el día de este pago, no

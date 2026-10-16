@@ -527,11 +527,12 @@ async function loadCorte() {
   const created = isGeneral ? (createdResult.data || []) : (createdResult.data || []).filter(sale =>
     String(sale.seller_email || '').toLowerCase() === actorEmail
   );
-  let efectivo = 0, transferencia = 0, otros = 0, devoluciones = 0, anticipos = 0;
+  let efectivo = 0, transferencia = 0, tarjeta = 0, otros = 0, devoluciones = 0, anticipos = 0;
 
   payments.forEach(payment => {
     const amount = parseFloat(payment.amount) || 0;
     if (payment.method === 'transferencia') transferencia += amount;
+    else if (payment.method === 'tarjeta') tarjeta += amount;
     else if (payment.method === 'efectivo') efectivo += amount;
     else otros += amount;
     if (payment.kind === 'refund') devoluciones += Math.abs(amount);
@@ -541,6 +542,7 @@ async function loadCorte() {
   });
   efectivo = money(efectivo);
   transferencia = money(transferencia);
+  tarjeta = money(tarjeta);
   otros = money(otros);
   devoluciones = money(devoluciones);
   anticipos = money(anticipos);
@@ -554,10 +556,10 @@ async function loadCorte() {
     })
     .map(payment => payment.sale_id)).size;
   const otherCashiersNet = money(otherCashiers.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0));
-  const total = money(efectivo + transferencia + otros);
+  const total = money(efectivo + transferencia + tarjeta + otros);
   const fmt = n => `$${n.toLocaleString('es-MX')}`;
   const breakdown = isGeneral ? _corteBreakdownRows(allPayments) : [];
-  _corteData = { efectivo, transferencia, otros, devoluciones, total, numVentas, numApartados,
+  _corteData = { efectivo, transferencia, tarjeta, otros, devoluciones, total, numVentas, numApartados,
     numLiquidados, anticipos, ahoraMX, inicioMX, actorLabel, otherCashiersNet, isGeneral, breakdown };
   if (shareButton) shareButton.disabled = false;
 
@@ -580,6 +582,7 @@ async function loadCorte() {
       <div class="corte-card-title">${isGeneral ? 'Cobros de hoy' : 'Tus cobros del turno'}</div>
       ${row('Efectivo', fmt(efectivo))}
       ${row('Transferencia', fmt(transferencia))}
+      ${tarjeta || _metodosActivos().includes('tarjeta') ? row('Tarjeta', fmt(tarjeta)) : ''}
       ${Math.abs(otros) >= .005 ? row('Ajustes sin método', fmt(otros)) : ''}
       ${devoluciones > 0 ? row('Devoluciones (ya restadas)', `−${fmt(devoluciones)}`) : ''}
       <div class="corte-total">
@@ -631,7 +634,7 @@ function _renderCorteDetalle(payments) {
     const time = new Intl.DateTimeFormat('es-MX', { timeZone:'America/Mexico_City', hour:'2-digit', minute:'2-digit' }).format(new Date(payment.paid_at));
     const amount = parseFloat(payment.amount) || 0;
     const amountText = `${isRefund ? '−' : ''}$${Math.abs(amount).toLocaleString('es-MX')}`;
-    const metodo = payment.method === 'transferencia' ? 'Transferencia' : payment.method === 'efectivo' ? 'Efectivo' : 'Sin método';
+    const metodo = _metodoLabel(payment.method);
     return `
       <div class="corte-cobro">
         <div class="corte-cobro-main">
@@ -919,7 +922,7 @@ function _renderCierre() {
 
 function compartirCorteWA() {
   if (!_corteData) return;
-  const { efectivo, transferencia, otros, devoluciones, total, numVentas, numApartados,
+  const { efectivo, transferencia, tarjeta, otros, devoluciones, total, numVentas, numApartados,
     numLiquidados, anticipos, ahoraMX, inicioMX, actorLabel, otherCashiersNet,
     isGeneral, breakdown } = _corteData;
   const fmt = n => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('es-MX')}`;
@@ -931,7 +934,7 @@ function compartirCorteWA() {
   if (numVentas > 0)      msg += `🛍 Ventas directas: ${numVentas}\n`;
   if (numLiquidados)      msg += `✅ Apartados liquidados: ${numLiquidados}\n`;
   if (numApartados)       msg += `📌 Apartados nuevos: ${numApartados}${anticipos > 0 ? ` (anticipos activos ${fmt(anticipos)})` : ''}\n`;
-  msg += `\n💵 Efectivo: ${fmt(efectivo)}\n📱 Transferencia: ${fmt(transferencia)}\n*Total cobrado: ${fmt(total)}*`;
+  msg += `\n💵 Efectivo: ${fmt(efectivo)}\n📱 Transferencia: ${fmt(transferencia)}${tarjeta ? `\n💳 Tarjeta: ${fmt(tarjeta)}` : ''}\n*Total cobrado: ${fmt(total)}*`;
   if (Math.abs(otros || 0) >= .005) msg += `\n🧾 Ajustes sin método: ${fmt(otros)}`;
   if (devoluciones > 0) msg += `\n↩️ Devoluciones registradas: −${fmt(devoluciones)}`;
   if (anticipos > 0) msg += `\n📌 Incluye ${fmt(anticipos)} cobrados en apartados aún activos`;

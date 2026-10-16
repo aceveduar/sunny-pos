@@ -64,10 +64,10 @@ function getDiscountedTotal() { return Math.max(0, getTotal() - getDiscount()); 
 /* ── MÉTODO DE PAGO ── */
 function setPayMethod(method) {
   payMethod = method;
-  document.getElementById('pay-efectivo').classList.toggle('active', method === 'efectivo');
-  document.getElementById('pay-transferencia').classList.toggle('active', method === 'transferencia');
-  document.getElementById('apt-pay-efectivo')?.classList.toggle('active', method === 'efectivo');
-  document.getElementById('apt-pay-transferencia')?.classList.toggle('active', method === 'transferencia');
+  Object.keys(_METODOS_PAGO).forEach(m => {
+    document.getElementById('pay-' + m)?.classList.toggle('active', method === m);
+    document.getElementById('apt-pay-' + m)?.classList.toggle('active', method === m);
+  });
   const isApt = document.getElementById('pos-is-apartado')?.checked;
   document.getElementById('cash-section').style.display = (!isApt && method === 'efectivo') ? '' : 'none';
   updateChange();
@@ -413,11 +413,13 @@ function _apartadoPaymentMeta(payment) {
   }
   const method = isReactivation ? 'reactivación'
     : payment?.method === 'transferencia' ? 'transferencia'
+    : payment?.method === 'tarjeta' ? 'tarjeta'
     : payment?.method === 'efectivo' ? 'efectivo' : 'método sin registrar';
   const _ip = p => `<svg style="width:13px;height:13px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24">${p}</svg>`;
   const icon = (amount < 0 || isReactivation)
     ? _ip('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>')
     : method === 'transferencia' ? _ip('<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>')
+    : method === 'tarjeta' ? _ip(_METODOS_PAGO.tarjeta.ico)
     : method === 'efectivo' ? _ip('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>')
     : _ip('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>');
   return { amount, dateLabel, method, icon, isReactivation, isLibreta: false };
@@ -917,7 +919,7 @@ function showPaymentDone({ id, nombre, monto, metodo, pendiente, esLiquidacion }
   document.getElementById('ad-customer').textContent = nombre || 'Cliente';
   document.getElementById('ad-amount-label').textContent = esLiquidacion ? 'Pago recibido' : 'Abono recibido';
   document.getElementById('ad-amount').textContent = `$${monto.toLocaleString('es-MX')}`;
-  document.getElementById('ad-method').textContent = metodo === 'transferencia' ? 'Transferencia' : 'Efectivo';
+  document.getElementById('ad-method').textContent = _metodoLabel(metodo);
   document.getElementById('ad-pending-row').style.display = esLiquidacion ? 'none' : '';
   document.getElementById('ad-pending').textContent = `$${pendiente.toLocaleString('es-MX')}`;
   const handover = document.getElementById('ad-handover');
@@ -966,7 +968,7 @@ function sendPaymentReceipt() {
   const nombre    = c.nombre || custParts[0] || 'Cliente';
   const phoneInput = document.getElementById('ad-phone-input');
   const telNum    = c.telNum || (phoneInput?.value || '').trim();
-  const metodoTxt = c.metodo === 'transferencia' ? '📱 Transferencia' : '💵 Efectivo';
+  const metodoTxt = `${_metodoEmoji(c.metodo)} ${_metodoLabel(c.metodo)}`;
   const fechaTxt  = `${c.fecha.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})} a las ${c.fecha.toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit'})}`;
   const saldoLine = c.esLiquidacion
     ? '✅ *Tu apartado quedó pagado por completo.*'
@@ -1037,8 +1039,7 @@ function abonarApartado(id, total, pagado, nombre) {
   const pendienteAmt = total - pagado;
   const hint = document.getElementById('abonar-max-hint');
   if (hint) hint.textContent = `Máx: $${pendienteAmt.toLocaleString('es-MX')}`;
-  document.getElementById('abpay-efectivo').classList.add('active');
-  document.getElementById('abpay-transferencia').classList.remove('active');
+  setAbonarMethod('efectivo');
   document.getElementById('abonar-confirm-btn').disabled = true;
   document.getElementById('abonar-overlay').style.display = 'flex';
   document.getElementById('abonar-amount').focus();
@@ -1052,8 +1053,7 @@ function _fillAbonarMax() {
 
 function setAbonarMethod(m) {
   _abonarMethod = m;
-  document.getElementById('abpay-efectivo').classList.toggle('active', m === 'efectivo');
-  document.getElementById('abpay-transferencia').classList.toggle('active', m === 'transferencia');
+  Object.keys(_METODOS_PAGO).forEach(k => document.getElementById('abpay-' + k)?.classList.toggle('active', m === k));
 }
 
 function validateAbonarAmount() {
@@ -1506,6 +1506,7 @@ function setLiqMethod(m) {
   _liqMethod = m;
   document.getElementById('liq-pay-efectivo').classList.toggle('active', m === 'efectivo');
   document.getElementById('liq-pay-transf').classList.toggle('active', m === 'transferencia');
+  document.getElementById('liq-pay-tarjeta')?.classList.toggle('active', m === 'tarjeta');
 }
 
 function closeLiqModal() {

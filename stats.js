@@ -641,13 +641,10 @@ function renderTodaySales() {
   el.innerHTML = displayItems.map((payment, idx) => {
     const s = paymentSalesById.get(String(payment.sale_id));
     const time = _mxTime(payment.paid_at);
-    const isTrans = payment.method === 'transferencia';
     const isMultiMethod = payment.method === 'multiple';
     const payIconSvg = isMultiMethod
       ? '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/>'
-      : isTrans
-        ? '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>'
-        : '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>';
+      : (_METODOS_PAGO[payment.method] || _METODOS_PAGO.efectivo).ico;
     const payIcon = `<span class="dv-sale-pay ${isTrans ? 'dv-pay-trans' : 'dv-pay-efec'}"><svg class="dv-icon" viewBox="0 0 24 24">${payIconSvg}</svg></span>`;
     const items = Array.isArray(s?.items) ? s.items : [];
     const origin = _saleOrigin(s);
@@ -688,7 +685,7 @@ function renderTodaySales() {
     const collector = collectorEmail ? (nameMap[collectorEmail] || collectorEmail.split('@')[0]) : '';
     const _rbIco = p => `<svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:2px">${p}</svg>`;
     const refundBreakdown = payment.refund_breakdown?.length > 1
-      ? payment.refund_breakdown.map(line => `${line.method === 'transferencia' ? _rbIco('<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>') : line.method === 'efectivo' ? _rbIco('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>') : _rbIco('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>')} ${line.method}: −$${Math.abs(line.amount).toLocaleString('es-MX',{maximumFractionDigits:0})}`).join(' · ')
+      ? payment.refund_breakdown.map(line => `${line.method === 'tarjeta' ? _rbIco(_METODOS_PAGO.tarjeta.ico) : line.method === 'transferencia' ? _rbIco('<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>') : line.method === 'efectivo' ? _rbIco('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>') : _rbIco('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>')} ${line.method}: −$${Math.abs(line.amount).toLocaleString('es-MX',{maximumFractionDigits:0})}`).join(' · ')
       : '';
     const detail = [
       collector ? `Registró ${_esc(collector)}` : '',
@@ -2308,6 +2305,9 @@ function sendDailySummaryWA() {
   const transf = todayPayments
     .filter(payment => payment.method === 'transferencia')
     .reduce((sum, payment) => sum + _paymentAmount(payment), 0);
+  const tarjeta = todayPayments
+    .filter(payment => payment.method === 'tarjeta')
+    .reduce((sum, payment) => sum + _paymentAmount(payment), 0);
   const refundLines = todayPayments.filter(payment => payment.kind === 'refund');
   const refundCount = _refundOperationCount(todayPayments);
   const adjustmentLines = todayPayments.filter(payment => payment.kind === 'adjustment');
@@ -2339,6 +2339,7 @@ function sendDailySummaryWA() {
   msg += `🔢 *Ventas directas:* ${ventas.length}\n`;
   if (efectivo !== 0) msg += `💵 Efectivo: ${fmt(efectivo)}\n`;
   if (transf !== 0)   msg += `📱 Transferencia: ${fmt(transf)}\n`;
+  if (tarjeta !== 0)  msg += `💳 Tarjeta: ${fmt(tarjeta)}\n`;
   if (refundCount) msg += `↩️ Devoluciones: ${refundCount} (${fmt(_paymentTotal(refundLines))})\n`;
   if (adjustmentLines.length) msg += `🧾 Ajustes: ${adjustmentLines.length} (${fmt(_paymentTotal(adjustmentLines))})\n`;
   if (aptos.length) msg += `\n📌 *Apartados nuevos:* ${aptos.length}${aperturaAmount > 0 ? ` (${fmt(aperturaAmount)} al abrir)` : ''}\n`;

@@ -1421,3 +1421,22 @@ function _varOrden(vals) {
   if (vals.length > 1 && vals.every(v => !isNaN(n(v)))) return [...vals].sort((a, b) => n(a) - n(b));
   return vals;
 }
+
+/* ── Formas de pago (Caja, Reportes, Actividad, Configuración) ──
+   Efectivo es lo único que entra al cajón; transferencia y tarjeta no. */
+const _METODOS_PAGO = {
+  efectivo:      { label: 'Efectivo',      emoji: '💵', ico: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>' },
+  transferencia: { label: 'Transferencia', emoji: '📱', ico: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>' },
+  tarjeta:       { label: 'Tarjeta',       emoji: '💳', ico: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/>' },
+};
+const _metodoLabel = m => _METODOS_PAGO[m]?.label || 'Sin método';
+const _metodoEmoji = m => _METODOS_PAGO[m]?.emoji || '🧾';
+function _metodoIco(m, px = 12) {
+  const d = _METODOS_PAGO[m]?.ico || '<path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2z"/>';
+  return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px" aria-hidden="true">${d}</svg>`;
+}
+// Las que usa este negocio (negocio.js → formasDePago); efectivo siempre
+function _metodosActivos() {
+  const lista = Array.isArray(window.NEGOCIO?.formasDePago) ? window.NEGOCIO.formasDePago : Object.keys(_METODOS_PAGO);
+  return Object.keys(_METODOS_PAGO).filter(m => m === 'efectivo' || lista.includes(m));
+}

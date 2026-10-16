@@ -50,7 +50,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [ ] Juntar en `shared.js` lo repetido: `_esc`, `api`, `_driveSz`, `toast`
 
 ## 6. Lo que falta para vender
-- [ ] Forma de pago Tarjeta
+- [x] Forma de pago Tarjeta (2026-10-16): `sale_payments.method` acepta `tarjeta` (mejoras.sql reescribe las RPC de cobro desde su definición); Caja, corte, historial, Reportes, Actividad y CSV la muestran; no entra al cajón (prueba en caja.sql); `negocio.js → formasDePago` la oculta si el negocio no tiene terminal.
 - [ ] Importar productos desde Excel/CSV
 - [ ] Asistente de primer uso (nombre, logo, categorías, equipo, primera caja)
 - [ ] Negocio demo con datos ficticios
@@ -84,7 +84,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] 4) Reportes (2026-10-16): tarjeta "Tallas y colores" (piezas por talla en su orden, por color, por número…, y "Se vendieron y ya no quedan"); Productos más vendidos suma cada prenda con su talla/color más vendida. Solo aparece si se vendió algo con variantes. Ventas demo: 25% prendas.
 - [x] 5) Juntar productos sueltos (2026-10-16): selección → Más acciones → "Juntar en una prenda" adivina nombre común, talla/número y color (corregibles), valida combinaciones repetidas; sirve también para sumar un suelto a una prenda. Ficha → Más → "Quitar de la prenda".
 - [x] 6) Etiquetas (2026-10-16, `admin-etiquetas.js`): ficha → Más → Etiquetas (prenda = todas sus variantes) y selección → Imprimir etiquetas. Hoja carta 3×10 (66.7×25.4 mm) o rollo térmico 50×25 mm; una por pieza o una de cada; EAN-13/Code 128 con JsBarcode; ofrece crear códigos faltantes. Falta probar en impresora real.
-- [ ] 4) Reportes por talla.
+- [x] 4) Reportes por talla (ver 4 arriba).
 
 ## 8. Rapidez (máxima velocidad de carga)
 **Punto de partida (2026-10-13, 5,000 productos, PC de Eduardo, sesión real):** Inventario 7–8 s · Caja ~5 s · Reportes ~6 s · Actividad ~6 s · Configuración ~4.5 s. Inventario descarga ~4 MB.

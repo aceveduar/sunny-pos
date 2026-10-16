@@ -238,6 +238,13 @@ const _actIcoUser     = (px) => _actIco('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 
 const _actIcoClock    = (px) => _actIco('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', px);
 
 /* ── ACTION CONFIG ── */
+// Forma de pago con su ícono (efectivo, transferencia, tarjeta)
+function _actMetodo(m) {
+  if (m === 'transferencia') return _actIcoPhone(12) + ' Transferencia';
+  if (m === 'efectivo' || !m) return _actIcoCash(12) + ' Efectivo';
+  return _metodoIco(m) + _metodoLabel(m);
+}
+
 const ACTION_CFG = {
   venta:              { type:'venta',      badge:'venta',     icon:_actIcoCash(),     label:'Venta'     },
   venta_cancelada:    { type:'venta',      badge:'eliminado', icon:_actIcoX(),        label:'Venta cancelada' },
@@ -447,13 +454,13 @@ function render(data) {
       if (item.action === 'venta' || item.action === 'venta_cancelada')
         detail = [
           meta.items != null ? `${meta.items} producto${meta.items !== 1 ? 's' : ''}` : '',
-          meta.method ? (meta.method === 'transferencia' ? _actIcoPhone(12)+' Transferencia' : _actIcoCash(12)+' Efectivo') : '',
+          meta.method ? _actMetodo(meta.method) : '',
           meta.discount > 0 ? `Desc. $${(meta.discount).toLocaleString('es-MX')}` : ''
         ].filter(Boolean).join(' · ');
       else if (item.action === 'apartado_nuevo' && meta.anticipo != null)
         detail = `Anticipo $${meta.anticipo.toLocaleString('es-MX')} · Pendiente $${(meta.pendiente ?? 0).toLocaleString('es-MX')}`;
       else if (item.action === 'apartado_abono' && meta.amount != null)
-        detail = `$${meta.amount.toLocaleString('es-MX')} · ${meta.method === 'transferencia' ? _actIcoPhone(12)+' Transferencia' : _actIcoCash(12)+' Efectivo'}`;
+        detail = `$${meta.amount.toLocaleString('es-MX')} · ${_actMetodo(meta.method)}`;
       else if (item.action === 'apartado_reembolso' && meta.refund != null)
         detail = `Devuelto $${parseFloat(meta.refund).toLocaleString('es-MX')}`;
       else if (item.action === 'apartado_cancelado' && meta.refund > 0)
@@ -611,7 +618,7 @@ function _actPopup(idx) {
     }
     bodyHtml = `<div style="font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif;color:var(--brand);margin-bottom:6px">$${parseFloat(meta.total||0).toLocaleString('es-MX')} MXN</div>`;
     bodyHtml += `<div style="font-size:.82rem;color:var(--charcoal);margin-bottom:4px">${meta.items||0} producto${(meta.items||0)!==1?'s':''}</div>`;
-    bodyHtml += `<div style="font-size:.82rem;color:var(--muted)">${meta.method==='transferencia'?_actIcoPhone(12)+' Transferencia':_actIcoCash(12)+' Efectivo'}</div>`;
+    bodyHtml += `<div style="font-size:.82rem;color:var(--muted)">${_actMetodo(meta.method)}</div>`;
     if (meta.discount > 0) bodyHtml += `<div style="font-size:.78rem;color:#059669;margin-top:4px">Descuento −$${parseFloat(meta.discount).toLocaleString('es-MX')}</div>`;
     if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:var(--radio-sm);font-style:italic">"${_esc(meta.reason)}"</div>`;
     bodyHtml += _renderItemsDetail(meta);
@@ -624,7 +631,7 @@ function _actPopup(idx) {
     if (meta.restante != null) bodyHtml += `<div style="font-size:.82rem;color:#059669;margin-top:2px">Liquidado: $${parseFloat(meta.restante).toLocaleString('es-MX')}</div>`;
     if (meta.pagado != null)   bodyHtml += `<div style="font-size:.82rem;color:var(--muted);margin-top:2px">Cobrado antes de cancelar: $${parseFloat(meta.pagado).toLocaleString('es-MX')}</div>`;
     if (meta.refund != null)   bodyHtml += `<div style="font-size:.82rem;color:var(--red);margin-top:2px">Devuelto: $${parseFloat(meta.refund).toLocaleString('es-MX')}</div>`;
-    if (meta.method)           bodyHtml += `<div style="font-size:.78rem;color:var(--muted);margin-top:2px">${meta.method==='transferencia'?_actIcoPhone(12)+' Transferencia':_actIcoCash(12)+' Efectivo'}</div>`;
+    if (meta.method)           bodyHtml += `<div style="font-size:.78rem;color:var(--muted);margin-top:2px">${_actMetodo(meta.method)}</div>`;
     if (meta.dueDate)          bodyHtml += `<div style="font-size:.78rem;color:var(--muted);margin-top:2px">${_actIcoCalendar(12)} Vencía: ${_activityFormat(meta.dueDate+'T12:00:00Z',{day:'numeric',month:'short',year:'numeric'})}</div>`;
     if (meta.reason) bodyHtml += `<div style="font-size:.8rem;color:var(--charcoal);margin-top:8px;padding:8px 10px;background:var(--surface-soft);border-radius:var(--radio-sm);font-style:italic">"${_esc(meta.reason)}"</div>`;
     bodyHtml += _renderItemsDetail(meta);
