@@ -1087,14 +1087,15 @@ function _mapPosProduct(p) {
     badge: p.badge,
     badgeType: p.badge_type,
     kitItems: p.kit_items || null,
-    expiryDate: p.expiry_date || null
+    expiryDate: p.expiry_date || null,
+    variantGroup: p.variant_group || null
   };
 }
 
 let _productsLoadGeneration = 0;
 async function loadProducts() {
   const loadGeneration = ++_productsLoadGeneration;
-  const result = await _posFetchAll('products?select=id,name,category,category_label,price,original_price,description,image,barcode,stock,out_of_stock,badge,badge_type,kit_items,expiry_date&is_archived=eq.false&order=position.asc,id.asc');
+  const result = await _posFetchAll('products?select=id,name,category,category_label,price,original_price,description,image,barcode,stock,out_of_stock,badge,badge_type,kit_items,expiry_date,variant_group&is_archived=eq.false&order=position.asc,id.asc');
   if (loadGeneration !== _productsLoadGeneration) return false;
   if (result.ok && Array.isArray(result.data)) {
     products = result.data.map(_mapPosProduct);
@@ -1366,7 +1367,18 @@ function getFilteredProducts(q = '', includeOos = false) {
       return aOos - bOos;
     });
   }
-  return sorted;
+  // Tallas y colores de una prenda, juntas y en su orden (CH, M, G…) en el
+  // lugar de la primera que aparezca: si no, salían revueltas por "reciente".
+  if (!sorted.some(p => p.variantGroup)) return sorted;
+  const orden = new Map(products.map((p, i) => [p.id, i]));
+  const out = [], hechos = new Set();
+  sorted.forEach(p => {
+    if (!p.variantGroup) { out.push(p); return; }
+    if (hechos.has(p.variantGroup)) return;
+    hechos.add(p.variantGroup);
+    out.push(...sorted.filter(x => x.variantGroup === p.variantGroup).sort((a, b) => orden.get(a.id) - orden.get(b.id)));
+  });
+  return out;
 }
 
 /* ── PAGINACIÓN DEL CATÁLOGO — evita renderizar ~800 tarjetas de un jalón ── */
