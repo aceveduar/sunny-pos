@@ -54,7 +54,7 @@ para tiendas chicas (boutiques, accesorios, belleza). Nació como copia de Tres 
 - [x] Importar productos desde Excel/CSV (2026-10-16, `admin-importar.js`, + Agregar → Desde Excel, permiso canImportExport): SheetJS, reconoce columnas por título, CSV en UTF-8 o Windows-1252, montos con $ y comas, plantilla descargable, tallas/colores → prenda, código existente: saltar o actualizar, categoría desconocida → Por revisar.
 - [x] Asistente de primer uso (2026-10-16, `admin-primeros.js`): guía "Primeros pasos" arriba de Inventario para quien administra (productos, categorías, equipo, primera venta, compartir Tienda, Ayuda); se marca sola y se oculta (`config.primeros_pasos`). Nombre, logo y color van en `negocio.js` al instalar.
 - [ ] Negocio demo con datos ficticios
-- [ ] Aviso de privacidad y términos
+- [ ] Aviso de privacidad y términos — **borradores listos** en `docs/legal/` (2026-10-16): aviso integral + simplificado para cada negocio (responsable) y términos Sunname–negocio (Sunname como encargado). **(Eduardo)** revisarlos con un abogado; luego publicar el aviso en la Tienda.
 - [ ] **(Eduardo)** Nombre definitivo (hoy "Sunny POS" es de trabajo), antes de logo, dominio o primera venta
 - [ ] Precio y planes (básico / con tienda / diseño a la medida aparte)
 - [ ] Instalarlo a un segundo negocio piloto
