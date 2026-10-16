@@ -1291,12 +1291,16 @@ function _varSelectorHTML(p, hs) {
   return `<div class="modal-variantes">${nombres.map(n => {
     const valores = _varOrden([...new Set(hs.map(v => _varValor(v, n)))]);
     const actual = _varValor(p, n);
-    return `<div class="mv-opcion"><p class="mv-label">${_esc(n)}: <strong>${_esc(actual || '')}</strong></p><div class="mv-botones">${valores.map(val => {
+    // Color con foto propia (Inventario → foto por color): botón con la foto, como en ZARA
+    const fotoDe = val => hs.find(v => _varValor(v, n) === val)?.image;
+    const conFoto = /color|tono/i.test(n) && new Set(valores.map(fotoDe)).size > 1;
+    return `<div class="mv-opcion"><p class="mv-label">${_esc(n)}: <strong>${_esc(actual || '')}</strong></p><div class="mv-botones${conFoto ? ' mv-con-foto' : ''}">${valores.map(val => {
       const exacta = hs.find(v => _varValor(v, n) === val && nombres.every(m => m === n || _varValor(v, m) === _varValor(p, m)));
       const libre = !!exacta && !isOos(exacta);
       const destino = libre ? exacta : (hs.find(v => _varValor(v, n) === val && !isOos(v)) || exacta);
       const sel = val === actual;
-      return `<button type="button" class="mv-btn${sel ? ' on' : ''}${libre ? '' : ' agotada'}"${destino ? ` onclick="_varElegir(${destino.id})"` : ' disabled'} aria-pressed="${sel}"${libre ? '' : ` title="Agotada" aria-label="${_esc(val)}, agotada"`}>${_esc(val)}</button>`;
+      return `<button type="button" class="mv-btn${sel ? ' on' : ''}${libre ? '' : ' agotada'}"${destino ? ` onclick="_varElegir(${destino.id})"` : ' disabled'} aria-pressed="${sel}"${libre ? (conFoto ? ` aria-label="${_esc(val)}"` : '') : ` title="Agotada" aria-label="${_esc(val)}, agotada"`}>${conFoto
+        ? `<img src="${_driveSz(fotoDe(val), 160)}" alt="" loading="lazy"><span>${_esc(val)}</span>` : _esc(val)}</button>`;
     }).join('')}</div></div>`;
   }).join('')}</div>`;
 }

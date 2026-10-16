@@ -193,7 +193,7 @@ Cada variante es un producto con su propio stock y su nombre completo ("Blusa de
 
 **Agregar una talla o un color después:** abre la prenda y, debajo de la cuadrícula, toca **+ Talla o color**. Escribe la nueva (por ejemplo "Rojo") y toca **Agregar**: se crea en todas las tallas con 0 piezas; luego escribe cuántas llegaron. Si solo falta una combinación, toca el **+** de su casilla.
 
-**Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color, y en la Tienda la clienta ve la foto del color que elige.
+**Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color. En la Tienda, los botones de color muestran la foto de cada color y, al elegir uno, la foto grande cambia.
 
 **Juntar productos que ya tenías sueltos:** si ya capturaste "Blusa lino M negra", "Blusa lino G negra"… como productos separados, selecciónalos en la lista y toca **Más acciones → Juntar en una prenda**. El sistema adivina el nombre de la prenda, la talla y el color de cada uno; corrige lo que haga falta y toca **Juntar**. Cada uno conserva su precio, piezas, código y fotos. Para sumar un producto suelto a una prenda que ya existe, selecciona la prenda y el producto, y júntalos. Si juntaste uno por error, ábrelo y toca **Más → Quitar de la prenda**.
 

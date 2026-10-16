@@ -947,3 +947,9 @@ body{font-feature-settings:"lnum" 1}
 .mv-btn.agotada{color:var(--muted-light);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(0,0,0,.035) 6px 7px);text-decoration:line-through}
 .mv-btn.agotada.on{background:var(--surface-soft);color:var(--muted);border-color:var(--muted-light)}
 .mv-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* Colores con foto propia: miniatura + nombre */
+.mv-con-foto .mv-btn{display:flex;flex-direction:column;align-items:center;gap:4px;width:76px;min-height:auto;padding:4px 4px 6px;font-size:.76rem;font-weight:600;line-height:1.2;text-align:center}
+.mv-con-foto .mv-btn img{width:66px;height:66px;object-fit:contain;background:#fff;border-radius:var(--radio-sm);display:block}
+.mv-con-foto .mv-btn.on{background:var(--surface);color:var(--charcoal);border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.mv-con-foto .mv-btn.agotada img{opacity:.45}
+
