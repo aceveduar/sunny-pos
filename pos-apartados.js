@@ -296,13 +296,13 @@ function _renderApartadoSummary() {
   summary.innerHTML = `<span>${_uiIcoBookmark()} ${parts.join(' · ')}</span><span class="apt-summary-edit">${_uiIcoEdit()} Editar</span>`;
 }
 
-function setAnticipo(pct) {
+function setAnticipo(pct, btn) {
   const total = getDiscountedTotal();
   const amount = pct === 1 ? total : Math.floor(total * pct);
   const el = document.getElementById('pos-anticipo');
   if (el) el.value = amount > 0 ? amount : '';
   document.querySelectorAll('.anticipo-quick button').forEach(b => b.classList.remove('active-cash'));
-  event?.currentTarget?.classList.add('active-cash');
+  btn?.classList.add('active-cash');
   updateAnticipoInfo();
 }
 
@@ -399,18 +399,6 @@ function _apartadoPaymentMeta(payment) {
   // 'adjustment' positivo. Sin rotularlo, en el historial del apartado se leería
   // como un pago extra de la clienta en vez de la reversa de la devolución.
   const isReactivation = payment?.source === 'rpc_apartado_reactivation';
-  // Abonos (y su devolución) de una libreta de papel: sin fecha de cobro; la
-  // fecha escrita en la libreta, si la había, viene en meta.fecha.
-  const isLibreta = payment?.source === 'libreta' || payment?.meta?.libreta === true;
-  if (isLibreta) {
-    const f = payment?.meta?.fecha;
-    return {
-      amount, isReactivation: false, isLibreta: true,
-      dateLabel: f ? _posFormatDayKey(f, { day:'numeric', month:'short' }) : 'Sin fecha',
-      method: amount < 0 ? 'devolución (libreta)' : 'anotado en libreta',
-      icon: _libIco(13)
-    };
-  }
   const method = isReactivation ? 'reactivación'
     : payment?.method === 'transferencia' ? 'transferencia'
     : payment?.method === 'tarjeta' ? 'tarjeta'
@@ -422,7 +410,7 @@ function _apartadoPaymentMeta(payment) {
     : method === 'tarjeta' ? _ip(_METODOS_PAGO.tarjeta.ico)
     : method === 'efectivo' ? _ip('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>')
     : _ip('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>');
-  return { amount, dateLabel, method, icon, isReactivation, isLibreta: false };
+  return { amount, dateLabel, method, icon, isReactivation };
 }
 
 async function _hydrateApartadoPayments(rows) {
@@ -669,7 +657,7 @@ function _renderApartadoCanceladosCards(data) {
       </div>
     </div>
     <div class="apt-header-r2">
-      <span class="apt-h-meta">${_saldoFavor(s) > 0 ? _favorChipHTML(s) : ''}Cancelado el ${t} · ${_isLibretaSale(s) ? _libretaChipHTML() : `${nItems} prod.`}</span>
+      <span class="apt-h-meta">${_saldoFavor(s) > 0 ? _favorChipHTML(s) : ''}Cancelado el ${t} · ${nItems} prod.</span>
     </div>
   </div>
 </div>`;
@@ -733,9 +721,7 @@ function _renderApartadoCards(data, isLiquidado) {
       </div>
     </div>
     <div class="apt-header-r2">
-      <span class="apt-h-meta">${_isLibretaSale(s)
-        ? (isLiquidado ? `Liquidado el ${t} · ${_libretaChipHTML()}` : `${_libretaChipHTML()}${_libretaDateLabel(s)}`)
-        : `${isLiquidado ? '' : _enTiendaChipHTML(s)}${isLiquidado ? 'Liquidado el ' : ''}${t} · ${nItems} prod.`}</span>
+      <span class="apt-h-meta">${isLiquidado ? '' : _enTiendaChipHTML(s)}${isLiquidado ? 'Liquidado el ' : ''}${t} · ${nItems} prod.</span>
       ${dueHTML}
     </div>
     ${isLiquidado ? '' : `<div class="apt-mini-bar" role="progressbar" aria-label="Progreso de pago" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div class="apt-mini-fill" style="width:${pct}%"></div></div>`}
@@ -767,9 +753,7 @@ function sendApartadoReminder(id, sale = null) {
   const total     = parseFloat(s.total) || 0;
   const pagado    = parseFloat(s.paid_amount || 0);
   const pendiente = Math.max(0, total - pagado);
-  const productos = Array.isArray(s.items) ? s.items.map(i => i.libreta
-    ? `• Apartado anotado en nuestra libreta${i.nota ? ` (${i.nota})` : ''}`
-    : `• ${i.name}`).join('\n') : '';
+  const productos = Array.isArray(s.items) ? s.items.map(i => `• ${i.name}`).join('\n') : '';
   const liquidado = _isApartadoLiquidado(s);
   let fechaTexto  = '';
   if (s.due_date) {
@@ -926,7 +910,7 @@ function showPaymentDone({ id, nombre, monto, metodo, pendiente, esLiquidacion }
   document.getElementById('ad-pending').textContent = `$${pendiente.toLocaleString('es-MX')}`;
   const handover = document.getElementById('ad-handover');
   if (handover) {
-    const enTienda = esLiquidacion && sale && !sale.se_lo_llevo && !_isLibretaSale(sale);
+    const enTienda = esLiquidacion && sale && !sale.se_lo_llevo;
     const nombres = enTienda ? (sale.items || []).map(i => i.name).filter(Boolean) : [];
     handover.hidden = !nombres.length;
     handover.innerHTML = nombres.length
@@ -1139,8 +1123,6 @@ async function confirmAbonar() {
 let _editAptCtx = null;
 
 async function openEditApartado(id) {
-  // Un apartado de libreta no tiene productos: se corrige en su propio formulario.
-  if (_isLibretaSale(_apartadosData[id])) return openLibretaEdit(id);
   if (!canEditApartado()) {
     const granted = await requestOverride('canEditApartado', 'Editar apartado');
     if (!granted) return;

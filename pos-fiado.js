@@ -20,7 +20,7 @@ function _fiadoChipHTML() { return `<span class="lib-chip">${_fiadoIco()} Se lo 
 // guardado aquí ("En tienda"). Casi todos los apartados son fiado, y una
 // etiqueta que sale en todas las tarjetas ya no distingue nada.
 function _enTiendaChipHTML(s) {
-  if (!s || _isFiado(s) || s.status !== 'activo' || (typeof _isLibretaSale === 'function' && _isLibretaSale(s))) return '';
+  if (!s || _isFiado(s) || s.status !== 'activo') return '';
   return `<span class="lib-chip">${_uiIcoBookmark(11)} En tienda</span>`;
 }
 // ¿El apartado que se está capturando en Caja es fiado?
@@ -36,7 +36,7 @@ function _aptDiasVencido(s) {
 }
 function _aptPuedeLiberar(s) {
   if (!s || s.status !== 'activo' || s.cancelled_at) return false;
-  if (_isFiado(s) || (typeof _isLibretaSale === 'function' && _isLibretaSale(s))) return false;
+  if (_isFiado(s)) return false;
   const d = _aptDiasVencido(s);
   return d != null && d >= _LIBERAR_DIAS;
 }

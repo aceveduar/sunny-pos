@@ -26,9 +26,6 @@ function _collectedByEmailFromCheck(id) {
   const el = document.getElementById(id);
   return (el && el.classList.contains('active')) ? _COLLECTED_BY_ALT_EMAIL : null;
 }
-// La libreta (apartados de papel de Tres Encantos) no existe en Sunny POS: las
-// listas de apartados todavía preguntan por ella, siempre es "no".
-function _isLibretaSale() { return false; }
 const TE = null; // tracking removed — stub keeps TE?.track() calls safe
 const _giftIconSvg  = (px = 14) => `<svg style="width:${px}px;height:${px}px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>`;
 const _clockIconSvg = (px = 14) => `<svg style="width:${px}px;height:${px}px;vertical-align:-2px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
@@ -140,8 +137,7 @@ function _openCancelModal(id, sale, kind, opts = {}) {
 
   document.getElementById('cancel-apt-title').textContent = isVenta ? '¿Cancelar esta venta?'
     : liberar ? '¿Liberar el producto?' : '¿Cancelar este apartado?';
-  const isLib = typeof _isLibretaSale === 'function' && _isLibretaSale(sale);
-  document.getElementById('cancel-apt-info').textContent = `${nombre} · $${fmt(total)} MXN · ${isLib ? 'apartado de libreta' : `${nItems} producto${nItems !== 1 ? 's' : ''}`}`;
+  document.getElementById('cancel-apt-info').textContent = `${nombre} · $${fmt(total)} MXN · ${nItems} producto${nItems !== 1 ? 's' : ''}`;
   _cancelAptReason = '';
   // "No pagó (vencido)" solo tiene sentido en un apartado activo; en una venta
   // o un apartado ya liquidado la 2ª opción es "Producto con defecto".
@@ -169,7 +165,7 @@ function _openCancelModal(id, sale, kind, opts = {}) {
 
   const undoNote = isVenta ? 'Esta acción no se puede deshacer.' : 'Solo el administrador puede deshacerlo después.';
   const warnIco = '<svg style="width:13px;height:13px;vertical-align:-2px;margin-right:3px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-  const stockTxt = isLib || fiado ? '' : liberar
+  const stockTxt = fiado ? '' : liberar
     ? `${warnIco}<strong>Solo si el producto sigue en la tienda.</strong> Vuelve a la venta. Si la clienta se lo llevó, no lo liberes: márcalo como fiado en Editar (lápiz).<br>`
     : 'El producto regresa al inventario. ';
   document.getElementById('cancel-apt-warning').innerHTML =
@@ -328,9 +324,8 @@ async function reactivateApartado(id) {
     .filter(p => p.kind === 'refund' && cancelTs && Math.abs(new Date(p.paid_at || p.meta?.devuelto_en).getTime() - cancelTs) < 5000)
     .reduce((n, p) => n + Math.abs(parseFloat(p.amount) || 0), 0);
 
-  const isLib = typeof _isLibretaSale === 'function' && _isLibretaSale(sale);
   const ok = await teConfirm({ title: `¿Reactivar el apartado de ${nombre}?`, confirmText: 'Reactivar', message:
-    (isLib ? '• Vuelve a Activos con lo que debía.\n' : `• Se vuelven a apartar ${nItems} producto${nItems !== 1 ? 's' : ''} (se descuentan del stock).\n`) +
+    `• Se vuelven a apartar ${nItems} producto${nItems !== 1 ? 's' : ''} (se descuentan del stock).\n` +
     (restored > 0 ? `• Se revierte la devolución de $${restored.toLocaleString('es-MX')} — vuelve a contar como pagado.\n` : '') +
     `• La reversa queda a nombre de quien registró la devolución, así su turno de caja cuadra.\n\n` +
     `Si algún producto ya se vendió, no se reactiva y te diremos cuál.`

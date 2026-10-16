@@ -187,7 +187,7 @@
           <button id="quick-cash-1">$100</button>
           <button id="quick-cash-2">$200</button>
           <button id="quick-cash-3">$500</button>
-          <button onclick="setCash(getDiscountedTotal())" class="exact-btn">Exacto</button>
+          <button onclick="setCash(getDiscountedTotal(), this)" class="exact-btn">Exacto</button>
         </div>
         <div class="cash-row">
           <div class="cash-field">
@@ -353,10 +353,10 @@
     <!-- Botones rápidos de anticipo -- justo debajo del campo que llenan,
          no después del resultado calculado (Pendiente) -->
     <div class="cash-quick anticipo-quick" style="margin:6px 0 12px">
-      <button onclick="setAnticipo(.25)">25%</button>
-      <button onclick="setAnticipo(.50)">50%</button>
-      <button onclick="setAnticipo(.75)">75%</button>
-      <button onclick="setAnticipo(1)" class="exact-btn">Exacto</button>
+      <button onclick="setAnticipo(.25, this)">25%</button>
+      <button onclick="setAnticipo(.50, this)">50%</button>
+      <button onclick="setAnticipo(.75, this)">75%</button>
+      <button onclick="setAnticipo(1, this)" class="exact-btn">Exacto</button>
     </div>
     <div class="cash-field" style="margin-bottom:14px">
       <label>Pendiente</label>

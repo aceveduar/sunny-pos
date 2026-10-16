@@ -401,18 +401,18 @@ function _updateQuickCashButtons() {
     if (amount == null) { btn.style.display = 'none'; return; }
     btn.style.display = '';
     btn.textContent = `$${amount.toLocaleString('es-MX')}`;
-    btn.onclick = () => setCash(amount);
+    btn.onclick = () => setCash(amount, btn);
   });
 }
 
-function setCash(amount) {
+function setCash(amount, btn) {
   const total = getTotal();
   const val = amount === total ? total : amount;
   document.getElementById('pos-cash').value = _fmtMoneyInput(String(val));
   updateChange();
   // Highlight el botón seleccionado
   document.querySelectorAll('.cash-quick button').forEach(b => b.classList.remove('active-cash'));
-  event?.currentTarget?.classList.add('active-cash');
+  btn?.classList.add('active-cash');
 }
 
 /* ── CORTE DE CAJA ── */

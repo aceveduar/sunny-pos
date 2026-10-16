@@ -133,7 +133,6 @@ function _themeToggleRowHtml() {
         if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('click', close); }
       });
     }, 10);
-    _udOpening = false;
   }
 
   document.addEventListener('DOMContentLoaded', _initUserDropdown);
