@@ -191,6 +191,8 @@ Cada variante es un producto con su propio stock y su nombre completo ("Blusa de
 
 **Cuando llega mercancía de una prenda:** abre la prenda y en la cuadrícula cambia a **Llegaron**. Escribe cuántas llegaron de cada talla y color (debajo ves cuántas había) y toca **Sumar al inventario**: se suman solas, no tienes que calcular el total.
 
+**Otro modelo con las mismas tallas:** abre la prenda y toca **Más → Duplicar prenda**. Se crea una copia con las mismas tallas, colores, precio y fotos, en 0 piezas y oculta; cámbiale el nombre y escribe sus piezas.
+
 **Agregar una talla o un color después:** abre la prenda y, debajo de la cuadrícula, toca **+ Talla o color**. Escribe la nueva (por ejemplo "Rojo") y toca **Agregar**: se crea en todas las tallas con 0 piezas; luego escribe cuántas llegaron. Si solo falta una combinación, toca el **+** de su casilla.
 
 **Foto por color:** en la cuadrícula, cada color tiene su foto arriba. Tócala para cambiarla: se cambia en todas las tallas de ese color. En la Tienda, los botones de color muestran la foto de cada color y, al elegir uno, la foto grande cambia.

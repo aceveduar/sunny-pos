@@ -671,7 +671,10 @@ function _renderQV(p) {
   const btnEdit = can.editProduct
     ? `<button class="qv-btn qv-btn-edit" onclick="closeQV();openForm(${p.id})">${ICON_EDIT} Editar</button>`
     : '';
-  const btnDup  = `<button class="qv-btn qv-btn-dup" onclick="closeQV();duplicateProduct(${p.id})">${ICON_COPY} Duplicar</button>`;
+  // En una prenda, Duplicar copia la prenda completa (mismas tallas y colores, 0 piezas)
+  const btnDup  = p.variantGroup
+    ? `<button class="qv-btn qv-btn-dup" onclick="_varDuplicarPrenda(${p.id})">${ICON_COPY} Duplicar prenda</button>`
+    : `<button class="qv-btn qv-btn-dup" onclick="closeQV();duplicateProduct(${p.id})">${ICON_COPY} Duplicar</button>`;
   const btnPub  = can.publishProduct
     ? `<button class="qv-btn qv-btn-pub" onclick="_qvTogglePublished(${p.id})">${p.isPublished === false ? QV_ICO_GLOBE() + 'Publicar' : QV_ICO_EYEOFF() + 'Ocultar'}</button>`
     : '';

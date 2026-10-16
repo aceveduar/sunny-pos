@@ -833,3 +833,30 @@ async function _varSeparar(id) {
   _varRefrescarFicha();
   toast('Ahora es un producto suelto', 'success');
 }
+
+// Ficha → Más → "Duplicar prenda": otra prenda con las mismas tallas/colores,
+// precio, costo, categoría, descripción y fotos; 0 piezas, oculta y sin
+// códigos (cada código es de una pieza física). Para otro modelo con la misma corrida.
+async function _varDuplicarPrenda(pId) {
+  if (!can.addProduct) { toast('Sin permiso para agregar productos', 'error'); return; }
+  const p = products.find(x => x.id === pId); if (!p?.variantGroup) return;
+  const hs = _varHermanas(p);
+  const base = 'Copia de ' + (p.variantBase || p.name);
+  const grupo = crypto.randomUUID();
+  const filas = hs.map((v, i) => ({
+    name: `${base} · ${(v.variant || []).map(e => e[1]).join(' · ')}`, variant_base: base, variant: v.variant, variant_group: grupo,
+    category: v.category, category_label: v.categoryLabel || v.category, price: v.price || 0, cost: v.cost ?? null,
+    original_price: v.originalPrice || null, description: v.description || '', image: v.image || DEFAULT_IMG,
+    images: v.images?.length ? v.images : null, badge: v.badge || null, badge_type: v.badgeType || null,
+    stock: 0, is_published: false, featured: false, position: products.length + i, created_by: getCurrentUserEmail(),
+  }));
+  const r = await supabaseApi('products', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(filas) });
+  if (!r.ok || !Array.isArray(r.data)) { toast(`No se pudo duplicar: ${r.data?.message || 'HTTP ' + r.status}`, 'error'); return; }
+  r.data.forEach(row => { products.push(mapProduct(row)); _trackEdit(row.id); });
+  logActivity('producto_creado', `Duplicó la prenda "${p.variantBase || p.name}" (${filas.length} variantes)`, { ids: r.data.map(x => x.id), name: base, variant_group: grupo });
+  renderTable(); renderStats();
+  toast(`"${base}" creada (oculta, 0 piezas): cámbiale el nombre`, 'success');
+  _varModo = 'piezas';
+  openQV(r.data[0].id);
+}
+
